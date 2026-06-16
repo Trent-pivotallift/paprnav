@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# paprnav
 
-## Getting Started
+paprnav is an OCR-assisted aviation logbook and Airworthiness Directive decision-support application.
 
-First, run the development server:
+The MVP direction is:
+
+- Customers upload scanned aircraft logbooks.
+- The app OCRs the scans and asks users to verify page order and completeness.
+- Low-confidence OCR regions are highlighted for human correction.
+- Verified OCR is ingested into structured logbook records.
+- FAA Airworthiness Directives are ingested from the Federal Register API.
+- The app matches ADs against logbook entries and routes uncertain cases to human-in-the-loop adjudication.
+
+The product provides decision support with citations and review trails. It is not an official compliance attestation.
+
+## Project Layout
+
+- `frontend/paprnav-frontend`: Next.js frontend app.
+- `backend`: FastAPI backend scaffold.
+- `.ai`: project memory, requirements, decisions, MVP definition, and `/goal` task roadmap.
+- `ad-ingestion-spec.md`: legacy AD ingestion architecture draft, now marked as historical context.
+
+## Start Here
+
+Read these before starting feature work:
+
+- `.ai/MVP_COMPLETION.md`
+- `.ai/REQUIREMENTS.md`
+- `.ai/DECISIONS.md`
+- `.ai/GOAL_TASKS.md`
+- `.ai/AD_INGESTION_REVIEW.md`
+
+## Frontend
 
 ```bash
+cd frontend/paprnav-frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Backend
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd backend
+docker compose up db
+uvicorn main:app --reload
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The backend is currently minimal and exposes only the placeholder FastAPI app.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

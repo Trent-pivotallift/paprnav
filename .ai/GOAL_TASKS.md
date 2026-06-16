@@ -1,0 +1,1067 @@
+# paprnav Agent-Digestible Tasks
+
+Last updated: 2026-06-16
+
+Use these as candidates for `/goal`. Each task should be small enough for one agent run to complete, verify, and summarize without needing broad product decisions.
+
+This file should describe a path to a working webapp, not only documentation and cleanup. The early tasks reduce ambiguity; the later tasks turn paprnav into an integrated MVP.
+
+## Task Format For `/goal`
+
+Suggested prompt shape:
+
+```text
+/goal Complete task T### from .ai/GOAL_TASKS.md. Read .ai/README.md, .ai/REQUIREMENTS.md, and .ai/DECISIONS.md first. Keep changes scoped, run relevant checks, and update .ai files if decisions or task status change.
+```
+
+## Ready Tasks
+
+### T001: Replace default frontend README with paprnav-specific developer README
+
+Status: completed 2026-06-16
+
+Goal: Update `frontend/paprnav-frontend/README.md` so it describes paprnav, local setup, scripts, route overview, and current mock-data limitations.
+
+Acceptance:
+
+- README no longer reads like a default Create Next App file.
+- Includes frontend setup commands.
+- Mentions backend is currently separate and minimal.
+- Mentions `.ai` as project memory.
+- No behavior changes.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+```
+
+### T002: Add backend developer README
+
+Status: ready
+
+Goal: Add `backend/README.md` describing FastAPI startup, Postgres compose usage, environment assumptions, and current API surface.
+
+Acceptance:
+
+- Documents `uvicorn main:app --reload`.
+- Documents `docker compose up db`.
+- Calls out current placeholder endpoint.
+- Notes missing migrations/schema.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T003: Define initial backend domain model plan
+
+Status: ready
+
+Goal: Create a design note, likely `.ai/DATA_MODEL.md`, for users, organizations, aircraft, logbook sections, logbook entries, uploads, and compliance statuses.
+
+Acceptance:
+
+- Defines entities and relationships.
+- Lists required fields and open questions.
+- Does not implement database tables yet.
+- Updates `.ai/DECISIONS.md` only if a durable choice is made.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*.md' -print
+```
+
+### T004: Add typed frontend mock data module
+
+Status: ready
+
+Goal: Move hardcoded aircraft and logbook mock arrays from pages into a typed module under `frontend/paprnav-frontend/src/lib` or `src/data`.
+
+Acceptance:
+
+- Pages import typed mock data instead of declaring arrays inline.
+- Types represent owner aircraft, client aircraft, and logbook entries.
+- UI behavior remains the same.
+- Lint passes.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T005: Wire upload page to a local API abstraction
+
+Status: ready
+
+Goal: Add a frontend API helper for logbook uploads and update the upload page to call it, while the helper can still simulate success until the backend endpoint exists.
+
+Acceptance:
+
+- Upload page no longer contains raw fake delay logic inline.
+- API helper has a clear function signature for future backend integration.
+- Existing success/error UI still works.
+- File validation remains or improves.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T006: Add FastAPI health and version endpoints
+
+Status: ready
+
+Goal: Expand `backend/main.py` with `/health` and `/version` endpoints suitable for local checks and future deployment probes.
+
+Acceptance:
+
+- `/health` returns a stable JSON status.
+- `/version` returns app name and version.
+- Existing `/` still works or redirects intentionally.
+- Backend Python compile check passes.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T007: Add backend CORS configuration for local frontend development
+
+Status: ready
+
+Goal: Configure FastAPI CORS middleware so the local Next dev server can call the API.
+
+Acceptance:
+
+- CORS origins are explicit for local development.
+- Configuration is easy to adjust via environment variables or constants.
+- `requirements.txt` remains sufficient or is updated if needed.
+- Backend Python compile check passes.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T008: Create initial API contract document
+
+Status: ready
+
+Goal: Add `.ai/API_CONTRACT.md` describing first-pass endpoints for aircraft list, logbook entries, upload initiation/completion, and auth assumptions.
+
+Acceptance:
+
+- Documents routes, methods, sample request/response shapes.
+- Marks unresolved auth and file storage decisions.
+- Does not implement code.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*.md' -print
+```
+
+### T009: Add frontend empty/loading/error states for dashboard data
+
+Status: ready after T004
+
+Goal: Prepare dashboard pages for API-backed data by adding explicit loading, empty, and error rendering states around aircraft lists.
+
+Acceptance:
+
+- Owner and maintenance dashboard states are visually coherent.
+- Existing mock data path still renders.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T010: Decide and scaffold database migrations
+
+Status: superseded by T015 and T017
+
+Goal: Choose a migration tool and add the minimal migration scaffolding for the backend.
+
+Acceptance:
+
+- Migration tool choice is recorded in `.ai/DECISIONS.md`.
+- Backend has clear commands to create/apply migrations.
+- No production schema is invented beyond the approved initial model.
+
+### T011: Decide and scaffold file storage
+
+Status: superseded by T026 and T027
+
+Goal: Choose local and production object storage strategy for uploaded logbook files.
+
+Acceptance:
+
+- Storage decision is recorded.
+- Local dev path is documented.
+- Production path does not expose secrets in repo.
+
+### T012: Add infrastructure planning document
+
+Status: ready
+
+Goal: Add `.ai/INFRASTRUCTURE.md` to define desired environments, AWS target account/region assumptions, deployment tool options, and secrets/state handling questions.
+
+Acceptance:
+
+- Explicitly states no AWS IaC currently exists.
+- Lists recommended next decision points before deployment.
+- Does not run AWS commands or modify cloud resources.
+
+## MVP Completion Definition
+
+The authoritative MVP definition is `.ai/MVP_COMPLETION.md`.
+
+In short: the webapp is not complete until scanned logbooks can be uploaded, OCR processed, page-order/completeness verified, low-confidence OCR decoded by users, ingested into structured logbook records, compared against ingested FAA AD data, and routed through HITL adjudication when matching is uncertain.
+
+## MVP Implementation Tasks
+
+### T013: Decide MVP auth strategy
+
+Status: ready
+
+Goal: Resolve P001 in `.ai/DECISIONS.md` with a concrete authentication approach for the MVP.
+
+Acceptance:
+
+- Records the chosen auth provider/session strategy in `.ai/DECISIONS.md`.
+- Explains why it fits a small MVP.
+- Lists follow-up implementation tasks that depend on the decision.
+- Does not implement auth yet unless it is a tiny supporting proof.
+
+Suggested checks:
+
+```bash
+sed -n '1,220p' .ai/DECISIONS.md
+```
+
+### T014: Decide API schema and client typing strategy
+
+Status: ready
+
+Goal: Resolve P002 in `.ai/DECISIONS.md` so backend and frontend can integrate without ad hoc types.
+
+Acceptance:
+
+- Records how API request/response schemas are defined.
+- Records how frontend TypeScript types stay aligned.
+- Updates or creates `.ai/API_CONTRACT.md` if useful.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*.md' -print
+```
+
+### T015: Decide database migration stack
+
+Status: ready
+
+Goal: Resolve P004 in `.ai/DECISIONS.md`, likely by choosing SQLAlchemy plus Alembic unless there is a better local reason.
+
+Acceptance:
+
+- Records ORM/database access and migration choices.
+- Adds implementation follow-up tasks if needed.
+- Does not create tables unless the migration approach is also scaffolded cleanly.
+
+Suggested checks:
+
+```bash
+sed -n '1,240p' .ai/DECISIONS.md
+```
+
+### T016: Scaffold backend settings and app structure
+
+Status: ready after T015
+
+Goal: Refactor backend from a single placeholder file into a small FastAPI app structure with configuration, routers, and database module placeholders.
+
+Acceptance:
+
+- Backend has a clear app package layout.
+- Existing root, health, or version endpoints still work if already added.
+- Settings include database URL and local development defaults.
+- Python compile check passes.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T017: Add initial database models and migrations
+
+Status: ready after T003 and T015
+
+Goal: Implement the first persisted schema for users, organizations, memberships/roles, aircraft, logbook sections, logbook entries, and upload metadata.
+
+Acceptance:
+
+- Migrations create the MVP tables.
+- Models include timestamps and stable identifiers.
+- N-number normalization is represented.
+- Migration apply command is documented.
+- Does not include AD rule automation unless separately designed.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T018: Seed local development data
+
+Status: ready after T017
+
+Goal: Add a repeatable local seed process that creates an owner user, maintenance user, sample aircraft, and sample logbook entries.
+
+Acceptance:
+
+- Seed command is documented.
+- Seed data matches frontend demo scenarios.
+- Re-running the seed is safe or clearly documented.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T019: Implement backend auth endpoints
+
+Status: ready after T013 and T017
+
+Goal: Add register, login, logout/session, and current-user endpoints based on the selected auth strategy.
+
+Acceptance:
+
+- Users can register and authenticate through API endpoints.
+- Passwords/secrets are not stored in plaintext.
+- Current user endpoint returns identity and role context.
+- Critical auth paths have tests or documented manual verification.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T020: Implement frontend auth integration
+
+Status: ready after T019
+
+Goal: Wire login/register UI to backend auth and protect authenticated app routes.
+
+Acceptance:
+
+- Login form calls the API and handles success/failure.
+- Register form calls the API and handles success/failure.
+- Authenticated pages require a signed-in user.
+- Sign-out flow exists.
+- The dev dashboard bypass link is removed.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T021: Implement aircraft API endpoints
+
+Status: ready after T017 and T019
+
+Goal: Add backend endpoints to list, create, view, and update aircraft visible to the authenticated user.
+
+Acceptance:
+
+- Owner users can create and view their aircraft.
+- Maintenance users can view assigned client aircraft.
+- API enforces role/ownership boundaries.
+- Responses match the API contract.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T022: Replace dashboard mock data with aircraft API data
+
+Status: ready after T004, T009, and T021
+
+Goal: Update `/logbook` so owner and maintenance dashboard views use API-backed aircraft data.
+
+Acceptance:
+
+- Inline aircraft arrays are removed from the dashboard page.
+- Loading, empty, and error states are visible.
+- Owner and maintenance role views still work.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T023: Implement logbook entry API endpoints
+
+Status: ready after T017 and T021
+
+Goal: Add backend endpoints to list, create, view, and update logbook entries by aircraft and logbook section.
+
+Acceptance:
+
+- Supports airframe, engine, and propeller sections.
+- Manual entries can be created.
+- Entry detail can be fetched by ID.
+- Authorization checks prevent cross-aircraft access.
+- Responses match the API contract.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T024: Replace logbook detail mock data with API data
+
+Status: ready after T023
+
+Goal: Update `/logbook/[nNumber]` and `/logbook/[nNumber]/entry/[entryId]` to use backend logbook entry APIs.
+
+Acceptance:
+
+- Inline dummy logbook entries are removed.
+- Logbook tabs load API data by section.
+- Entry detail page renders API data.
+- Loading, empty, and error states are handled.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T025: Build manual logbook entry form
+
+Status: ready after T023
+
+Goal: Add a real manual-entry workflow separate from upload, or mode-switch the existing add/upload page clearly.
+
+Acceptance:
+
+- User can enter date, section, description, performer, credentials, and notes.
+- Form validates required fields.
+- Successful submission persists through the API and returns to the entry list/detail.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T026: Decide file storage target for MVP
+
+Status: ready
+
+Goal: Resolve P003 in `.ai/DECISIONS.md` with local development and production storage targets.
+
+Acceptance:
+
+- Records local file storage behavior.
+- Records production storage target, likely S3 if AWS remains the plan.
+- States secret handling and maximum upload assumptions.
+- Adds infrastructure follow-up tasks if production storage requires them.
+
+Suggested checks:
+
+```bash
+sed -n '1,260p' .ai/DECISIONS.md
+```
+
+### T027: Implement backend upload API
+
+Status: ready after T017, T023, and T026
+
+Goal: Add backend support for uploading PDF/JPG/PNG logbook files and creating upload metadata linked to an aircraft/logbook entry.
+
+Acceptance:
+
+- Validates file type and size server-side.
+- Stores original file using the selected storage strategy.
+- Persists upload metadata.
+- Provides a way to retrieve/download the file.
+- Authorization prevents cross-aircraft access.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T028: Wire frontend upload page to backend upload API
+
+Status: ready after T005 and T027
+
+Goal: Replace simulated upload success with a real API call.
+
+Acceptance:
+
+- Upload page submits selected file to the backend.
+- Progress/pending/success/error states remain clear.
+- Success links or routes the user back to the relevant entry/logbook context.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T029: Implement profile API and frontend persistence
+
+Status: ready after T019
+
+Goal: Make profile/account screens display and update authenticated user data from the backend.
+
+Acceptance:
+
+- Profile page reads current-user/profile API data.
+- Editable fields persist through the backend.
+- Error and success states are handled.
+- Lint/build and backend compile checks pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+cd ../../backend
+python -m py_compile main.py
+```
+
+### T030: Implement role and organization assignment workflow
+
+Status: ready after T017, T019, and T021
+
+Goal: Add the minimal workflow needed to associate maintenance-shop users with client aircraft.
+
+Acceptance:
+
+- Role model is enforced in backend.
+- Maintenance user can see assigned client aircraft.
+- Owner-only aircraft are not exposed to unrelated users.
+- The UI has a practical way to represent assignments for MVP.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+cd ../frontend/paprnav-frontend
+npm run lint
+```
+
+### T031: Add backend endpoint tests for MVP flows
+
+Status: ready after T019, T021, T023, and T027
+
+Goal: Add automated tests for auth, aircraft, logbook entry, and upload metadata behaviors.
+
+Acceptance:
+
+- Tests cover happy paths and at least one unauthorized access case per protected domain.
+- Test database setup is documented.
+- Tests run locally with a documented command.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest
+```
+
+### T032: Add frontend smoke tests or interaction checks
+
+Status: ready after T020, T022, T024, T025, and T028
+
+Goal: Add practical frontend checks for login, dashboard, logbook detail, manual entry, and upload flows.
+
+Acceptance:
+
+- Test approach is documented.
+- Critical routes render without crashing.
+- At least one form workflow is exercised.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T033: Add environment variable documentation and examples
+
+Status: ready after T013, T015, and T026
+
+Goal: Document required frontend/backend environment variables and add safe example files if appropriate.
+
+Acceptance:
+
+- No real secrets are committed.
+- Frontend and backend env vars are documented.
+- Local dev setup is reproducible from docs.
+
+Suggested checks:
+
+```bash
+find . -name '.env*' -maxdepth 4 -print
+```
+
+### T034: Create production infrastructure as code
+
+Status: blocked pending T012, T026, and environment decisions
+
+Goal: Add reviewable IaC for the selected AWS production architecture.
+
+Acceptance:
+
+- IaC defines frontend hosting, backend hosting, database, storage, networking, secrets, and logs as needed for MVP.
+- State handling and target AWS account/region are documented.
+- Plan/diff command is documented.
+- Does not apply cloud changes without explicit approval.
+
+### T035: Add CI workflow
+
+Status: ready after test commands exist
+
+Goal: Add GitHub Actions workflows for frontend lint/build and backend tests.
+
+Acceptance:
+
+- Workflow runs on pull requests and main branch pushes.
+- Frontend lint/build is included.
+- Backend tests are included once available.
+- No deployment secrets are required for basic checks.
+
+### T036: Production deployment dry run
+
+Status: blocked pending T034 and T035
+
+Goal: Execute a non-destructive deployment plan/diff and document the exact deployment steps.
+
+Acceptance:
+
+- Plan/diff output is reviewed.
+- Required secrets and AWS permissions are listed.
+- Rollback steps are documented.
+- No infrastructure is applied unless explicitly approved.
+
+### T037: MVP release audit
+
+Status: blocked pending OCR, AD ingestion, matching, HITL, tests, and deployment tasks
+
+Goal: Audit the app against the MVP Completion Definition and close remaining gaps.
+
+Acceptance:
+
+- Every item in the MVP Completion Definition is verified with file evidence, test output, or manual runtime evidence.
+- `.ai/GOAL_TASKS.md` is updated with completed/remaining tasks.
+- Known risks are documented.
+
+## OCR, AD, And HITL MVP Tasks
+
+### T038: Design OCR ingestion data model
+
+Status: ready after T003
+
+Goal: Extend the data model design for upload batches, pages, OCR text spans, bounding boxes, confidence scores, page-order verification, completeness confirmation, and HITL OCR corrections.
+
+Acceptance:
+
+- `.ai/DATA_MODEL.md` or equivalent includes OCR ingestion entities and relationships.
+- Defines traceability from structured logbook entry back to upload, page, OCR span, and correction.
+- Identifies required fields for audit and user correction.
+- Does not implement tables unless paired with a migration task.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*.md' -print
+```
+
+### T039: Decide OCR provider and abstraction
+
+Status: ready
+
+Goal: Resolve P006 in `.ai/DECISIONS.md` with the MVP OCR provider strategy.
+
+Acceptance:
+
+- Records selected OCR provider or provider abstraction.
+- Explains local dev behavior and production behavior.
+- Lists confidence data required from OCR output.
+- Adds follow-up implementation tasks if provider choice changes the roadmap.
+
+Suggested checks:
+
+```bash
+sed -n '1,280p' .ai/DECISIONS.md
+```
+
+### T040: Implement upload ingestion job API
+
+Status: ready after T017, T026, T027, and T038
+
+Goal: Change upload handling from "store a file" to "create an ingestion job" with upload status, page extraction status, OCR status, verification status, and error states.
+
+Acceptance:
+
+- Backend creates ingestion jobs tied to aircraft and user.
+- Job status can be queried.
+- Original upload remains retrievable.
+- API response supports frontend progress/status UI.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T041: Implement OCR processing worker skeleton
+
+Status: ready after T039 and T040
+
+Goal: Add a backend worker/service entrypoint that can process an ingestion job into pages and OCR records through the chosen OCR abstraction.
+
+Acceptance:
+
+- Worker can be run locally.
+- OCR provider interface is explicit.
+- Stub or real provider persists page/text/confidence records.
+- Failures are recorded on the ingestion job.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T042: Build page-order and completeness verification UI
+
+Status: ready after T040
+
+Goal: Add UI for users to review uploaded pages, reorder pages if needed, and confirm whether the logbook upload is complete.
+
+Acceptance:
+
+- Shows upload pages or page placeholders from API data.
+- User can set/confirm page order.
+- User can confirm completeness or mark missing/uncertain pages.
+- Verification state persists through the backend.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+### T043: Build low-confidence OCR correction workflow
+
+Status: ready after T041
+
+Goal: Present low-confidence OCR regions as highlighted snippets with focused correction fields.
+
+Acceptance:
+
+- UI shows OCR snippet context and source page region reference.
+- User can submit corrected text.
+- Corrections persist as HITL annotations.
+- Backend records original OCR text, corrected text, confidence, user, and timestamp.
+- Lint/build and backend compile checks pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+cd ../../backend
+python -m py_compile main.py
+```
+
+### T044: Implement structured logbook ingestion from verified OCR
+
+Status: ready after T038, T041, T042, and T043
+
+Goal: Convert verified OCR text plus corrections into structured logbook entries.
+
+Acceptance:
+
+- Creates logbook entries with date, section, description, performer, credential, times when available, and source evidence links.
+- Ambiguous fields are marked for review rather than silently guessed.
+- Structured entries can be viewed through existing logbook APIs/pages.
+- Extraction provider/version metadata is persisted.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T045: Rewrite AD ingestion spec for MVP architecture
+
+Status: ready
+
+Goal: Create `.ai/AD_INGESTION_MVP_SPEC.md` using `.ai/AD_INGESTION_REVIEW.md` and the legacy `ad-ingestion-spec.md`.
+
+Acceptance:
+
+- Specifies Federal Register discovery, AD classification, persistence, extraction, supersession, and review.
+- Uses Postgres plus object storage abstraction for MVP.
+- Marks DynamoDB/OpenSearch/EventBridge/SQS/Lambda as optional future production architecture.
+- Explicitly recommends retaining AD data with content-hash de-duplication and lifecycle policies.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*AD*' -print
+```
+
+### T046: Implement Federal Register AD discovery prototype
+
+Status: ready after T045
+
+Goal: Add a backend script or worker that queries the Federal Register API and classifies FAA rules as AD candidates.
+
+Acceptance:
+
+- Uses Federal Register API as primary source.
+- Does not assume every FAA Rule is an AD.
+- Stores discovery metadata and candidate/rejected classification.
+- Can run locally without applying AWS changes.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T047: Implement AD persistence and supersession model
+
+Status: ready after T017 and T045
+
+Goal: Add database support for AD source records, extracted structured data, applicability, compliance requirements, source snapshots, confidence, and supersession relationships.
+
+Acceptance:
+
+- AD records persist in Postgres.
+- Supersedes/superseded-by can be represented as graph relationships.
+- Source metadata includes Federal Register document number, URLs, publication date, and content hash.
+- Low-confidence extraction can be queued for review.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T048: Decide AD extraction provider
+
+Status: ready
+
+Goal: Resolve P007 in `.ai/DECISIONS.md`.
+
+Acceptance:
+
+- Records deterministic parsing, LLM extraction, or hybrid extraction strategy.
+- Defines provider/version/prompt/hash metadata that must be persisted.
+- Defines confidence thresholds for review routing.
+
+Suggested checks:
+
+```bash
+sed -n '1,320p' .ai/DECISIONS.md
+```
+
+### T049: Implement structured AD extraction worker
+
+Status: ready after T047 and T048
+
+Goal: Extract applicability, compliance actions, intervals, effective date, and supersession clues from AD source records.
+
+Acceptance:
+
+- Extraction output validates against a schema.
+- Low-confidence outputs route to AD extraction review.
+- Provider/version metadata is persisted.
+- Extraction can be re-run idempotently by content hash.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T050: Build AD extraction review queue
+
+Status: ready after T047 and T049
+
+Goal: Add backend and frontend review flow for low-confidence AD extraction results.
+
+Acceptance:
+
+- Reviewer can inspect source text/PDF link and proposed extraction.
+- Reviewer can accept, edit, or reject extracted fields.
+- Review decisions are audited.
+- Approved extraction becomes available for matching.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+cd ../../backend
+python -m py_compile main.py
+```
+
+### T051: Design AD-to-logbook matching rules
+
+Status: ready after T044 and T047
+
+Goal: Create a matching design for one-time, recurring/cyclical, conditional, component-specific, and superseded ADs.
+
+Acceptance:
+
+- Documents matching inputs, outputs, confidence, and unresolved reasons.
+- Defines how candidate logbook entries are cited.
+- Defines when HITL adjudication is required.
+- Does not claim official compliance attestation.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*.md' -print
+```
+
+### T052: Implement first-pass AD-to-logbook matcher
+
+Status: ready after T044, T049, and T051
+
+Goal: Add backend matching job that compares applicable ADs against structured logbook entries and produces candidate match/unresolved records.
+
+Acceptance:
+
+- Handles at least one-time ADs and simple recurring ADs.
+- Superseded ADs do not appear as currently required unless history is explicitly requested.
+- Uncertain/conditional cases create HITL adjudication tasks.
+- Matcher output includes evidence and rationale.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T053: Build HITL AD adjudication workflow
+
+Status: ready after T052
+
+Goal: Add UI and API for humans to adjudicate unresolved AD/logbook matches.
+
+Acceptance:
+
+- Reviewer sees AD, aircraft/component facts, candidate logbook entries, and system rationale.
+- Reviewer can mark satisfied, not satisfied, not applicable, needs more info, or defer.
+- Decision stores reviewer, notes, timestamp, and future-improvement tags.
+- Decisions are visible to software/admin review.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+cd ../../backend
+python -m py_compile main.py
+```
+
+### T054: Build aircraft compliance worklist
+
+Status: ready after T052 and T053
+
+Goal: Replace simple compliance status badges with an evidence-backed worklist of AD candidates, matched items, unresolved items, and HITL decisions.
+
+Acceptance:
+
+- User can see AD status by aircraft.
+- Each item links to source AD evidence and logbook evidence where available.
+- Unresolved items clearly ask for review rather than implying compliance.
+- Lint/build pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
