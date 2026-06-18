@@ -16,4 +16,5 @@ venv/
 # Local uploads / generated artifacts
 uploads/
 storage/
-
+.data/
+backend/.data/

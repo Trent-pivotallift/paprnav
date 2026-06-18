@@ -2,20 +2,43 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ChevronLeft, Upload, FileText, X, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
+import { listAircraft, LogbookSection, uploadLogbookFile, Upload as StoredUpload } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+function normalizeNNumber(nNumber: string) {
+  return nNumber.replace(/[-\s]/g, "").toUpperCase();
+}
+
+function getSection(value: string | null): LogbookSection {
+  if (value === "engine" || value === "propeller") {
+    return value;
+  }
+  return "airframe";
+}
+
+function proxyDownloadUrl(downloadUrl: string) {
+  if (downloadUrl.startsWith("/api/v1/")) {
+    return `/api/backend${downloadUrl}`;
+  }
+  return downloadUrl;
+}
 
 export default function LogbookUploadPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const nNumber = params.nNumber as string;
+  const section = getSection(searchParams.get("logbook"));
+  const displayNNumber = normalizeNNumber(nNumber);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [storedUpload, setStoredUpload] = useState<StoredUpload | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,6 +46,7 @@ export default function LogbookUploadPage() {
       setSelectedFile(event.target.files[0]);
       setUploadStatus("idle");
       setUploadMessage(null);
+      setStoredUpload(null);
     }
   };
 
@@ -43,6 +67,7 @@ export default function LogbookUploadPage() {
       setSelectedFile(event.dataTransfer.files[0]);
       setUploadStatus("idle");
       setUploadMessage(null);
+      setStoredUpload(null);
     }
   };
 
@@ -55,14 +80,23 @@ export default function LogbookUploadPage() {
 
     setIsUploading(true);
     setUploadMessage("Uploading...");
+    setUploadStatus("idle");
+    setStoredUpload(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setUploadMessage(`Successfully uploaded ${selectedFile.name}`);
+      const aircraftResponse = await listAircraft();
+      const aircraft = aircraftResponse.aircraft.find((item) => item.nNumberNormalized === displayNNumber);
+      if (!aircraft) {
+        throw new Error("Aircraft not found.");
+      }
+
+      const response = await uploadLogbookFile(aircraft.id, selectedFile, section);
+      setStoredUpload(response.upload);
+      setUploadMessage(`Stored ${response.upload.originalFilename}`);
       setUploadStatus("success");
       setSelectedFile(null);
-    } catch {
-      setUploadMessage("Upload failed. Please try again.");
+    } catch (caught) {
+      setUploadMessage(caught instanceof Error ? caught.message : "Upload failed. Please try again.");
       setUploadStatus("error");
     } finally {
       setIsUploading(false);
@@ -73,6 +107,7 @@ export default function LogbookUploadPage() {
     setSelectedFile(null);
     setUploadStatus("idle");
     setUploadMessage(null);
+    setStoredUpload(null);
   };
 
   return (
@@ -90,7 +125,7 @@ export default function LogbookUploadPage() {
 
       <PageHeader
         title="Upload Logbook Entry"
-        description={`Aircraft N-${nNumber}`}
+        description={`${displayNNumber} ${section} logbook`}
       />
 
       <Card className="mt-8">
@@ -147,7 +182,7 @@ export default function LogbookUploadPage() {
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Supports PDF, JPG, PNG (max 10MB)
+                  Supports PDF, JPG, PNG (max 100MB)
                 </p>
               </div>
             )}
@@ -172,7 +207,17 @@ export default function LogbookUploadPage() {
             >
               {uploadStatus === "success" && <CheckCircle className="h-4 w-4" />}
               {uploadStatus === "error" && <AlertCircle className="h-4 w-4" />}
-              {uploadMessage}
+              <span>{uploadMessage}</span>
+              {storedUpload ? (
+                <span className="ml-auto flex gap-3">
+                  <Link href={`/logbook/${displayNNumber}?logbook=${section}`} className="underline underline-offset-4">
+                    Back to logbook
+                  </Link>
+                  <Link href={proxyDownloadUrl(storedUpload.downloadUrl)} className="underline underline-offset-4">
+                    Download
+                  </Link>
+                </span>
+              ) : null}
             </div>
           )}
 

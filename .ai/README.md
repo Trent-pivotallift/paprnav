@@ -1,6 +1,6 @@
 # paprnav AI Project State
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
 
 This folder is the shared project memory for AI agents working on paprnav. Keep it concise, current, and useful for handoffs.
 
@@ -8,14 +8,15 @@ This folder is the shared project memory for AI agents working on paprnav. Keep 
 
 paprnav is intended to be an OCR-assisted digital aviation logbook and AD compliance decision-support application for aircraft owners and maintenance shops.
 
-The current codebase is early-stage:
+The current codebase is an early local MVP build:
 
-- `frontend/paprnav-frontend` is a Next.js app with Shadcn/ui-inspired components, route groups for auth and authenticated pages, role-switched logbook dashboards, aircraft logbook detail pages, upload UI, profile UI, and static mock data.
-- `backend` is a minimal FastAPI service with a root endpoint and a local Postgres `docker-compose.yml`.
-- There is no implemented frontend-to-backend API integration yet.
-- There is no auth implementation yet; login/register forms are visual only.
-- There is no persisted domain model yet beyond the Postgres container scaffold.
+- `frontend/paprnav-frontend` is a Next.js app with auth wiring, authenticated dashboards, aircraft logbook detail pages, manual entry, upload UI, profile UI, and a same-origin backend proxy.
+- `backend` is a FastAPI service with root, health, version, auth/session, aircraft, logbook entry, upload, and download endpoints.
+- Local development uses Docker Compose for the backend API and Postgres database.
+- Persisted SQLAlchemy/Alembic models exist for users, organizations, memberships, aircraft, assignments, logbook sections, logbook entries, auth sessions, and uploads.
+- Backend endpoint tests now cover auth, aircraft visibility, logbook entry, upload/download, and unauthorized access boundaries.
 - There is no AWS infrastructure code or GitHub Actions workflow in this checkout.
+- OCR ingestion and Airworthiness Directive ingestion/matching are not implemented yet.
 
 ## Important Paths
 
@@ -27,6 +28,9 @@ The current codebase is early-stage:
 - AI project memory: `.ai`
 - MVP definition: `.ai/MVP_COMPLETION.md`
 - AD ingestion review: `.ai/AD_INGESTION_REVIEW.md`
+- Backend/OCR data model plan: `.ai/DATA_MODEL.md`
+- MVP AD ingestion spec: `.ai/AD_INGESTION_MVP_SPEC.md`
+- Interim API contract: `.ai/API_CONTRACT.md`
 
 ## Useful Local Commands
 
@@ -45,6 +49,9 @@ Backend:
 cd backend
 uvicorn main:app --reload
 docker compose up db
+docker compose up api
+docker compose run --rm migrate
+docker compose exec -T api python -m pytest
 ```
 
 ## Current Repo Notes

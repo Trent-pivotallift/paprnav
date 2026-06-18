@@ -72,21 +72,17 @@ Route groups:
 
 ## Current Data State
 
-The frontend currently uses inline mock data for aircraft, client aircraft, and logbook entries. The upload page simulates a successful upload after a delay.
+The frontend uses backend auth sessions and fetches dashboard aircraft and logbook entry data from the backend API. Manual logbook entries and uploaded logbook files are created through the backend API.
 
 Known limitations:
 
-- Login and registration forms are visual only.
-- Dashboard data is not fetched from an API.
-- Uploads are not persisted.
-- Logbook entries are mock records.
-- Role switching is local UI state, not an authenticated permission model.
+- Full role/permission UX is still minimal; backend authorization is enforced by the API.
 
 ## Backend Relationship
 
-The backend is currently separate and minimal at `../../backend`. It is a FastAPI app with a placeholder root endpoint and a local Postgres `docker-compose.yml`.
+The backend lives at `../../backend`. It is a FastAPI app with local Postgres Docker Compose support, auth/session endpoints, aircraft endpoints, logbook entry endpoints, and upload create/download endpoints.
 
-There is not yet a frontend API client or stable backend contract. Future work should add explicit API contracts before replacing mock data with persisted data.
+The frontend proxies browser API calls through `/api/backend/*` to preserve same-origin cookie behavior in local development. Set `PAPRNAV_BACKEND_URL` for the Next server if the backend is not running at `http://127.0.0.1:8000`.
 
 ## Project Memory
 

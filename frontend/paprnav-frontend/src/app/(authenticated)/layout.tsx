@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header";
+import { AuthenticatedShell } from "@/components/AuthProvider";
 
 export default function AuthenticatedLayout({
   children,
@@ -6,9 +7,11 @@ export default function AuthenticatedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">{children}</main>
-    </div>
+    <AuthenticatedShell>
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1">{children}</main>
+      </div>
+    </AuthenticatedShell>
   );
 }

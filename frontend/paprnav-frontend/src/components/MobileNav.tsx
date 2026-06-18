@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, FileWarning, User, LogOut, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useAuth } from "@/components/AuthProvider";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -16,20 +17,25 @@ const navLinks = [
   { href: "/profile", label: "Profile", icon: User },
 ];
 
-interface MobileNavProps {
-  name?: string;
-  email?: string;
-}
-
-export function MobileNav({ name = "John Doe", email = "john@example.com" }: MobileNavProps) {
+export function MobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { setTheme, theme } = useTheme();
+  const { user, signOut } = useAuth();
+  const name = user?.name ?? "Signed In";
+  const email = user?.email ?? "";
   const initials = name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  async function handleLogout() {
+    await signOut();
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -124,13 +130,14 @@ export function MobileNav({ name = "John Doe", email = "john@example.com" }: Mob
 
       {/* Logout */}
       <div className="px-4 py-4">
-        <Link
-          href="/"
+        <button
+          type="button"
+          onClick={handleLogout}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
         >
           <LogOut className="h-5 w-5" />
           Logout
-        </Link>
+        </button>
       </div>
     </div>
   );

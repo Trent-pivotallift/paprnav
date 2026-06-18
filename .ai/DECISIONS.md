@@ -56,27 +56,132 @@ The MVP is not complete with CRUD logbooks alone. It must support scanned logboo
 
 ### D009: Retain AD data after ingestion
 
-Status: proposed
+Status: accepted
 
-Recommendation: keep structured AD data indefinitely and retain raw/source artifacts or source snapshots with content-hash de-duplication and lifecycle policies for bulky files. Re-fetching later should be a fallback, not the primary audit strategy, because matching must be reproducible and supersession/HITL decisions require citations.
+Keep structured AD data indefinitely and retain raw/source artifacts or source snapshots with content-hash de-duplication and lifecycle policies for bulky files. Re-fetching later should be a fallback, not the primary audit strategy, because matching must be reproducible and supersession/HITL decisions require citations.
+
+### D010: Use FastAPI-owned session auth for the local MVP
+
+Status: accepted
+
+For the MVP, implement auth in FastAPI with Postgres-backed users, password hashes, server-managed sessions, and secure HTTP-only cookies. This keeps local development unblocked without requiring AWS Cognito or another hosted provider before infrastructure exists. User records should include room for future external identity fields so production can later move to Cognito or another provider without rewriting domain ownership.
+
+Follow-up implementation tasks:
+
+- T017 should include user and session-compatible identity fields.
+- T019 should implement register, login, logout/session, and current-user endpoints.
+- T020 should wire the frontend to cookie-based auth and remove the dev dashboard bypass.
+- T033 should document session secret and cookie/security environment variables.
+
+### D011: Let FastAPI own OpenAPI schemas and generate frontend types
+
+Status: accepted
+
+Backend request/response contracts should be defined with Pydantic schemas in the FastAPI app. FastAPI's OpenAPI document is the source of truth for API shape. The frontend should use generated TypeScript types from that OpenAPI schema once backend schemas exist, with `.ai/API_CONTRACT.md` serving as the interim human-readable contract before code generation is wired.
+
+Follow-up implementation tasks:
+
+- T016 should create a backend app structure with a clear schema module.
+- T021, T023, T027, T040, and later AD/OCR endpoints should define Pydantic request and response models.
+- A future tooling task should add an OpenAPI export command and TypeScript type generation step.
+
+### D012: Use SQLAlchemy 2.0 plus Alembic for persistence and migrations
+
+Status: accepted
+
+Use SQLAlchemy 2.0 ORM models for Postgres persistence and Alembic for database migrations. This matches FastAPI/Postgres conventions, supports local Docker Postgres and future AWS RDS/Aurora, and gives reviewable schema diffs before persistent data is introduced.
+
+Follow-up implementation tasks:
+
+- T016 should add backend settings, database engine/session wiring, and migration placeholders.
+- T017 should add the initial schema and first Alembic migration.
+- T033 should document `DATABASE_URL` and migration commands.
+
+### D013: Use a storage abstraction with local filesystem for dev and S3 for production
+
+Status: accepted
+
+Uploaded logbook files and retained AD source artifacts should go through a storage interface. Local development should store files under a configurable local data directory, such as `backend/.data`, which must not contain committed user uploads. Production should use S3 or S3-compatible object storage with bucket/key references, content hashes, server-side encryption, and lifecycle policies for bulky artifacts.
+
+Implementation expectations:
+
+- Persist `storage_backend`, `storage_key`, content type, file size, and SHA-256 hash in Postgres.
+- Keep original uploaded logbook files retrievable.
+- Use environment variables for local data path, production bucket, and maximum upload size.
+- Default maximum upload size should be `100 MB` until real sample logbooks prove a different limit is needed.
+- Do not store AWS keys or storage secrets in the repo; production should prefer IAM role credentials and managed secret/config services.
+- Start with backend-mediated uploads for MVP; presigned S3 uploads can be added later if file size or deployment shape requires it.
+- T012/T034 should include an S3 bucket, encryption, IAM access, lifecycle policies, and rollback expectations when production infrastructure is modeled.
+
+### D014: Use an OCR provider abstraction with a deterministic local provider first
+
+Status: accepted
+
+The OCR pipeline should depend on a provider interface, not directly on a cloud SDK. For local MVP implementation, start with a deterministic fixture/mock provider or local adapter that can persist page, text, bounding-box, and confidence records without requiring AWS. The production-oriented provider target is AWS Textract, because paprnav is expected to live in AWS and Textract returns page geometry and confidence data needed for HITL review.
+
+Required provider-neutral OCR output:
+
+- page number and rendered page/image reference
+- span type: word, line, block, or region
+- text
+- confidence score
+- bounding box coordinates and units
+- reading order
+- provider name, provider version, configuration hash
+- raw provider artifact reference when useful for audit/replay
+
+Follow-up implementation tasks:
+
+- T041 should define the provider interface and include a deterministic local provider.
+- A later provider task can add Textract behind the same interface.
+- T043 should consume provider-neutral low-confidence spans rather than provider-specific objects.
+
+### D015: Use hybrid deterministic and LLM-assisted AD extraction
+
+Status: accepted
+
+AD extraction should start with deterministic parsing/classification for Federal Register metadata, title/body AD detection, dates, AD numbers, and obvious supersession text. Structured applicability and compliance requirements should allow LLM-assisted extraction behind a provider interface, with schema validation and review routing before results become authoritative for matching.
+
+Required extraction metadata:
+
+- provider name and version
+- extraction schema version
+- ruleset version or prompt hash
+- input content hash
+- output content hash when useful
+- confidence score
+- source citations
+- review status
+
+Review thresholds:
+
+- Route to review when extraction confidence is below `0.80`.
+- Route to review when applicability, compliance interval, or supersession fields are missing or uncertain.
+- Route to review when deterministic and LLM outputs disagree on safety-critical fields.
+
+Follow-up implementation tasks:
+
+- T047 should persist source records, extraction metadata, applicability, requirements, supersession, and review state.
+- T049 should validate extraction output against a schema and route low-confidence outputs to review.
+- T050 should expose the review queue for accept/edit/reject/defer decisions.
 
 ## Proposed Decisions To Resolve Soon
 
 ### P001: Authentication provider
 
-Options include custom JWT/session auth in FastAPI, managed auth such as Cognito, or a frontend-friendly provider. This should be decided before implementing persistent user-specific workflows.
+Resolved by D010.
 
 ### P002: API boundary and schema format
 
-Decide whether the backend owns OpenAPI-generated client types, hand-written TypeScript interfaces, or a shared schema process.
+Resolved by D011.
 
 ### P003: File storage target
 
-Decide where uploaded PDFs/images live in production. Likely candidates are S3 or equivalent object storage. This decision affects backend upload API, security, and infrastructure.
+Resolved by D013.
 
 ### P004: Migration tool
 
-Pick a backend migration workflow before adding database tables. Alembic is the likely default for FastAPI plus SQLAlchemy.
+Resolved by D012.
 
 ### P005: Monorepo layout
 
@@ -84,8 +189,8 @@ Decide whether to make the project root a Git repo containing both frontend and 
 
 ### P006: OCR provider
 
-Decide whether MVP OCR uses a local/open-source OCR engine, AWS Textract, another managed OCR provider, or a pluggable abstraction with one default provider.
+Resolved by D014.
 
 ### P007: AD extraction provider
 
-Decide whether structured AD extraction starts with deterministic parsing plus LLM review, managed LLM extraction, or a provider abstraction with persisted provider/version metadata.
+Resolved by D015.

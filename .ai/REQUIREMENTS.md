@@ -83,7 +83,7 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - No low-confidence OCR correction workflow exists.
 - No AD ingestion or AD/logbook matching exists.
 - No HITL adjudication model exists.
-- Backend exposes only `/`.
+- Backend exposes only placeholder/local-readiness endpoints: `/`, `/health`, and `/version`.
 - No database schema or migrations exist.
 - No tests exist in the checked files reviewed for this note.
 - Frontend README has been replaced, but backend and root project docs are still thin.

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { User, Settings, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -10,19 +11,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/components/AuthProvider";
 
-interface UserAvatarProps {
-  name?: string;
-  email?: string;
-}
-
-export function UserAvatar({ name = "John Doe", email = "john@example.com" }: UserAvatarProps) {
+export function UserAvatar() {
+  const router = useRouter();
+  const { user, signOut } = useAuth();
+  const name = user?.name ?? "Signed In";
+  const email = user?.email ?? "";
   const initials = name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  async function handleLogout() {
+    await signOut();
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <DropdownMenu>
@@ -62,10 +69,14 @@ export function UserAvatar({ name = "John Doe", email = "john@example.com" }: Us
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/" className="cursor-pointer text-destructive focus:text-destructive">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full cursor-pointer items-center text-destructive focus:text-destructive"
+          >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
-          </Link>
+          </button>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

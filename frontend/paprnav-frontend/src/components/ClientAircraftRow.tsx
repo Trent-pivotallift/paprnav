@@ -63,7 +63,7 @@ export default function ClientAircraftRow({ nNumber, type, owner, adStatus }: Cl
 
           {/* Add Entry Button */}
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/logbook/${nNumber}/upload`}>
+            <Link href={`/logbook/${nNumber}/new`}>
               <Plus className="mr-1 h-4 w-4" />
               Add Entry
             </Link>

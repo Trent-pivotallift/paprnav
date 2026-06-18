@@ -1,10 +1,46 @@
+"use client";
+
 import Link from "next/link";
+import { FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { login } from "@/lib/api";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState("owner.demo@paprnav.local");
+  const [password, setPassword] = useState("demo-password");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      await login(email, password);
+      router.push(searchParams.get("next") ?? "/logbook");
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to sign in.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
@@ -27,7 +63,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" action="#" method="POST">
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
                 <Input
@@ -37,6 +73,8 @@ export default function LoginPage() {
                   autoComplete="email"
                   required
                   placeholder="you@example.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                 />
               </div>
 
@@ -49,8 +87,16 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   required
                   placeholder="Enter your password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                 />
               </div>
+
+              {error ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </div>
+              ) : null}
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -73,19 +119,9 @@ export default function LoginPage() {
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full">
-                Sign in
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
-
-              {/* Temporary dashboard link for development */}
-              <div className="text-center">
-                <Link
-                  href="/logbook"
-                  className="text-sm text-primary hover:text-primary/80"
-                >
-                  Go to Dashboard (dev)
-                </Link>
-              </div>
             </form>
           </CardContent>
         </Card>

@@ -39,7 +39,7 @@ npm run lint
 
 ### T002: Add backend developer README
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Add `backend/README.md` describing FastAPI startup, Postgres compose usage, environment assumptions, and current API surface.
 
@@ -59,7 +59,7 @@ python -m py_compile main.py
 
 ### T003: Define initial backend domain model plan
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Create a design note, likely `.ai/DATA_MODEL.md`, for users, organizations, aircraft, logbook sections, logbook entries, uploads, and compliance statuses.
 
@@ -120,7 +120,7 @@ npm run build
 
 ### T006: Add FastAPI health and version endpoints
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Expand `backend/main.py` with `/health` and `/version` endpoints suitable for local checks and future deployment probes.
 
@@ -140,7 +140,7 @@ python -m py_compile main.py
 
 ### T007: Add backend CORS configuration for local frontend development
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Configure FastAPI CORS middleware so the local Next dev server can call the API.
 
@@ -242,7 +242,7 @@ In short: the webapp is not complete until scanned logbooks can be uploaded, OCR
 
 ### T013: Decide MVP auth strategy
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Resolve P001 in `.ai/DECISIONS.md` with a concrete authentication approach for the MVP.
 
@@ -261,7 +261,7 @@ sed -n '1,220p' .ai/DECISIONS.md
 
 ### T014: Decide API schema and client typing strategy
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Resolve P002 in `.ai/DECISIONS.md` so backend and frontend can integrate without ad hoc types.
 
@@ -279,7 +279,7 @@ find .ai -maxdepth 1 -type f -name '*.md' -print
 
 ### T015: Decide database migration stack
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Resolve P004 in `.ai/DECISIONS.md`, likely by choosing SQLAlchemy plus Alembic unless there is a better local reason.
 
@@ -297,9 +297,13 @@ sed -n '1,240p' .ai/DECISIONS.md
 
 ### T016: Scaffold backend settings and app structure
 
-Status: ready after T015
+Status: completed 2026-06-17 via T016a
 
 Goal: Refactor backend from a single placeholder file into a small FastAPI app structure with configuration, routers, and database module placeholders.
+
+Implementation note:
+
+- T016a created the app package, settings module, router structure, and database placeholders without adding domain tables.
 
 Acceptance:
 
@@ -317,9 +321,15 @@ python -m py_compile main.py
 
 ### T017: Add initial database models and migrations
 
-Status: ready after T003 and T015
+Status: completed 2026-06-17
 
 Goal: Implement the first persisted schema for users, organizations, memberships/roles, aircraft, logbook sections, logbook entries, and upload metadata.
+
+Implementation note:
+
+- T017a added Alembic migration scaffolding and dependency declarations.
+- T017b added SQLAlchemy models and an initial schema migration for users, organizations, memberships/roles, aircraft, aircraft assignments, logbook sections, logbook entries, and upload metadata.
+- Docker support was added for the backend API, Postgres, and one-shot migration runs.
 
 Acceptance:
 
@@ -338,7 +348,7 @@ python -m py_compile main.py
 
 ### T018: Seed local development data
 
-Status: ready after T017
+Status: completed 2026-06-17
 
 Goal: Add a repeatable local seed process that creates an owner user, maintenance user, sample aircraft, and sample logbook entries.
 
@@ -357,7 +367,7 @@ python -m py_compile main.py
 
 ### T019: Implement backend auth endpoints
 
-Status: ready after T013 and T017
+Status: completed 2026-06-17
 
 Goal: Add register, login, logout/session, and current-user endpoints based on the selected auth strategy.
 
@@ -377,9 +387,16 @@ python -m py_compile main.py
 
 ### T020: Implement frontend auth integration
 
-Status: ready after T019
+Status: completed 2026-06-17
 
 Goal: Wire login/register UI to backend auth and protect authenticated app routes.
+
+Implementation:
+
+- Login and register forms call backend auth endpoints through a same-origin frontend API proxy.
+- Authenticated app routes load the current backend session and redirect signed-out users to login.
+- Header and mobile nav show the signed-in user and call backend logout.
+- Removed the temporary dashboard bypass link.
 
 Acceptance:
 
@@ -399,9 +416,16 @@ npm run build
 
 ### T021: Implement aircraft API endpoints
 
-Status: ready after T017 and T019
+Status: completed 2026-06-17
 
 Goal: Add backend endpoints to list, create, view, and update aircraft visible to the authenticated user.
+
+Implementation:
+
+- Added authenticated `GET /api/v1/aircraft`, `POST /api/v1/aircraft`, `GET /api/v1/aircraft/{aircraftId}`, and `PATCH /api/v1/aircraft/{aircraftId}` endpoints.
+- Owner organization members can create, view, and update owned aircraft.
+- Maintenance organization members can view assigned client aircraft through `aircraft_assignments` but cannot update owner records.
+- No-organization users receive an empty aircraft list.
 
 Acceptance:
 
@@ -415,13 +439,21 @@ Suggested checks:
 ```bash
 cd backend
 python -m py_compile main.py
+curl -b /tmp/paprnav-owner.cookies http://127.0.0.1:8000/api/v1/aircraft
 ```
 
 ### T022: Replace dashboard mock data with aircraft API data
 
-Status: ready after T004, T009, and T021
+Status: completed 2026-06-17
 
 Goal: Update `/logbook` so owner and maintenance dashboard views use API-backed aircraft data.
+
+Implementation:
+
+- Replaced inline dashboard aircraft/client arrays with `GET /api/v1/aircraft`.
+- Added typed frontend API client models for auth and aircraft responses.
+- Added loading, retryable error, and empty states.
+- Dashboard defaults to maintenance view for users with only maintenance memberships.
 
 Acceptance:
 
@@ -440,9 +472,16 @@ npm run build
 
 ### T023: Implement logbook entry API endpoints
 
-Status: ready after T017 and T021
+Status: completed 2026-06-17
 
 Goal: Add backend endpoints to list, create, view, and update logbook entries by aircraft and logbook section.
+
+Implementation:
+
+- Added authenticated `GET /api/v1/aircraft/{aircraftId}/logbook-entries`, `POST /api/v1/aircraft/{aircraftId}/logbook-entries`, `GET /api/v1/aircraft/{aircraftId}/logbook-entries/{entryId}`, and `PATCH /api/v1/aircraft/{aircraftId}/logbook-entries/{entryId}` endpoints.
+- Supports `airframe`, `engine`, and `propeller` sections.
+- Owners and assigned maintenance users can create and update manual entries for visible aircraft.
+- Unrelated users receive `404` for aircraft they cannot access.
 
 Acceptance:
 
@@ -457,13 +496,22 @@ Suggested checks:
 ```bash
 cd backend
 python -m py_compile main.py
+curl -b /tmp/paprnav-owner-t023.cookies http://127.0.0.1:8000/api/v1/aircraft/{aircraftId}/logbook-entries
 ```
 
 ### T024: Replace logbook detail mock data with API data
 
-Status: ready after T023
+Status: completed 2026-06-17
 
 Goal: Update `/logbook/[nNumber]` and `/logbook/[nNumber]/entry/[entryId]` to use backend logbook entry APIs.
+
+Implementation:
+
+- Replaced inline dummy logbook entries in `/logbook/[nNumber]` with `GET /api/v1/aircraft/{aircraftId}/logbook-entries?section=...`.
+- Entry links now use real backend logbook entry IDs.
+- `/logbook/[nNumber]/entry/[entryId]` resolves visible aircraft by N-number and loads the entry from the backend API.
+- Entry detail save now calls the backend `PATCH` endpoint instead of simulating a save.
+- Added loading, empty, retryable error, and not-found states.
 
 Acceptance:
 
@@ -483,9 +531,17 @@ npm run build
 
 ### T025: Build manual logbook entry form
 
-Status: ready after T023
+Status: completed 2026-06-17
 
 Goal: Add a real manual-entry workflow separate from upload, or mode-switch the existing add/upload page clearly.
+
+Implementation:
+
+- Added `/logbook/[nNumber]/new?logbook=...` as a dedicated manual-entry workflow.
+- Form captures date, section, description, performer, credential, notes, tach, Hobbs, and total time.
+- Required date and description validation prevents empty submissions.
+- Successful submission calls `POST /api/v1/aircraft/{aircraftId}/logbook-entries` and redirects to the created entry detail page.
+- Logbook list and maintenance row "add" actions now route to the manual-entry workflow; scanned upload actions remain separate.
 
 Acceptance:
 
@@ -504,7 +560,7 @@ npm run build
 
 ### T026: Decide file storage target for MVP
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Resolve P003 in `.ai/DECISIONS.md` with local development and production storage targets.
 
@@ -523,9 +579,17 @@ sed -n '1,260p' .ai/DECISIONS.md
 
 ### T027: Implement backend upload API
 
-Status: ready after T017, T023, and T026
+Status: completed 2026-06-17
 
 Goal: Add backend support for uploading PDF/JPG/PNG logbook files and creating upload metadata linked to an aircraft/logbook entry.
+
+Implementation:
+
+- Added authenticated `POST /api/v1/aircraft/{aircraftId}/uploads` for multipart PDF/JPG/PNG uploads.
+- Added authenticated `GET /api/v1/uploads/{uploadId}/download` for retrieving stored originals.
+- Local development stores files under configurable `PAPRNAV_LOCAL_STORAGE_PATH`, defaulting to `.data`.
+- Upload responses expose metadata and a `downloadUrl` without leaking local filesystem paths.
+- Upload metadata persists to Postgres with storage backend, storage key, file size, content type, SHA-256 hash, and status.
 
 Acceptance:
 
@@ -544,9 +608,16 @@ python -m py_compile main.py
 
 ### T028: Wire frontend upload page to backend upload API
 
-Status: ready after T005 and T027
+Status: completed 2026-06-17
 
 Goal: Replace simulated upload success with a real API call.
+
+Implementation:
+
+- Upload page resolves visible aircraft by N-number and submits selected file to `POST /api/v1/aircraft/{aircraftId}/uploads` through the frontend same-origin proxy.
+- Pending, success, and error states now reflect backend responses.
+- Success state links back to the relevant logbook section and exposes the authorized download URL through the proxy.
+- Upload size copy now matches the backend default `100 MB` limit.
 
 Acceptance:
 
@@ -610,9 +681,16 @@ npm run lint
 
 ### T031: Add backend endpoint tests for MVP flows
 
-Status: ready after T019, T021, T023, and T027
+Status: completed 2026-06-17
 
 Goal: Add automated tests for auth, aircraft, logbook entry, and upload metadata behaviors.
+
+Implementation:
+
+- Added pytest-based backend endpoint tests using FastAPI `TestClient`.
+- Added an isolated SQLite test database fixture with dependency-overridden sessions.
+- Covered auth register/me/logout, aircraft visibility, logbook entry create/list/update/read, upload create/download validation, and unauthorized access boundaries.
+- Added a small session-expiry timezone guard so tests and lightweight SQLite-backed runs handle naive datetimes safely.
 
 Acceptance:
 
@@ -624,7 +702,7 @@ Suggested checks:
 
 ```bash
 cd backend
-python -m pytest
+docker compose exec -T api python -m pytest
 ```
 
 ### T032: Add frontend smoke tests or interaction checks
@@ -646,6 +724,94 @@ Suggested checks:
 cd frontend/paprnav-frontend
 npm run lint
 npm run build
+```
+
+## Human Product Observability Tasks
+
+These tasks add human-visible product observability: demo/support timelines, user feedback, workflow state evidence, and lightweight admin/reviewer visibility. This is not a substitute for infrastructure logs or cloud monitoring.
+
+### T055: Add product observability data model and migration
+
+Status: ready after T017
+
+Goal: Add persisted models for product events, user feedback, and workflow status events based on `.ai/DATA_MODEL.md`.
+
+Acceptance:
+
+- Models store product events without raw logbook text, secrets, or uploaded file contents.
+- User feedback can link to aircraft, uploads, ingestion jobs, OCR corrections, AD review tasks, or compliance worklist items.
+- Workflow status events can represent upload, OCR, AD ingestion, AD extraction, matching, and adjudication state transitions.
+- Migration applies locally and is documented.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T056: Add backend product observability capture helpers
+
+Status: ready after T016 and T055
+
+Goal: Add a backend service/helper for recording product events and workflow status transitions from API routes and workers.
+
+Acceptance:
+
+- Helper accepts actor, event type, subject, safe properties, and request/session context.
+- Helper redacts or rejects sensitive fields.
+- Existing health/version routes remain unchanged.
+- Backend compile check passes.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T057: Instrument core MVP workflow events
+
+Status: ready after T019, T021, T023, T027, T040, and T056
+
+Goal: Record product events for auth, aircraft creation, logbook entry creation, upload, ingestion job creation/status changes, page verification, OCR correction, and AD review actions as those workflows become available.
+
+Acceptance:
+
+- Key user and worker actions write product events.
+- Long-running workflow status changes write workflow status events.
+- Events include enough IDs and statuses to reconstruct demo/support timelines.
+- Events avoid raw uploaded content, OCR text payloads, passwords, and secrets.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+```
+
+### T058: Build internal product observability view
+
+Status: ready after T020, T022, T028, T040, and T057
+
+Goal: Add a lightweight authenticated internal/admin view for recent product events, workflow timelines, and user feedback.
+
+Acceptance:
+
+- Internal user can filter by aircraft, upload, ingestion job, user, event type, and status.
+- Workflow timeline makes demo/support state understandable to a human.
+- User feedback can be created and triaged.
+- No raw uploaded file content, secrets, or full OCR text are shown in the event stream.
+- Lint/build and backend compile checks pass.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+cd ../../backend
+python -m py_compile main.py
 ```
 
 ### T033: Add environment variable documentation and examples
@@ -721,7 +887,7 @@ Acceptance:
 
 ### T038: Design OCR ingestion data model
 
-Status: ready after T003
+Status: completed 2026-06-16
 
 Goal: Extend the data model design for upload batches, pages, OCR text spans, bounding boxes, confidence scores, page-order verification, completeness confirmation, and HITL OCR corrections.
 
@@ -740,7 +906,7 @@ find .ai -maxdepth 1 -type f -name '*.md' -print
 
 ### T039: Decide OCR provider and abstraction
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Resolve P006 in `.ai/DECISIONS.md` with the MVP OCR provider strategy.
 
@@ -865,7 +1031,7 @@ python -m py_compile main.py
 
 ### T045: Rewrite AD ingestion spec for MVP architecture
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Create `.ai/AD_INGESTION_MVP_SPEC.md` using `.ai/AD_INGESTION_REVIEW.md` and the legacy `ad-ingestion-spec.md`.
 
@@ -924,7 +1090,7 @@ python -m py_compile main.py
 
 ### T048: Decide AD extraction provider
 
-Status: ready
+Status: completed 2026-06-16
 
 Goal: Resolve P007 in `.ai/DECISIONS.md`.
 
