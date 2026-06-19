@@ -198,6 +198,88 @@ export interface ExtractLogbookEntriesResponse {
   }>;
 }
 
+export interface AirworthinessDirective {
+  id: string;
+  discoveryRecordId: string;
+  adNumber: string | null;
+  title: string;
+  status: string;
+  extractionStatus: string;
+  reviewStatus: string;
+  federalRegisterDocumentNumber: string;
+  publicationDate: string | null;
+  htmlUrl: string | null;
+  pdfUrl: string | null;
+}
+
+export interface ADExtraction {
+  id: string;
+  directiveId: string;
+  providerName: string;
+  providerVersion: string;
+  schemaVersion: string;
+  inputContentHash: string;
+  status: string;
+  confidence: number;
+  output: Record<string, unknown>;
+  citations: Array<Record<string, unknown>>;
+}
+
+export interface ADExtractionReview {
+  id: string;
+  status: string;
+  proposedOutput: Record<string, unknown>;
+  decisionOutput: Record<string, unknown> | null;
+  decision: string | null;
+  notes: string | null;
+  extraction: ADExtraction;
+  directive: AirworthinessDirective;
+  sourceText: string;
+}
+
+export interface ADExtractionReviewListResponse {
+  reviews: ADExtractionReview[];
+}
+
+export interface ADMatchEvidence {
+  id: string;
+  logbookEntryId: string;
+  entryDate: string;
+  section: LogbookSection;
+  evidenceType: string;
+  fieldName: string | null;
+  matchedText: string;
+  confidence: number;
+  rationale: string;
+}
+
+export interface ADMatchAdjudication {
+  id: string;
+  status: string;
+  decision: string | null;
+  notes: string | null;
+}
+
+export interface ADMatchResult {
+  id: string;
+  aircraftId: string;
+  directive: AirworthinessDirective;
+  status: string;
+  matchType: string;
+  confidence: number;
+  rationale: string;
+  unresolvedReasons: string[];
+  algorithmName: string;
+  algorithmVersion: string;
+  inputHash: string;
+  evidence: ADMatchEvidence[];
+  adjudication: ADMatchAdjudication | null;
+}
+
+export interface ADMatchResultListResponse {
+  matches: ADMatchResult[];
+}
+
 interface ApiErrorPayload {
   detail?: string;
 }
@@ -358,4 +440,26 @@ export function extractLogbookEntries(jobId: string) {
   return apiFetch<ExtractLogbookEntriesResponse>(`/api/v1/ingestion-jobs/${jobId}/extract-logbook-entries`, {
     method: "POST",
   });
+}
+
+export function listAdExtractionReviews() {
+  return apiFetch<ADExtractionReviewListResponse>("/api/v1/ads/extraction-reviews");
+}
+
+export function decideAdExtractionReview(
+  reviewId: string,
+  payload: {
+    decision: "approved" | "edited" | "rejected";
+    output?: Record<string, unknown>;
+    notes?: string | null;
+  },
+) {
+  return apiFetch<{ review: ADExtractionReview }>(`/api/v1/ads/extraction-reviews/${reviewId}/decision`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listAircraftAdMatches(aircraftId: string) {
+  return apiFetch<ADMatchResultListResponse>(`/api/v1/ads/aircraft/${aircraftId}/matches`);
 }

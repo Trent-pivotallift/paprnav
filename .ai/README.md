@@ -11,13 +11,13 @@ paprnav is intended to be an OCR-assisted digital aviation logbook and AD compli
 The current codebase is an early local MVP build:
 
 - `frontend/paprnav-frontend` is a Next.js app with auth wiring, authenticated dashboards, aircraft logbook detail pages, manual entry, upload UI, profile UI, and a same-origin backend proxy.
-- `backend` is a FastAPI service with root, health, version, auth/session, aircraft, logbook entry, upload, and download endpoints.
+- `backend` is a FastAPI service with root, health, version, auth/session, aircraft, logbook entry, upload, download, ingestion, AD review, and AD matching endpoints.
 - Local development uses Docker Compose for the backend API and Postgres database.
 - Persisted SQLAlchemy/Alembic models exist for users, organizations, memberships, aircraft, assignments, logbook sections, logbook entries, auth sessions, and uploads.
 - Backend endpoint tests now cover auth, aircraft visibility, logbook entry, upload/download, and unauthorized access boundaries.
 - There is no AWS infrastructure code or GitHub Actions workflow in this checkout.
 - Deterministic local OCR ingestion, page verification, OCR correction, and structured logbook extraction are implemented for the local MVP slice.
-- Airworthiness Directive ingestion/matching is not implemented yet.
+- Federal Register AD discovery, AD persistence, deterministic structured extraction, AD extraction review, and first-pass AD-to-logbook matching are implemented locally.
 
 ## Important Paths
 
@@ -31,6 +31,7 @@ The current codebase is an early local MVP build:
 - AD ingestion review: `.ai/AD_INGESTION_REVIEW.md`
 - Backend/OCR data model plan: `.ai/DATA_MODEL.md`
 - MVP AD ingestion spec: `.ai/AD_INGESTION_MVP_SPEC.md`
+- AD matching rules: `.ai/AD_MATCHING_RULES.md`
 - Interim API contract: `.ai/API_CONTRACT.md`
 - Environment variable guide: `.ai/ENVIRONMENT.md`
 - External provider references: `.ai/PROVIDER_REFERENCES.md`
@@ -56,6 +57,9 @@ docker compose up db
 docker compose up api
 docker compose run --rm migrate
 docker compose exec -T api python -m pytest
+docker compose exec -T api python -m app.workers.ad_discovery
+docker compose exec -T api python -m app.workers.ad_extraction
+docker compose exec -T api python -m app.workers.ad_matching
 ```
 
 ## Current Repo Notes
@@ -74,3 +78,14 @@ docker compose exec -T api python -m pytest
 6. Check current official docs before specifying or implementing external provider behavior.
 7. Record provider docs, date checked, verified fields, and mapping notes in `.ai/PROVIDER_REFERENCES.md`.
 8. Keep changes scoped. Prefer working vertical slices that can be linted or built.
+
+## Run Closeout Expectations
+
+After any `/goal` or `/agent` run, include a concise closeout with:
+
+- Recap of what changed.
+- Evidence and checks run.
+- Current git state, including uncommitted or untracked files.
+- Human demo point, if one exists.
+- Recommended next tasks in order.
+- Explicit blockers or external permissions, if any.

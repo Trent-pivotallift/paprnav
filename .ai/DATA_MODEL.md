@@ -344,6 +344,185 @@ Open questions:
 - Whether `ProductEvent` and `WorkflowStatusEvent` should be one table with typed categories or two separate tables.
 - Whether local MVP should expose these through a lightweight admin page or only through API/debug views first.
 
+## AD Ingestion Entities
+
+These entities implement the local MVP AD ingestion track from Federal Register discovery through human-reviewed structured extraction.
+
+### ADDiscoveryRecord
+
+Represents one Federal Register source document returned by the AD discovery worker.
+
+Required fields:
+
+- `id`
+- `federal_register_document_number`
+- `title`
+- `document_type`
+- `abstract`
+- `publication_date`
+- `effective_date`
+- `html_url`
+- `pdf_url`
+- `public_inspection_pdf_url`
+- `agency_names`
+- `excerpts`
+- `api_snapshot`
+- `content_hash`
+- `classification`: ad_candidate, non_ad_rule, rejected
+- `classification_confidence`
+- `classification_reason`
+- `classifier_name`
+- `classifier_version`
+- `classified_at`
+
+Audit notes:
+
+- `api_snapshot` retains the raw per-document provider response.
+- `content_hash` is computed from normalized provider JSON for replay/idempotency.
+- FAA `RULE` documents are classified instead of assumed to be ADs.
+
+### AirworthinessDirective
+
+Represents an AD candidate or reviewed AD derived from a discovery record.
+
+Required fields:
+
+- `id`
+- `discovery_record_id`
+- `ad_number`
+- `title`
+- `status`
+- `source_content_hash`
+- `extraction_status`
+- `review_status`
+- `approved_at`
+
+Relationships:
+
+- Belongs to one discovery record.
+- Has many extraction attempts.
+- Has supersedes/superseded-by graph edges through `ADSupersession`.
+
+### ADExtraction
+
+Represents one structured extraction attempt for an AD.
+
+Required fields:
+
+- `id`
+- `directive_id`
+- `provider_name`
+- `provider_version`
+- `schema_version`
+- `input_content_hash`
+- `status`
+- `confidence`
+- `output`
+- `citations`
+- `raw_response`
+- `extracted_at`
+
+Audit notes:
+
+- Idempotency is enforced by directive, input content hash, provider name, provider version, and schema version.
+- Current local provider is `deterministic_ad_extractor` with schema `ad_extraction_v1`.
+
+### ADExtractionReview
+
+Represents human review of a low-confidence or uncertain AD extraction.
+
+Required fields:
+
+- `id`
+- `extraction_id`
+- `status`: pending, approved, edited, rejected
+- `proposed_output`
+- `decision_output`
+- `decision`
+- `reviewer_user_id`
+- `notes`
+- `reviewed_at`
+
+Audit notes:
+
+- Approved and edited decisions validate structured output before becoming available for matching.
+- Rejected decisions preserve the proposed output and reviewer notes.
+
+### ADSupersession
+
+Represents a graph edge between two persisted AD records.
+
+Required fields:
+
+- `id`
+- `superseding_ad_id`
+- `superseded_ad_id`
+- `relationship_type`
+- `evidence_text`
+- `confidence`
+
+## AD Matching Entities
+
+These entities connect approved AD extraction output to structured logbook entries.
+
+### ADMatchResult
+
+Represents one matcher result for an aircraft/directive pair under a specific algorithm replay input.
+
+Required fields:
+
+- `id`
+- `aircraft_id`
+- `directive_id`
+- `extraction_id`
+- `status`: candidate_satisfied, needs_adjudication
+- `match_type`: one_time, simple_recurring
+- `confidence`
+- `rationale`
+- `unresolved_reasons`
+- `algorithm_name`
+- `algorithm_version`
+- `input_hash`
+- `computed_at`
+
+Audit notes:
+
+- `input_hash` includes aircraft facts, approved AD extraction output, and logbook entry text/status.
+- Status is product workflow evidence, not official compliance attestation.
+
+### ADMatchEvidence
+
+Represents a cited logbook entry that contributed to a match result.
+
+Required fields:
+
+- `id`
+- `match_result_id`
+- `logbook_entry_id`
+- `evidence_type`
+- `field_name`
+- `matched_text`
+- `confidence`
+- `rationale`
+
+Relationships:
+
+- Evidence links back to structured logbook entries, which may themselves link to OCR spans and corrections.
+
+### ADMatchAdjudication
+
+Represents a pending or decided human review task for an unresolved AD match.
+
+Required fields:
+
+- `id`
+- `match_result_id`
+- `status`: pending, not_required, reviewed
+- `decision`
+- `reviewer_user_id`
+- `notes`
+- `reviewed_at`
+
 ## OCR Ingestion Entities
 
 These entities extend the core model for T038. They preserve traceability from original upload through OCR, user corrections, and generated structured entries.

@@ -1177,7 +1177,7 @@ find .ai -maxdepth 1 -type f -name '*AD*' -print
 
 ### T046: Implement Federal Register AD discovery prototype
 
-Status: ready after T045
+Status: completed 2026-06-18
 
 Goal: Add a backend script or worker that queries the Federal Register API and classifies FAA rules as AD candidates.
 
@@ -1197,9 +1197,17 @@ cd backend
 python -m py_compile main.py
 ```
 
+Evidence:
+
+- Official Federal Register API docs checked and recorded in `.ai/PROVIDER_REFERENCES.md`.
+- Implemented `backend/app/services/ad_discovery.py` and `backend/app/workers/ad_discovery.py`.
+- Discovery persists raw Federal Register result snapshots, source URLs, publication dates, document numbers, content hashes, and AD/non-AD classification.
+- Backend test covers one AD candidate and one non-AD FAA rule fixture.
+- Live Docker worker run: `ad_discovery seen=20 candidates=20 rejected=0`.
+
 ### T047: Implement AD persistence and supersession model
 
-Status: ready after T017 and T045
+Status: completed 2026-06-18
 
 Goal: Add database support for AD source records, extracted structured data, applicability, compliance requirements, source snapshots, confidence, and supersession relationships.
 
@@ -1216,6 +1224,14 @@ Suggested checks:
 cd backend
 python -m py_compile main.py
 ```
+
+Evidence:
+
+- Added SQLAlchemy models for `ADDiscoveryRecord`, `AirworthinessDirective`, `ADExtraction`, `ADExtractionReview`, and `ADSupersession`.
+- Added Alembic migration `20260618_0004_add_ad_ingestion.py`.
+- Docker Postgres upgraded from `20260618_0003` to `20260618_0004`.
+- Local database after live worker run: 20 discovery records, 20 directives, 13 pending reviews.
+- Data model documented in `.ai/DATA_MODEL.md`.
 
 ### T048: Decide AD extraction provider
 
@@ -1237,7 +1253,7 @@ sed -n '1,320p' .ai/DECISIONS.md
 
 ### T049: Implement structured AD extraction worker
 
-Status: ready after T047 and T048
+Status: completed 2026-06-18
 
 Goal: Extract applicability, compliance actions, intervals, effective date, and supersession clues from AD source records.
 
@@ -1257,9 +1273,17 @@ cd backend
 python -m py_compile main.py
 ```
 
+Evidence:
+
+- Implemented `backend/app/services/ad_extraction.py` and `backend/app/workers/ad_extraction.py`.
+- Extraction persists provider name/version, schema version, input content hash, confidence, citations, raw response metadata, and structured output.
+- Extraction validates required schema keys before persistence/review approval.
+- Idempotency enforced by directive, input content hash, provider name, provider version, and schema version.
+- Live Docker worker run: `ad_extraction seen=20 extracted=20 review_queued=13`.
+
 ### T050: Build AD extraction review queue
 
-Status: ready after T047 and T049
+Status: completed 2026-06-18
 
 Goal: Add backend and frontend review flow for low-confidence AD extraction results.
 
@@ -1280,9 +1304,18 @@ cd ../../backend
 python -m py_compile main.py
 ```
 
+Evidence:
+
+- Added protected AD review API routes under `/api/v1/ads`.
+- Added frontend review page at `/logbook/ads`.
+- Reviewers can inspect source text plus Federal Register/govinfo links, edit structured JSON, approve, save edits, or reject.
+- Review decisions persist reviewer, decision, decision output, notes, and reviewed timestamp.
+- Approved/edited reviews mark extraction approved and directive review status approved for future matching.
+- Browser verification rendered `/logbook/ads` with 13 pending AD extraction reviews and approve/edit/reject controls.
+
 ### T051: Design AD-to-logbook matching rules
 
-Status: ready after T044 and T047
+Status: completed 2026-06-18
 
 Goal: Create a matching design for one-time, recurring/cyclical, conditional, component-specific, and superseded ADs.
 
@@ -1299,9 +1332,15 @@ Suggested checks:
 find .ai -maxdepth 1 -type f -name '*.md' -print
 ```
 
+Evidence:
+
+- Added `.ai/AD_MATCHING_RULES.md`.
+- Documents inputs, outputs, statuses, match types, confidence, candidate logbook entry citation, HITL adjudication triggers, supersession handling, and the non-attestation boundary.
+- Defines current matcher as `deterministic_ad_logbook_matcher` version `0.1.0`.
+
 ### T052: Implement first-pass AD-to-logbook matcher
 
-Status: ready after T044, T049, and T051
+Status: completed 2026-06-18
 
 Goal: Add backend matching job that compares applicable ADs against structured logbook entries and produces candidate match/unresolved records.
 
@@ -1318,6 +1357,15 @@ Suggested checks:
 cd backend
 python -m py_compile main.py
 ```
+
+Evidence:
+
+- Added `ADMatchResult`, `ADMatchEvidence`, and `ADMatchAdjudication` models plus migration `20260618_0005_add_ad_matching.py`.
+- Implemented matcher service and worker in `backend/app/services/ad_matching.py` and `backend/app/workers/ad_matching.py`.
+- Matcher handles one-time and simple recurring AD extraction output, cites candidate logbook entries, skips non-applicable products, and creates pending adjudication for unresolved cases.
+- Added `GET /api/v1/ads/aircraft/{aircraft_id}/matches`.
+- Added aircraft logbook AD Matching panel in the frontend.
+- Backend test `tests/test_ad_matching.py` proves one-time match evidence, simple recurring match evidence, unresolved adjudication, and API response shape.
 
 ### T053: Build HITL AD adjudication workflow
 

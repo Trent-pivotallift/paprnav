@@ -456,7 +456,178 @@ Response: created correction.
 
 ## AD Ingestion And Review Boundary
 
-The first implementation can keep AD ingestion worker commands internal. When exposed through the API, endpoints should follow the same `/api/v1` contract and return reviewed/approved AD records, extraction review tasks, and matching worklist items. AD source persistence, extraction metadata, review thresholds, and future AWS mapping are defined in `.ai/AD_INGESTION_MVP_SPEC.md` and D015.
+AD ingestion is currently driven by local backend workers:
+
+```bash
+cd backend
+python -m app.workers.ad_discovery
+python -m app.workers.ad_extraction
+```
+
+The worker commands persist discovery records, directives, structured extractions, and low-confidence review tasks. The review API is protected by MVP session auth.
+
+### List AD Discovery Records
+
+`GET /api/v1/ads/discovery-records`
+
+Response: array of Federal Register discovery records with document number, title, publication date, source URLs, classification, classification confidence, reason, and content hash.
+
+### List Airworthiness Directives
+
+`GET /api/v1/ads/directives`
+
+Response: array of candidate or reviewed AD records with AD number when detected, Federal Register document number, source URLs, extraction status, and review status.
+
+### List AD Extraction Reviews
+
+`GET /api/v1/ads/extraction-reviews`
+
+Response:
+
+```json
+{
+  "reviews": [
+    {
+      "id": "arv_123",
+      "status": "pending",
+      "proposedOutput": {
+        "adNumber": "2026-12-08",
+        "title": "Airworthiness Directives; Airbus Helicopters",
+        "effectiveDate": null,
+        "publicationDate": "2026-06-16",
+        "affectedProducts": ["Airbus Helicopters"],
+        "complianceActions": ["Review source document for required corrective actions."],
+        "complianceIntervals": [],
+        "supersedesAdNumbers": [],
+        "sourceUrls": {
+          "html": "https://www.federalregister.gov/...",
+          "pdf": "https://www.govinfo.gov/...",
+          "publicInspectionPdf": "https://public-inspection.federalregister.gov/..."
+        }
+      },
+      "decisionOutput": null,
+      "decision": null,
+      "notes": null,
+      "extraction": {
+        "id": "adx_123",
+        "directiveId": "ad_123",
+        "providerName": "deterministic_ad_extractor",
+        "providerVersion": "0.1.0",
+        "schemaVersion": "ad_extraction_v1",
+        "inputContentHash": "sha256",
+        "status": "needs_review",
+        "confidence": 0.84,
+        "output": {},
+        "citations": []
+      },
+      "directive": {
+        "id": "ad_123",
+        "discoveryRecordId": "adr_123",
+        "adNumber": "2026-12-08",
+        "title": "Airworthiness Directives; Airbus Helicopters",
+        "status": "candidate",
+        "extractionStatus": "needs_review",
+        "reviewStatus": "pending",
+        "federalRegisterDocumentNumber": "2026-12050",
+        "publicationDate": "2026-06-16",
+        "htmlUrl": "https://www.federalregister.gov/...",
+        "pdfUrl": "https://www.govinfo.gov/..."
+      },
+      "sourceText": "source title, abstract, and excerpts"
+    }
+  ]
+}
+```
+
+### Decide AD Extraction Review
+
+`POST /api/v1/ads/extraction-reviews/{reviewId}/decision`
+
+Request:
+
+```json
+{
+  "decision": "edited",
+  "output": {
+    "adNumber": "2026-12-08",
+    "title": "Airworthiness Directives; Airbus Helicopters",
+    "effectiveDate": null,
+    "publicationDate": "2026-06-16",
+    "affectedProducts": ["Airbus Helicopters Model AS350B2"],
+    "complianceActions": ["Review source document for required corrective actions."],
+    "complianceIntervals": [],
+    "supersedesAdNumbers": [],
+    "sourceUrls": {
+      "html": "https://www.federalregister.gov/...",
+      "pdf": "https://www.govinfo.gov/...",
+      "publicInspectionPdf": null
+    }
+  },
+  "notes": "Confirmed from source PDF."
+}
+```
+
+Allowed decisions are `approved`, `edited`, and `rejected`. Approved and edited decisions validate the extraction output schema, mark the extraction approved, and make the directive available for future matching work.
+
+### List Aircraft AD Matches
+
+`GET /api/v1/ads/aircraft/{aircraftId}/matches`
+
+Returns first-pass AD-to-logbook matching results visible to the authenticated user for the aircraft.
+
+Response:
+
+```json
+{
+  "matches": [
+    {
+      "id": "adm_123",
+      "aircraftId": "ac_123",
+      "directive": {
+        "id": "ad_123",
+        "adNumber": "2026-99-01",
+        "title": "Airworthiness Directives; Cessna 172R Airplanes",
+        "status": "candidate",
+        "extractionStatus": "complete",
+        "reviewStatus": "approved",
+        "federalRegisterDocumentNumber": "2026-99001",
+        "publicationDate": "2026-06-18",
+        "htmlUrl": "https://www.federalregister.gov/...",
+        "pdfUrl": "https://www.govinfo.gov/..."
+      },
+      "status": "candidate_satisfied",
+      "matchType": "one_time",
+      "confidence": 0.9,
+      "rationale": "Candidate satisfied: found logbook evidence...",
+      "unresolvedReasons": [],
+      "algorithmName": "deterministic_ad_logbook_matcher",
+      "algorithmVersion": "0.1.0",
+      "inputHash": "sha256",
+      "evidence": [
+        {
+          "id": "ame_123",
+          "logbookEntryId": "lbe_123",
+          "entryDate": "2026-05-01",
+          "section": "airframe",
+          "evidenceType": "candidate_logbook_entry",
+          "fieldName": "description",
+          "matchedText": "Complied with AD 2026-99-01...",
+          "confidence": 0.9,
+          "rationale": "logbook text cites the AD number"
+        }
+      ],
+      "adjudication": null
+    }
+  ]
+}
+```
+
+Matching is produced by the local worker:
+
+```bash
+cd backend
+python -m app.workers.ad_matching
+```
 
 ## Open Contract Items
 

@@ -159,6 +159,7 @@ Required extraction metadata:
 Review thresholds:
 
 - Route to review when extraction confidence is below `0.80`.
+- For the local deterministic AD extractor, route to review when confidence is below `0.86` because applicability and compliance details are intentionally shallow until provider-backed extraction is added.
 - Route to review when applicability, compliance interval, or supersession fields are missing or uncertain.
 - Route to review when deterministic and LLM outputs disagree on safety-critical fields.
 

@@ -99,6 +99,7 @@ class Aircraft(TimestampMixin, Base):
     assignments = relationship("AircraftAssignment", back_populates="aircraft")
     logbook_entries = relationship("LogbookEntry", back_populates="aircraft")
     uploads = relationship("Upload", back_populates="aircraft")
+    ad_match_results = relationship("ADMatchResult", back_populates="aircraft")
 
 
 class AircraftAssignment(TimestampMixin, Base):
@@ -329,3 +330,201 @@ class LogbookEntryEvidence(Base):
     ingestion_page = relationship("IngestionPage", back_populates="evidence_links")
     ocr_text_span = relationship("OCRTextSpan", back_populates="evidence_links")
     ocr_correction = relationship("OCRCorrection", back_populates="evidence_links")
+
+
+class ADDiscoveryRecord(TimestampMixin, Base):
+    __tablename__ = "ad_discovery_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("adr"))
+    federal_register_document_number: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    document_type: Mapped[str] = mapped_column(String(64), nullable=True)
+    abstract: Mapped[str] = mapped_column(Text, nullable=True)
+    publication_date: Mapped[Date] = mapped_column(Date, nullable=True, index=True)
+    effective_date: Mapped[Date] = mapped_column(Date, nullable=True)
+    html_url: Mapped[str] = mapped_column(String(1024), nullable=True)
+    pdf_url: Mapped[str] = mapped_column(String(1024), nullable=True)
+    public_inspection_pdf_url: Mapped[str] = mapped_column(String(1024), nullable=True)
+    agency_names: Mapped[list] = mapped_column(JSON, nullable=True)
+    excerpts: Mapped[str] = mapped_column(Text, nullable=True)
+    api_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    classification: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    classification_confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    classification_reason: Mapped[str] = mapped_column(Text, nullable=False)
+    classifier_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    classifier_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    classified_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    directive = relationship("AirworthinessDirective", back_populates="discovery_record", uselist=False)
+
+
+class AirworthinessDirective(TimestampMixin, Base):
+    __tablename__ = "airworthiness_directives"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ad"))
+    discovery_record_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_discovery_records.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    ad_number: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="candidate", index=True)
+    source_content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    extraction_status: Mapped[str] = mapped_column(String(64), nullable=False, default="not_started", index=True)
+    review_status: Mapped[str] = mapped_column(String(64), nullable=False, default="not_started", index=True)
+    approved_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    discovery_record = relationship("ADDiscoveryRecord", back_populates="directive")
+    extractions = relationship("ADExtraction", back_populates="directive")
+    match_results = relationship("ADMatchResult", back_populates="directive")
+    supersedes_edges = relationship(
+        "ADSupersession",
+        foreign_keys="ADSupersession.superseding_ad_id",
+        back_populates="superseding_ad",
+    )
+    superseded_by_edges = relationship(
+        "ADSupersession",
+        foreign_keys="ADSupersession.superseded_ad_id",
+        back_populates="superseded_ad",
+    )
+
+
+class ADSupersession(TimestampMixin, Base):
+    __tablename__ = "ad_supersessions"
+    __table_args__ = (
+        UniqueConstraint("superseding_ad_id", "superseded_ad_id", "relationship_type", name="uq_ad_supersession_edge"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ads"))
+    superseding_ad_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    superseded_ad_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    relationship_type: Mapped[str] = mapped_column(String(64), nullable=False, default="supersedes")
+    evidence_text: Mapped[str] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=True)
+
+    superseding_ad = relationship(
+        "AirworthinessDirective",
+        foreign_keys=[superseding_ad_id],
+        back_populates="supersedes_edges",
+    )
+    superseded_ad = relationship(
+        "AirworthinessDirective",
+        foreign_keys=[superseded_ad_id],
+        back_populates="superseded_by_edges",
+    )
+
+
+class ADExtraction(TimestampMixin, Base):
+    __tablename__ = "ad_extractions"
+    __table_args__ = (
+        UniqueConstraint(
+            "directive_id",
+            "input_content_hash",
+            "provider_name",
+            "provider_version",
+            "schema_version",
+            name="uq_ad_extraction_idempotency",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("adx"))
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    provider_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    provider_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    input_content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="needs_review", index=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    output: Mapped[dict] = mapped_column(JSON, nullable=False)
+    citations: Mapped[list] = mapped_column(JSON, nullable=True)
+    raw_response: Mapped[dict] = mapped_column(JSON, nullable=True)
+    extracted_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    directive = relationship("AirworthinessDirective", back_populates="extractions")
+    reviews = relationship("ADExtractionReview", back_populates="extraction")
+    match_results = relationship("ADMatchResult", back_populates="extraction")
+
+
+class ADExtractionReview(TimestampMixin, Base):
+    __tablename__ = "ad_extraction_reviews"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("arv"))
+    extraction_id: Mapped[str] = mapped_column(ForeignKey("ad_extractions.id"), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="pending", index=True)
+    proposed_output: Mapped[dict] = mapped_column(JSON, nullable=False)
+    decision_output: Mapped[dict] = mapped_column(JSON, nullable=True)
+    decision: Mapped[str] = mapped_column(String(64), nullable=True)
+    reviewer_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    extraction = relationship("ADExtraction", back_populates="reviews")
+    reviewer = relationship("User")
+
+
+class ADMatchResult(TimestampMixin, Base):
+    __tablename__ = "ad_match_results"
+    __table_args__ = (
+        UniqueConstraint(
+            "aircraft_id",
+            "directive_id",
+            "algorithm_name",
+            "algorithm_version",
+            "input_hash",
+            name="uq_ad_match_result_replay",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("adm"))
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    extraction_id: Mapped[str] = mapped_column(ForeignKey("ad_extractions.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    match_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    unresolved_reasons: Mapped[list] = mapped_column(JSON, nullable=True)
+    algorithm_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    algorithm_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    computed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    aircraft = relationship("Aircraft", back_populates="ad_match_results")
+    directive = relationship("AirworthinessDirective", back_populates="match_results")
+    extraction = relationship("ADExtraction", back_populates="match_results")
+    evidence_links = relationship("ADMatchEvidence", back_populates="match_result")
+    adjudication = relationship("ADMatchAdjudication", back_populates="match_result", uselist=False)
+
+
+class ADMatchEvidence(TimestampMixin, Base):
+    __tablename__ = "ad_match_evidence"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ame"))
+    match_result_id: Mapped[str] = mapped_column(ForeignKey("ad_match_results.id"), nullable=False, index=True)
+    logbook_entry_id: Mapped[str] = mapped_column(ForeignKey("logbook_entries.id"), nullable=False, index=True)
+    evidence_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    field_name: Mapped[str] = mapped_column(String(128), nullable=True)
+    matched_text: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+
+    match_result = relationship("ADMatchResult", back_populates="evidence_links")
+    logbook_entry = relationship("LogbookEntry")
+
+
+class ADMatchAdjudication(TimestampMixin, Base):
+    __tablename__ = "ad_match_adjudications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("adj"))
+    match_result_id: Mapped[str] = mapped_column(ForeignKey("ad_match_results.id"), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="pending", index=True)
+    decision: Mapped[str] = mapped_column(String(64), nullable=True)
+    reviewer_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    reviewed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    match_result = relationship("ADMatchResult", back_populates="adjudication")
+    reviewer = relationship("User")

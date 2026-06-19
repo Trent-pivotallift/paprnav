@@ -172,13 +172,15 @@ The backend currently has:
 - Authenticated logbook entry list, create, view, and update endpoints under `/api/v1/aircraft/{aircraftId}/logbook-entries`
 - Authenticated upload create and download endpoints
 - Deterministic local OCR ingestion job, page verification, OCR correction, and structured extraction endpoints
+- Federal Register AD discovery, structured AD extraction, AD extraction review, and first-pass AD-to-logbook match endpoints
 - Owner-versus-maintenance aircraft visibility boundaries
 
 ## Missing Backend Pieces
 
 The backend does not yet have:
 
-- FAA Airworthiness Directive ingestion or matching
+- HITL AD match adjudication decisions
+- Production AWS worker scheduling or object storage
 
 See `.ai/GOAL_TASKS.md` from the project root for the current implementation roadmap.
 

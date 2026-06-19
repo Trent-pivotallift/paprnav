@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { Building2, Calendar, ChevronLeft, Plus, Upload, User, UserPlus } from "lucide-react";
+import { Building2, Calendar, ChevronLeft, FileWarning, Plus, ShieldCheck, Upload, User, UserPlus } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,9 @@ import { PageHeader } from "@/components/PageHeader";
 import {
   Aircraft,
   AircraftAssignment,
+  ADMatchResult,
   createAircraftAssignment,
+  listAircraftAdMatches,
   listAircraft,
   listAircraftAssignments,
   listLogbookEntries,
@@ -48,6 +50,7 @@ export default function AircraftLogbookPage() {
   const [aircraft, setAircraft] = useState<Aircraft | null>(null);
   const [assignments, setAssignments] = useState<AircraftAssignment[]>([]);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
+  const [adMatches, setAdMatches] = useState<ADMatchResult[]>([]);
   const [maintenanceEmail, setMaintenanceEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -74,15 +77,18 @@ export default function AircraftLogbookPage() {
       }
 
       const entriesResponse = await listLogbookEntries(selectedAircraft.id, logbookType);
+      const matchesResponse = await listAircraftAdMatches(selectedAircraft.id);
       const assignmentsResponse = canManageAssignments
         ? await listAircraftAssignments(selectedAircraft.id)
         : { assignments: [] };
       setAircraft(selectedAircraft);
       setEntries(entriesResponse.entries);
+      setAdMatches(matchesResponse.matches);
       setAssignments(assignmentsResponse.assignments);
     } catch (caught) {
       setAircraft(null);
       setEntries([]);
+      setAdMatches([]);
       setAssignments([]);
       setError(caught instanceof Error ? caught.message : "Unable to load logbook entries.");
     } finally {
@@ -200,6 +206,59 @@ export default function AircraftLogbookPage() {
             </form>
             {assignmentMessage ? <p className="text-sm text-green-700 dark:text-green-400">{assignmentMessage}</p> : null}
             {assignmentError ? <p className="text-sm text-destructive">{assignmentError}</p> : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {aircraft ? (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ShieldCheck className="h-5 w-5" />
+              AD Matching
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {adMatches.length ? (
+              adMatches.slice(0, 5).map((match) => (
+                <div key={match.id} className="rounded-md border p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-medium">{match.directive.adNumber ?? match.directive.federalRegisterDocumentNumber}</p>
+                      <p className="text-sm text-muted-foreground">{match.directive.title}</p>
+                    </div>
+                    <span className="rounded-md border px-2 py-1 text-xs font-medium">
+                      {match.status.replaceAll("_", " ")} · {(match.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm">{match.rationale}</p>
+                  {match.unresolvedReasons.length ? (
+                    <p className="mt-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+                      <FileWarning className="h-4 w-4" />
+                      {match.unresolvedReasons.join(", ").replaceAll("_", " ")}
+                    </p>
+                  ) : null}
+                  {match.evidence.length ? (
+                    <div className="mt-3 space-y-2">
+                      {match.evidence.slice(0, 2).map((evidence) => (
+                        <Link
+                          key={evidence.id}
+                          href={`/logbook/${displayNNumber}/entry/${evidence.logbookEntryId}?logbook=${evidence.section}`}
+                          className="block rounded-md bg-muted/40 p-3 text-sm hover:bg-muted"
+                        >
+                          <span className="font-medium">{evidence.entryDate}</span>
+                          <span className="ml-2 text-muted-foreground">{evidence.rationale}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No AD match results yet. Run the local AD matching worker after AD extraction review.
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : null}
