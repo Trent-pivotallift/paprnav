@@ -1,6 +1,6 @@
 # paprnav Decisions
 
-Last updated: 2026-06-16
+Last updated: 2026-06-18
 
 Record decisions here when they affect future implementation. Keep entries short and include the reason.
 
@@ -124,15 +124,18 @@ Required provider-neutral OCR output:
 - page number and rendered page/image reference
 - span type: word, line, block, or region
 - text
-- confidence score
-- bounding box coordinates and units
+- confidence score, stored with an explicit scale; Textract maps naturally to `0-100`
+- bounding box coordinates and units; Textract maps to ratio units, while Tesseract adapters may emit pixel units
+- optional polygon and rotation metadata when providers expose it
 - reading order
+- provider block/span ID and source relationships where available
 - provider name, provider version, configuration hash
 - raw provider artifact reference when useful for audit/replay
 
 Follow-up implementation tasks:
 
 - T041 should define the provider interface and include a deterministic local provider.
+- T041 must check current official Textract docs and any selected local OCR adapter docs before finalizing the interface, then record the mapping in `.ai/PROVIDER_REFERENCES.md`.
 - A later provider task can add Textract behind the same interface.
 - T043 should consume provider-neutral low-confidence spans rather than provider-specific objects.
 
@@ -164,6 +167,22 @@ Follow-up implementation tasks:
 - T047 should persist source records, extraction metadata, applicability, requirements, supersession, and review state.
 - T049 should validate extraction output against a schema and route low-confidence outputs to review.
 - T050 should expose the review queue for accept/edit/reject/defer decisions.
+
+### D016: Verify external provider behavior from current official docs before implementation
+
+Status: accepted
+
+When a task depends on an external service, SDK, API, CLI, file format, or provider-specific output shape, do not design or implement from memory. Check current official documentation or another primary source first, record the docs checked in `.ai/PROVIDER_REFERENCES.md`, and map paprnav's provider-neutral abstractions back to the source fields.
+
+This applies especially to AWS services, OCR engines, Federal Register APIs, LLM/extraction providers, GitHub Actions, deployment tooling, and any future production infrastructure.
+
+Acceptance expectations for affected tasks:
+
+- Cite the official docs or primary source checked.
+- Record the date checked.
+- List source fields/behaviors used by the implementation.
+- Explain any provider-neutral normalization, units, confidence scales, IDs, pagination, rate limits, or async behavior.
+- Keep raw provider artifacts or hashes where needed for audit/replay.
 
 ## Proposed Decisions To Resolve Soon
 

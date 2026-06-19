@@ -1,6 +1,6 @@
 # paprnav API Contract
 
-Last updated: 2026-06-16
+Last updated: 2026-06-18
 
 This is the interim human-readable API contract until FastAPI Pydantic schemas and OpenAPI-generated frontend types are implemented. Per D011, the backend OpenAPI document becomes the source of truth once endpoint schemas exist.
 
@@ -102,6 +102,22 @@ Response:
 }
 ```
 
+### Update Profile
+
+`PATCH /api/v1/auth/profile`
+
+Updates editable fields for the authenticated user. For the local MVP, only display name is editable; email remains read-only until verification and account recovery are defined.
+
+Request:
+
+```json
+{
+  "name": "Sample Owner"
+}
+```
+
+Response: current-user response.
+
 ### Logout
 
 `POST /api/v1/auth/logout`
@@ -175,6 +191,46 @@ Response: one aircraft object with component identity fields.
 Request: partial aircraft fields.
 
 Response: updated aircraft object.
+
+### List Aircraft Assignments
+
+`GET /api/v1/aircraft/{aircraftId}/assignments`
+
+Owner-only route. Returns active maintenance organization assignments for an aircraft.
+
+Response:
+
+```json
+{
+  "assignments": [
+    {
+      "id": "asn_123",
+      "aircraftId": "ac_123",
+      "organizationId": "org_456",
+      "organizationName": "Sample Maintenance Shop",
+      "organizationType": "maintenance_shop",
+      "role": "maintainer",
+      "status": "active"
+    }
+  ]
+}
+```
+
+### Assign Maintenance Access
+
+`POST /api/v1/aircraft/{aircraftId}/assignments`
+
+Owner-only route. MVP assignment resolves an existing active maintenance user by email and grants that user's active maintenance organization access to the aircraft. This avoids invite and account-provisioning flows until those product rules are defined.
+
+Request:
+
+```json
+{
+  "maintenanceUserEmail": "mechanic@example.com"
+}
+```
+
+Response: aircraft assignment object.
 
 ## Logbook Entries
 
@@ -265,6 +321,17 @@ Response:
     "sha256": "hex-hash",
     "status": "stored",
     "downloadUrl": "/api/v1/uploads/upl_123/download"
+  },
+  "ingestionJob": {
+    "id": "job_123",
+    "uploadId": "upl_123",
+    "aircraftId": "ac_123",
+    "status": "queued",
+    "pageExtractionStatus": "queued",
+    "ocrStatus": "queued",
+    "verificationStatus": "not_started",
+    "entryExtractionStatus": "not_started",
+    "logbookSection": "airframe"
   }
 }
 ```
@@ -274,6 +341,58 @@ Response:
 `GET /api/v1/uploads/{uploadId}/download`
 
 Returns the stored original file when the authenticated user can access the linked aircraft.
+
+## OCR Ingestion
+
+### Get Ingestion Job
+
+`GET /api/v1/ingestion-jobs/{jobId}`
+
+Returns job status, extracted page placeholders, OCR spans, corrections, and latest page verification.
+
+### Verify Page Order And Completeness
+
+`POST /api/v1/ingestion-jobs/{jobId}/page-verification`
+
+Request:
+
+```json
+{
+  "pages": [
+    {
+      "pageId": "pg_123",
+      "currentPageOrder": 1
+    }
+  ],
+  "isOrderConfirmed": true,
+  "isComplete": true,
+  "missingOrUncertainNotes": null
+}
+```
+
+Response: updated ingestion job detail.
+
+### Create OCR Correction
+
+`POST /api/v1/ingestion-jobs/{jobId}/ocr-corrections`
+
+Request:
+
+```json
+{
+  "ocrTextSpanId": "spn_123",
+  "correctedText": "Tach: 1035.8",
+  "correctionReason": "low_confidence"
+}
+```
+
+Response: persisted OCR correction.
+
+### Extract Structured Logbook Entries
+
+`POST /api/v1/ingestion-jobs/{jobId}/extract-logbook-entries`
+
+Creates structured logbook entries from verified OCR text and corrections. Entries include source evidence links back to upload, page, OCR span, and correction records.
 
 ### Create Ingestion Job
 

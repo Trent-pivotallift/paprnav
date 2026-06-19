@@ -3,12 +3,24 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { ChevronLeft, Upload, Plus, Calendar, User } from "lucide-react";
+import { Building2, Calendar, ChevronLeft, Plus, Upload, User, UserPlus } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
-import { Aircraft, listAircraft, listLogbookEntries, LogbookEntry, LogbookSection } from "@/lib/api";
+import {
+  Aircraft,
+  AircraftAssignment,
+  createAircraftAssignment,
+  listAircraft,
+  listAircraftAssignments,
+  listLogbookEntries,
+  LogbookEntry,
+  LogbookSection,
+} from "@/lib/api";
 
 const LOGBOOK_SECTIONS: LogbookSection[] = ["airframe", "engine", "propeller"];
 
@@ -28,16 +40,26 @@ function getPerformer(entry: LogbookEntry) {
 }
 
 export default function AircraftLogbookPage() {
+  const { user } = useAuth();
   const params = useParams();
   const searchParams = useSearchParams();
   const nNumber = params.nNumber as string;
   const logbookType = getSection(searchParams.get("logbook"));
   const [aircraft, setAircraft] = useState<Aircraft | null>(null);
+  const [assignments, setAssignments] = useState<AircraftAssignment[]>([]);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
+  const [maintenanceEmail, setMaintenanceEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assignmentMessage, setAssignmentMessage] = useState<string | null>(null);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
 
   const displayNNumber = useMemo(() => normalizeNNumber(nNumber), [nNumber]);
+  const canManageAssignments = useMemo(
+    () => user?.memberships.some((membership) => membership.role.startsWith("owner_")) ?? false,
+    [user],
+  );
 
   const loadEntries = useCallback(async () => {
     setIsLoading(true);
@@ -52,20 +74,50 @@ export default function AircraftLogbookPage() {
       }
 
       const entriesResponse = await listLogbookEntries(selectedAircraft.id, logbookType);
+      const assignmentsResponse = canManageAssignments
+        ? await listAircraftAssignments(selectedAircraft.id)
+        : { assignments: [] };
       setAircraft(selectedAircraft);
       setEntries(entriesResponse.entries);
+      setAssignments(assignmentsResponse.assignments);
     } catch (caught) {
       setAircraft(null);
       setEntries([]);
+      setAssignments([]);
       setError(caught instanceof Error ? caught.message : "Unable to load logbook entries.");
     } finally {
       setIsLoading(false);
     }
-  }, [logbookType, nNumber]);
+  }, [canManageAssignments, logbookType, nNumber]);
 
   useEffect(() => {
     void loadEntries();
   }, [loadEntries]);
+
+  async function handleAssignMaintenance(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!aircraft) {
+      return;
+    }
+
+    setIsAssigning(true);
+    setAssignmentError(null);
+    setAssignmentMessage(null);
+
+    try {
+      const assignment = await createAircraftAssignment(aircraft.id, maintenanceEmail);
+      setAssignments((current) => [
+        ...current.filter((item) => item.organizationId !== assignment.organizationId),
+        assignment,
+      ]);
+      setMaintenanceEmail("");
+      setAssignmentMessage(`${assignment.organizationName} can now access ${aircraft.nNumber}.`);
+    } catch (caught) {
+      setAssignmentError(caught instanceof Error ? caught.message : "Unable to assign maintenance access.");
+    } finally {
+      setIsAssigning(false);
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -101,6 +153,56 @@ export default function AircraftLogbookPage() {
           </Button>
         </div>
       </PageHeader>
+
+      {canManageAssignments && aircraft ? (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-5 w-5" />
+              Maintenance Access
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              {assignments.length ? (
+                assignments.map((assignment) => (
+                  <div
+                    key={assignment.id}
+                    className="flex flex-col gap-1 rounded-md border p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="font-medium">{assignment.organizationName}</span>
+                    <span className="text-muted-foreground">{assignment.role.replaceAll("_", " ")}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No maintenance shops assigned yet.</p>
+              )}
+            </div>
+
+            <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={handleAssignMaintenance}>
+              <div className="space-y-2">
+                <Label htmlFor="maintenance-email">Maintenance user email</Label>
+                <Input
+                  id="maintenance-email"
+                  type="email"
+                  value={maintenanceEmail}
+                  onChange={(event) => setMaintenanceEmail(event.target.value)}
+                  placeholder="shop.demo@paprnav.local"
+                  required
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" disabled={isAssigning || !maintenanceEmail.trim()}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {isAssigning ? "Assigning..." : "Assign"}
+                </Button>
+              </div>
+            </form>
+            {assignmentMessage ? <p className="text-sm text-green-700 dark:text-green-400">{assignmentMessage}</p> : null}
+            {assignmentError ? <p className="text-sm text-destructive">{assignmentError}</p> : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Logbook Tabs */}
       <Tabs value={logbookType} className="mt-8">

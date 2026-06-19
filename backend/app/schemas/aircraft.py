@@ -59,3 +59,22 @@ class AircraftResponse(BaseModel):
 
 class AircraftListResponse(BaseModel):
     aircraft: list[AircraftResponse]
+
+
+class AircraftAssignmentCreateRequest(BaseModel):
+    maintenanceUserEmail: str = Field(min_length=3, max_length=255)
+    role: str = Field(default="maintainer", min_length=1, max_length=64)
+
+
+class AircraftAssignmentResponse(BaseModel):
+    id: str
+    aircraftId: str
+    organizationId: str
+    organizationName: str
+    organizationType: str
+    role: str
+    status: str
+
+
+class AircraftAssignmentListResponse(BaseModel):
+    assignments: list[AircraftAssignmentResponse]

@@ -636,9 +636,22 @@ npm run build
 
 ### T029: Implement profile API and frontend persistence
 
-Status: ready after T019
+Status: completed 2026-06-18
 
 Goal: Make profile/account screens display and update authenticated user data from the backend.
+
+Architecture decision:
+
+- Current-user profile editing stays under the existing FastAPI-owned auth/session boundary for the MVP.
+- `PATCH /api/v1/auth/profile` updates the authenticated user's display name only; email remains read-only until email verification and account recovery are defined.
+
+Implementation:
+
+- Added `PATCH /api/v1/auth/profile`.
+- Added frontend API typing and profile page persistence.
+- Profile now shows current user email and active organization memberships from the backend.
+- Removed the fake password-change form and replaced it with an honest security status card.
+- Added backend endpoint coverage proving profile changes persist through `GET /api/v1/auth/me`.
 
 Acceptance:
 
@@ -659,9 +672,23 @@ python -m py_compile main.py
 
 ### T030: Implement role and organization assignment workflow
 
-Status: ready after T017, T019, and T021
+Status: completed 2026-06-18
 
 Goal: Add the minimal workflow needed to associate maintenance-shop users with client aircraft.
+
+Architecture decision:
+
+- MVP aircraft access assignment is owner-managed and organization-scoped.
+- Owners assign an aircraft by entering an existing maintenance user's email; the backend resolves that user's active maintenance organization and creates or reactivates an aircraft assignment.
+- Invite flows, new maintenance account provisioning, revocation UI, and fine-grained per-user aircraft permissions are deferred until the role model needs them.
+
+Implementation:
+
+- Added owner-only `GET /api/v1/aircraft/{aircraftId}/assignments`.
+- Added owner-only `POST /api/v1/aircraft/{aircraftId}/assignments`.
+- Assignment creation enforces owner access and requires the target user to belong to an active maintenance organization.
+- Aircraft detail page now has a maintenance access panel for owner users.
+- Backend tests prove assigned maintenance users can see client aircraft and cannot manage assignments.
 
 Acceptance:
 
@@ -707,9 +734,21 @@ docker compose exec -T api python -m pytest
 
 ### T032: Add frontend smoke tests or interaction checks
 
-Status: ready after T020, T022, T024, T025, and T028
+Status: completed 2026-06-18
 
 Goal: Add practical frontend checks for login, dashboard, logbook detail, manual entry, and upload flows.
+
+Architecture decision:
+
+- The first frontend smoke check is an HTTP-level local smoke script rather than a browser automation suite.
+- It uses the Next.js same-origin backend proxy so it validates the browser-facing integration path without adding Playwright/Cypress dependencies before CI is in place.
+- Full browser interaction coverage remains a future upgrade once the core OCR workflow stabilizes.
+
+Implementation:
+
+- Added `npm run smoke`.
+- Smoke script checks critical routes and performs login plus manual logbook entry creation through `/api/backend`.
+- Frontend README documents the smoke-test assumptions and environment overrides.
 
 Acceptance:
 
@@ -816,9 +855,22 @@ python -m py_compile main.py
 
 ### T033: Add environment variable documentation and examples
 
-Status: ready after T013, T015, and T026
+Status: completed 2026-06-18
 
 Goal: Document required frontend/backend environment variables and add safe example files if appropriate.
+
+Architecture decision:
+
+- Local examples are committed as `.env.example` files only.
+- Real `.env` and `.env.local` files remain ignored.
+- Future AWS secrets are documented as managed secret inputs, not committed placeholders.
+
+Implementation:
+
+- Added `backend/.env.example`.
+- Added `frontend/paprnav-frontend/.env.example`.
+- Added `.ai/ENVIRONMENT.md`.
+- Updated root and AI handoff docs to point at the environment guide.
 
 Acceptance:
 
@@ -840,6 +892,7 @@ Goal: Add reviewable IaC for the selected AWS production architecture.
 
 Acceptance:
 
+- Current official docs for selected AWS services and deployment tooling are checked and recorded in `.ai/PROVIDER_REFERENCES.md` before implementation.
 - IaC defines frontend hosting, backend hosting, database, storage, networking, secrets, and logs as needed for MVP.
 - State handling and target AWS account/region are documented.
 - Plan/diff command is documented.
@@ -847,9 +900,20 @@ Acceptance:
 
 ### T035: Add CI workflow
 
-Status: ready after test commands exist
+Status: blocked pending GitHub credential with `workflow` scope
 
 Goal: Add GitHub Actions workflows for frontend lint/build and backend tests.
+
+Architecture decision:
+
+- CI is verification-only at this stage.
+- Backend tests run against the SQLite test fixtures and require no Postgres or AWS services.
+- No deployment secrets, AWS credentials, or production actions are required for the first CI gate.
+
+Blocked note:
+
+- A local `.github/workflows/ci.yml` draft exists, but GitHub rejected the push because the current OAuth credential cannot create or update workflow files without `workflow` scope.
+- Do not mark this task complete until the workflow file is committed and pushed with a credential that has the required scope.
 
 Acceptance:
 
@@ -925,9 +989,22 @@ sed -n '1,280p' .ai/DECISIONS.md
 
 ### T040: Implement upload ingestion job API
 
-Status: ready after T017, T026, T027, and T038
+Status: completed 2026-06-18
 
 Goal: Change upload handling from "store a file" to "create an ingestion job" with upload status, page extraction status, OCR status, verification status, and error states.
+
+Architecture decision:
+
+- Upload remains the immutable original-file record.
+- Each upload now creates a separate ingestion job that owns processing state and downstream OCR/HITL workflow.
+- The upload response includes the queued ingestion job so the frontend can route directly to review/status UI.
+
+Implementation:
+
+- Added OCR ingestion persistence models and Alembic migration.
+- Upload API creates an ingestion job tied to upload, aircraft, user, and optional logbook section hint.
+- Added `GET /api/v1/ingestion-jobs/{jobId}` for status and page/span detail.
+- Original upload download behavior remains unchanged.
 
 Acceptance:
 
@@ -945,12 +1022,27 @@ python -m py_compile main.py
 
 ### T041: Implement OCR processing worker skeleton
 
-Status: ready after T039 and T040
+Status: completed 2026-06-18
 
 Goal: Add a backend worker/service entrypoint that can process an ingestion job into pages and OCR records through the chosen OCR abstraction.
 
+Architecture decision:
+
+- The first local OCR provider is deterministic and fixture-backed.
+- Provider-neutral storage uses Textract-compatible `0-100` confidence and explicit geometry units, with provider block IDs and relationships preserved where available.
+- The worker is a local Python entrypoint that can later be replaced or wrapped by queue processing.
+
+Implementation:
+
+- Added deterministic OCR provider abstraction and fixture provider.
+- Added `python -m app.workers.ocr`.
+- Worker persists ingestion pages, OCR runs, and OCR spans with confidence, bounding boxes, provider IDs, and reading order.
+- Worker failures set job failure state.
+
 Acceptance:
 
+- Current official Textract docs and any selected local OCR adapter docs are checked and recorded in `.ai/PROVIDER_REFERENCES.md`.
+- Provider-neutral OCR schema maps explicitly to source provider fields, including confidence scale, geometry units, page numbers, IDs, and relationships.
 - Worker can be run locally.
 - OCR provider interface is explicit.
 - Stub or real provider persists page/text/confidence records.
@@ -965,9 +1057,20 @@ python -m py_compile main.py
 
 ### T042: Build page-order and completeness verification UI
 
-Status: ready after T040
+Status: completed 2026-06-18
 
 Goal: Add UI for users to review uploaded pages, reorder pages if needed, and confirm whether the logbook upload is complete.
+
+Architecture decision:
+
+- Page review is part of the aircraft logbook workflow at `/logbook/{nNumber}/ingestion/{jobId}`.
+- The first UI shows page placeholders and order controls from API data; rendered page images can replace placeholders later without changing the API contract.
+
+Implementation:
+
+- Added OCR review page.
+- Added page-order controls and completeness/notes submission.
+- Backend persists page verification and updates ingestion job status.
 
 Acceptance:
 
@@ -987,9 +1090,20 @@ npm run build
 
 ### T043: Build low-confidence OCR correction workflow
 
-Status: ready after T041
+Status: completed 2026-06-18
 
 Goal: Present low-confidence OCR regions as highlighted snippets with focused correction fields.
+
+Architecture decision:
+
+- Low-confidence correction is span-based and preserves original OCR text.
+- Corrections are additive records; OCR text is not overwritten.
+
+Implementation:
+
+- OCR review page lists spans below the confidence threshold.
+- User can submit corrected text.
+- Backend stores original text, corrected text, confidence, reason, user, and timestamp.
 
 Acceptance:
 
@@ -1011,9 +1125,22 @@ python -m py_compile main.py
 
 ### T044: Implement structured logbook ingestion from verified OCR
 
-Status: ready after T038, T041, T042, and T043
+Status: completed 2026-06-18
 
 Goal: Convert verified OCR text plus corrections into structured logbook entries.
+
+Architecture decision:
+
+- The first extractor is deterministic and conservative.
+- It only runs after page verification and stores evidence links back to upload/page/span/correction records.
+- Low-confidence source material creates `needs_review` entries rather than silently treating extraction as final.
+
+Implementation:
+
+- Added `POST /api/v1/ingestion-jobs/{jobId}/extract-logbook-entries`.
+- Deterministic extractor parses date, description, performer, credential, and time fields from fixture OCR lines.
+- Created logbook entries use `source_type=ocr_ingestion`.
+- Added logbook entry evidence persistence with extraction provider metadata.
 
 Acceptance:
 
@@ -1056,6 +1183,8 @@ Goal: Add a backend script or worker that queries the Federal Register API and c
 
 Acceptance:
 
+- Current official Federal Register API docs are checked and recorded in `.ai/PROVIDER_REFERENCES.md`.
+- API query parameters, pagination/limits, source URLs, publication dates, document numbers, and raw response retention are mapped before implementation.
 - Uses Federal Register API as primary source.
 - Does not assume every FAA Rule is an AD.
 - Stores discovery metadata and candidate/rejected classification.
@@ -1114,6 +1243,8 @@ Goal: Extract applicability, compliance actions, intervals, effective date, and 
 
 Acceptance:
 
+- Current extraction provider docs are checked and recorded in `.ai/PROVIDER_REFERENCES.md` before provider-backed behavior is implemented.
+- Provider request/response shape, model/version metadata, structured output validation, confidence/uncertainty behavior, citations, and retry/idempotency expectations are mapped.
 - Extraction output validates against a schema.
 - Low-confidence outputs route to AD extraction review.
 - Provider/version metadata is persisted.

@@ -11,7 +11,9 @@ from app.api.routes.aircraft import get_visible_aircraft_or_404
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.core import Upload, User, new_id
+from app.schemas.ingestion import IngestionJobSummary
 from app.schemas.uploads import UploadCreateResponse, UploadResponse
+from app.services.ingestion import create_ingestion_job
 from app.services.storage import store_local_file
 
 router = APIRouter(prefix="/api/v1/aircraft/{aircraft_id}/uploads", tags=["uploads"])
@@ -49,6 +51,22 @@ def serialize_upload(upload: Upload) -> UploadResponse:
         sha256=upload.sha256,
         status=upload.status,
         downloadUrl=f"/api/v1/uploads/{upload.id}/download",
+    )
+
+
+def serialize_ingestion_job(job) -> IngestionJobSummary:
+    return IngestionJobSummary(
+        id=job.id,
+        uploadId=job.upload_id,
+        aircraftId=job.aircraft_id,
+        status=job.status,
+        pageExtractionStatus=job.page_extraction_status,
+        ocrStatus=job.ocr_status,
+        verificationStatus=job.verification_status,
+        entryExtractionStatus=job.entry_extraction_status,
+        logbookSection=job.logbook_section_key,
+        errorCode=job.error_code,
+        errorMessage=job.error_message,
     )
 
 
@@ -105,9 +123,12 @@ def upload_logbook_file(
         status="stored",
     )
     db.add(upload)
+    db.flush()
+    ingestion_job = create_ingestion_job(db, upload, current_user.id, section)
     db.commit()
     db.refresh(upload)
-    return UploadCreateResponse(upload=serialize_upload(upload))
+    db.refresh(ingestion_job)
+    return UploadCreateResponse(upload=serialize_upload(upload), ingestionJob=serialize_ingestion_job(ingestion_job))
 
 
 @download_router.get("/{upload_id}/download")

@@ -17,6 +17,10 @@ export interface AuthResponse {
   user: CurrentUser;
 }
 
+export interface ProfileUpdateRequest {
+  name: string;
+}
+
 export interface Aircraft {
   id: string;
   nNumber: string;
@@ -38,6 +42,20 @@ export interface Aircraft {
 
 export interface AircraftListResponse {
   aircraft: Aircraft[];
+}
+
+export interface AircraftAssignment {
+  id: string;
+  aircraftId: string;
+  organizationId: string;
+  organizationName: string;
+  organizationType: string;
+  role: string;
+  status: string;
+}
+
+export interface AircraftAssignmentListResponse {
+  assignments: AircraftAssignment[];
 }
 
 export type LogbookSection = "airframe" | "engine" | "propeller";
@@ -97,6 +115,87 @@ export interface Upload {
 
 export interface UploadCreateResponse {
   upload: Upload;
+  ingestionJob: IngestionJobSummary;
+}
+
+export interface IngestionJobSummary {
+  id: string;
+  uploadId: string;
+  aircraftId: string;
+  status: string;
+  pageExtractionStatus: string;
+  ocrStatus: string;
+  verificationStatus: string;
+  entryExtractionStatus: string;
+  logbookSection: LogbookSection | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export interface OCRCorrection {
+  id: string;
+  ocrTextSpanId: string;
+  originalText: string;
+  correctedText: string;
+  originalConfidence: number | null;
+  correctionReason: string;
+  notes: string | null;
+}
+
+export interface OCRTextSpan {
+  id: string;
+  ingestionPageId: string;
+  providerBlockId: string | null;
+  spanType: string;
+  text: string;
+  confidence: number | null;
+  confidenceScale: string;
+  bboxLeft: number | null;
+  bboxTop: number | null;
+  bboxWidth: number | null;
+  bboxHeight: number | null;
+  bboxUnits: string;
+  readingOrder: number;
+  corrections: OCRCorrection[];
+}
+
+export interface IngestionPage {
+  id: string;
+  sourcePageNumber: number;
+  currentPageOrder: number;
+  pageLabel: string | null;
+  imageStorageBackend: string | null;
+  imageStorageKey: string | null;
+  widthPx: number | null;
+  heightPx: number | null;
+  rotationDegrees: number | null;
+  extractionConfidence: number | null;
+  spans: OCRTextSpan[];
+}
+
+export interface PageVerification {
+  id: string;
+  isOrderConfirmed: boolean;
+  isComplete: boolean;
+  missingOrUncertainNotes: string | null;
+}
+
+export interface IngestionJobDetailResponse {
+  job: IngestionJobSummary;
+  pages: IngestionPage[];
+  latestVerification: PageVerification | null;
+}
+
+export interface ExtractLogbookEntriesResponse {
+  entries: Array<{
+    id: string;
+    entryDate: string;
+    section: LogbookSection;
+    description: string;
+    performerName: string | null;
+    performerCredential: string | null;
+    reviewStatus: string;
+  }>;
 }
 
 interface ApiErrorPayload {
@@ -159,12 +258,30 @@ export function getCurrentUser() {
   return apiFetch<AuthResponse>("/api/v1/auth/me");
 }
 
+export function updateProfile(payload: ProfileUpdateRequest) {
+  return apiFetch<AuthResponse>("/api/v1/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function logout() {
   return apiFetch<{ ok: boolean }>("/api/v1/auth/logout", { method: "POST" });
 }
 
 export function listAircraft() {
   return apiFetch<AircraftListResponse>("/api/v1/aircraft");
+}
+
+export function listAircraftAssignments(aircraftId: string) {
+  return apiFetch<AircraftAssignmentListResponse>(`/api/v1/aircraft/${aircraftId}/assignments`);
+}
+
+export function createAircraftAssignment(aircraftId: string, maintenanceUserEmail: string) {
+  return apiFetch<AircraftAssignment>(`/api/v1/aircraft/${aircraftId}/assignments`, {
+    method: "POST",
+    body: JSON.stringify({ maintenanceUserEmail }),
+  });
 }
 
 export function listLogbookEntries(aircraftId: string, section?: LogbookSection) {
@@ -200,5 +317,45 @@ export function uploadLogbookFile(aircraftId: string, file: File, section?: Logb
   return apiFetch<UploadCreateResponse>(`/api/v1/aircraft/${aircraftId}/uploads`, {
     method: "POST",
     body: formData,
+  });
+}
+
+export function getIngestionJob(jobId: string) {
+  return apiFetch<IngestionJobDetailResponse>(`/api/v1/ingestion-jobs/${jobId}`);
+}
+
+export function verifyIngestionPages(
+  jobId: string,
+  payload: {
+    pages: Array<{ pageId: string; currentPageOrder: number }>;
+    isOrderConfirmed: boolean;
+    isComplete: boolean;
+    missingOrUncertainNotes?: string | null;
+  },
+) {
+  return apiFetch<IngestionJobDetailResponse>(`/api/v1/ingestion-jobs/${jobId}/page-verification`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createOcrCorrection(
+  jobId: string,
+  payload: {
+    ocrTextSpanId: string;
+    correctedText: string;
+    correctionReason?: string;
+    notes?: string | null;
+  },
+) {
+  return apiFetch<OCRCorrection>(`/api/v1/ingestion-jobs/${jobId}/ocr-corrections`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function extractLogbookEntries(jobId: string) {
+  return apiFetch<ExtractLogbookEntriesResponse>(`/api/v1/ingestion-jobs/${jobId}/extract-logbook-entries`, {
+    method: "POST",
   });
 }

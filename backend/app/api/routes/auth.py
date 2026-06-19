@@ -9,7 +9,15 @@ from app.api.deps import SESSION_COOKIE_NAME, get_current_user
 from app.core.security import create_session_token, hash_password, hash_session_token, verify_password
 from app.db.session import get_db
 from app.models.core import AuthSession, User
-from app.schemas.auth import AuthResponse, CurrentUserResponse, LoginRequest, MembershipResponse, OkResponse, RegisterRequest
+from app.schemas.auth import (
+    AuthResponse,
+    CurrentUserResponse,
+    LoginRequest,
+    MembershipResponse,
+    OkResponse,
+    ProfileUpdateRequest,
+    RegisterRequest,
+)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -87,6 +95,18 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Sessi
 
 @router.get("/me", response_model=AuthResponse)
 def me(current_user: User = Depends(get_current_user)) -> AuthResponse:
+    return AuthResponse(user=serialize_user(current_user))
+
+
+@router.patch("/profile", response_model=AuthResponse)
+def update_profile(
+    payload: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AuthResponse:
+    current_user.name = payload.name.strip()
+    db.commit()
+    db.refresh(current_user)
     return AuthResponse(user=serialize_user(current_user))
 
 

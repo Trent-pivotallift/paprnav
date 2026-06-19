@@ -2,7 +2,7 @@
 
 paprnav is a digital aviation logbook application for aircraft owners and maintenance shops. This frontend currently provides the authenticated app shell, aircraft/logbook screens, upload UI, profile UI, theme switching, and Shadcn/ui-style components.
 
-The app is still early-stage. Most screens use static mock data and form submissions are not wired to the backend yet.
+The app is still early-stage. Auth, aircraft, logbook entry, upload, profile, maintenance assignment, deterministic OCR review, and OCR-to-logbook extraction flows are wired to the local backend; AD workflows are not implemented yet.
 
 ## Tech Stack
 
@@ -42,6 +42,12 @@ Build for production:
 npm run build
 ```
 
+Run smoke checks against a running local frontend/backend:
+
+```bash
+npm run smoke
+```
+
 Start a production build:
 
 ```bash
@@ -54,6 +60,7 @@ npm run start
 - `npm run lint`: runs ESLint.
 - `npm run build`: creates a production build.
 - `npm run start`: serves the production build.
+- `npm run smoke`: checks key routes, authenticated manual-entry creation, upload creation, and ingestion review route rendering through the frontend backend proxy.
 
 ## Route Overview
 
@@ -62,6 +69,7 @@ npm run start
 - `/logbook`: role-switched dashboard for aircraft owners and maintenance shops.
 - `/logbook/[nNumber]`: aircraft logbook detail page with airframe, engine, and propeller tabs.
 - `/logbook/[nNumber]/upload`: upload UI for scanned logbook records.
+- `/logbook/[nNumber]/ingestion/[jobId]`: OCR page review, low-confidence correction, and structured entry extraction.
 - `/logbook/[nNumber]/entry/[entryId]`: individual logbook entry detail page.
 - `/profile`: profile and account screen.
 
@@ -74,8 +82,27 @@ Route groups:
 
 The frontend uses backend auth sessions and fetches dashboard aircraft and logbook entry data from the backend API. Manual logbook entries and uploaded logbook files are created through the backend API.
 
+## Smoke Checks
+
+With the backend Docker API running, database migrated/seeded, and the frontend dev server available at `http://localhost:3000`, run:
+
+```bash
+npm run smoke
+```
+
+The smoke script checks key routes and exercises authenticated manual-entry creation, upload creation, and ingestion review route rendering through the frontend same-origin backend proxy.
+
+Optional overrides:
+
+```bash
+PAPRNAV_FRONTEND_URL=http://localhost:3000
+PAPRNAV_SMOKE_EMAIL=owner.demo@paprnav.local
+PAPRNAV_SMOKE_PASSWORD=demo-password
+```
+
 Known limitations:
 
+- AD workflows are not implemented yet.
 - Full role/permission UX is still minimal; backend authorization is enforced by the API.
 
 ## Backend Relationship

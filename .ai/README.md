@@ -1,6 +1,6 @@
 # paprnav AI Project State
 
-Last updated: 2026-06-17
+Last updated: 2026-06-18
 
 This folder is the shared project memory for AI agents working on paprnav. Keep it concise, current, and useful for handoffs.
 
@@ -16,7 +16,8 @@ The current codebase is an early local MVP build:
 - Persisted SQLAlchemy/Alembic models exist for users, organizations, memberships, aircraft, assignments, logbook sections, logbook entries, auth sessions, and uploads.
 - Backend endpoint tests now cover auth, aircraft visibility, logbook entry, upload/download, and unauthorized access boundaries.
 - There is no AWS infrastructure code or GitHub Actions workflow in this checkout.
-- OCR ingestion and Airworthiness Directive ingestion/matching are not implemented yet.
+- Deterministic local OCR ingestion, page verification, OCR correction, and structured logbook extraction are implemented for the local MVP slice.
+- Airworthiness Directive ingestion/matching is not implemented yet.
 
 ## Important Paths
 
@@ -31,6 +32,8 @@ The current codebase is an early local MVP build:
 - Backend/OCR data model plan: `.ai/DATA_MODEL.md`
 - MVP AD ingestion spec: `.ai/AD_INGESTION_MVP_SPEC.md`
 - Interim API contract: `.ai/API_CONTRACT.md`
+- Environment variable guide: `.ai/ENVIRONMENT.md`
+- External provider references: `.ai/PROVIDER_REFERENCES.md`
 
 ## Useful Local Commands
 
@@ -41,6 +44,7 @@ cd frontend/paprnav-frontend
 npm run dev
 npm run lint
 npm run build
+npm run smoke
 ```
 
 Backend:
@@ -56,10 +60,8 @@ docker compose exec -T api python -m pytest
 
 ## Current Repo Notes
 
-- The Git repository is nested at `frontend/paprnav-frontend`, not at the project root.
-- `origin/main` currently points to `18f8000`, matching local `main`.
-- Latest commit: `Modernize frontend with Shadcn/ui and theme switching`.
-- Project root is not a Git repository at the time of this note.
+- The Git repository is at the project root.
+- Latest known pushed checkpoint before this task wave: `b37b285 Build local MVP backend integration`.
 - Avoid treating `.next` or `node_modules` as source of truth.
 
 ## How Agents Should Work Here
@@ -69,4 +71,6 @@ docker compose exec -T api python -m pytest
 3. Update `.ai/DECISIONS.md` when making a durable architecture or product choice.
 4. Update `.ai/GOAL_TASKS.md` when a task is completed, split, blocked, or made obsolete.
 5. Read `.ai/AD_INGESTION_REVIEW.md` before changing AD ingestion or matching behavior.
-6. Keep changes scoped. Prefer working vertical slices that can be linted or built.
+6. Check current official docs before specifying or implementing external provider behavior.
+7. Record provider docs, date checked, verified fields, and mapping notes in `.ai/PROVIDER_REFERENCES.md`.
+8. Keep changes scoped. Prefer working vertical slices that can be linted or built.

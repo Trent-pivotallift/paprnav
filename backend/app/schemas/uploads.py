@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.schemas.ingestion import IngestionJobSummary
+
 
 class UploadResponse(BaseModel):
     id: str
@@ -14,3 +16,4 @@ class UploadResponse(BaseModel):
 
 class UploadCreateResponse(BaseModel):
     upload: UploadResponse
+    ingestionJob: IngestionJobSummary

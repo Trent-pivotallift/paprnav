@@ -7,7 +7,15 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.core import Aircraft, AircraftAssignment, LogbookEntry, OrganizationMembership, User
-from app.schemas.aircraft import AircraftCreateRequest, AircraftListResponse, AircraftResponse, AircraftUpdateRequest
+from app.schemas.aircraft import (
+    AircraftAssignmentCreateRequest,
+    AircraftAssignmentListResponse,
+    AircraftAssignmentResponse,
+    AircraftCreateRequest,
+    AircraftListResponse,
+    AircraftResponse,
+    AircraftUpdateRequest,
+)
 
 router = APIRouter(prefix="/api/v1/aircraft", tags=["aircraft"])
 
@@ -89,6 +97,26 @@ def serialize_aircraft(db: Session, aircraft: Aircraft) -> AircraftResponse:
         lastLogEntryDate=last_log_entry_date,
         complianceStatus="needs_review",
     )
+
+
+def serialize_assignment(assignment: AircraftAssignment) -> AircraftAssignmentResponse:
+    return AircraftAssignmentResponse(
+        id=assignment.id,
+        aircraftId=assignment.aircraft_id,
+        organizationId=assignment.organization_id,
+        organizationName=assignment.organization.name,
+        organizationType=assignment.organization.type,
+        role=assignment.role,
+        status=assignment.status,
+    )
+
+
+def maintenance_memberships_for_user(user: User) -> list[OrganizationMembership]:
+    return [
+        membership
+        for membership in active_memberships(user)
+        if membership.organization.type == "maintenance_shop" or membership.role.startswith("maintenance_")
+    ]
 
 
 def apply_aircraft_fields(aircraft: Aircraft, payload: AircraftCreateRequest | AircraftUpdateRequest) -> None:
@@ -205,3 +233,63 @@ def update_aircraft(
     db.commit()
     db.refresh(aircraft)
     return serialize_aircraft(db, aircraft)
+
+
+@router.get("/{aircraft_id}/assignments", response_model=AircraftAssignmentListResponse)
+def list_aircraft_assignments(
+    aircraft_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AircraftAssignmentListResponse:
+    aircraft = get_visible_aircraft_or_404(db, current_user, aircraft_id)
+    ensure_owner_access(aircraft, current_user)
+
+    assignments = db.scalars(
+        select(AircraftAssignment)
+        .where(AircraftAssignment.aircraft_id == aircraft_id, AircraftAssignment.status == "active")
+        .order_by(AircraftAssignment.created_at)
+    ).all()
+    return AircraftAssignmentListResponse(assignments=[serialize_assignment(assignment) for assignment in assignments])
+
+
+@router.post("/{aircraft_id}/assignments", response_model=AircraftAssignmentResponse, status_code=status.HTTP_201_CREATED)
+def create_aircraft_assignment(
+    aircraft_id: str,
+    payload: AircraftAssignmentCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AircraftAssignmentResponse:
+    aircraft = get_visible_aircraft_or_404(db, current_user, aircraft_id)
+    ensure_owner_access(aircraft, current_user)
+
+    maintenance_user = db.scalar(select(User).where(User.email == payload.maintenanceUserEmail.strip().lower()))
+    if not maintenance_user or maintenance_user.status != "active":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Maintenance user not found")
+
+    maintenance_membership = next(iter(maintenance_memberships_for_user(maintenance_user)), None)
+    if maintenance_membership is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not in a maintenance organization")
+
+    assignment = db.scalar(
+        select(AircraftAssignment).where(
+            AircraftAssignment.aircraft_id == aircraft_id,
+            AircraftAssignment.organization_id == maintenance_membership.organization_id,
+        )
+    )
+    if assignment:
+        assignment.assigned_by_user_id = current_user.id
+        assignment.role = payload.role.strip()
+        assignment.status = "active"
+    else:
+        assignment = AircraftAssignment(
+            aircraft_id=aircraft_id,
+            organization_id=maintenance_membership.organization_id,
+            assigned_by_user_id=current_user.id,
+            role=payload.role.strip(),
+            status="active",
+        )
+        db.add(assignment)
+
+    db.commit()
+    db.refresh(assignment)
+    return serialize_assignment(assignment)

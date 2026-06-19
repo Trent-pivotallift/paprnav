@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -149,6 +149,7 @@ class LogbookEntry(TimestampMixin, Base):
     aircraft = relationship("Aircraft", back_populates="logbook_entries")
     logbook_section = relationship("LogbookSection", back_populates="entries")
     created_by_user = relationship("User")
+    evidence_links = relationship("LogbookEntryEvidence", back_populates="logbook_entry")
 
 
 class Upload(TimestampMixin, Base):
@@ -167,3 +168,164 @@ class Upload(TimestampMixin, Base):
 
     aircraft = relationship("Aircraft", back_populates="uploads")
     uploaded_by_user = relationship("User")
+    ingestion_jobs = relationship("IngestionJob", back_populates="upload")
+
+
+class IngestionJob(TimestampMixin, Base):
+    __tablename__ = "ingestion_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("job"))
+    upload_id: Mapped[str] = mapped_column(ForeignKey("uploads.id"), nullable=False, index=True)
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="queued")
+    page_extraction_status: Mapped[str] = mapped_column(String(64), nullable=False, default="queued")
+    ocr_status: Mapped[str] = mapped_column(String(64), nullable=False, default="queued")
+    verification_status: Mapped[str] = mapped_column(String(64), nullable=False, default="not_started")
+    entry_extraction_status: Mapped[str] = mapped_column(String(64), nullable=False, default="not_started")
+    logbook_section_key: Mapped[str] = mapped_column(String(64), nullable=True)
+    error_code: Mapped[str] = mapped_column(String(128), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    completed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    upload = relationship("Upload", back_populates="ingestion_jobs")
+    aircraft = relationship("Aircraft")
+    created_by_user = relationship("User")
+    pages = relationship("IngestionPage", back_populates="ingestion_job", order_by="IngestionPage.current_page_order")
+    ocr_runs = relationship("OCRRun", back_populates="ingestion_job")
+    verifications = relationship("PageVerification", back_populates="ingestion_job")
+    corrections = relationship("OCRCorrection", back_populates="ingestion_job")
+    evidence_links = relationship("LogbookEntryEvidence", back_populates="ingestion_job")
+
+
+class IngestionPage(TimestampMixin, Base):
+    __tablename__ = "ingestion_pages"
+    __table_args__ = (UniqueConstraint("ingestion_job_id", "source_page_number", name="uq_ingestion_page_source"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("pg"))
+    ingestion_job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), nullable=False, index=True)
+    upload_id: Mapped[str] = mapped_column(ForeignKey("uploads.id"), nullable=False, index=True)
+    source_page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    current_page_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    page_label: Mapped[str] = mapped_column(String(128), nullable=True)
+    image_storage_backend: Mapped[str] = mapped_column(String(64), nullable=True)
+    image_storage_key: Mapped[str] = mapped_column(String(1024), nullable=True)
+    width_px: Mapped[int] = mapped_column(Integer, nullable=True)
+    height_px: Mapped[int] = mapped_column(Integer, nullable=True)
+    rotation_degrees: Mapped[float] = mapped_column(Float, nullable=True)
+    extraction_confidence: Mapped[float] = mapped_column(Float, nullable=True)
+
+    ingestion_job = relationship("IngestionJob", back_populates="pages")
+    upload = relationship("Upload")
+    ocr_spans = relationship("OCRTextSpan", back_populates="ingestion_page", order_by="OCRTextSpan.reading_order")
+    corrections = relationship("OCRCorrection", back_populates="ingestion_page")
+    evidence_links = relationship("LogbookEntryEvidence", back_populates="ingestion_page")
+
+
+class PageVerification(Base):
+    __tablename__ = "page_verifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ver"))
+    ingestion_job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), nullable=False, index=True)
+    verified_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    is_order_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    is_complete: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    missing_or_uncertain_notes: Mapped[str] = mapped_column(Text, nullable=True)
+    page_order_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    verified_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    ingestion_job = relationship("IngestionJob", back_populates="verifications")
+    verified_by_user = relationship("User")
+
+
+class OCRRun(Base):
+    __tablename__ = "ocr_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ocr"))
+    ingestion_job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), nullable=False, index=True)
+    provider_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    provider_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    configuration_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="queued")
+    started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    ingestion_job = relationship("IngestionJob", back_populates="ocr_runs")
+    spans = relationship("OCRTextSpan", back_populates="ocr_run")
+
+
+class OCRTextSpan(TimestampMixin, Base):
+    __tablename__ = "ocr_text_spans"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("spn"))
+    ocr_run_id: Mapped[str] = mapped_column(ForeignKey("ocr_runs.id"), nullable=False, index=True)
+    ingestion_page_id: Mapped[str] = mapped_column(ForeignKey("ingestion_pages.id"), nullable=False, index=True)
+    provider_block_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    span_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    confidence_scale: Mapped[str] = mapped_column(String(32), nullable=False, default="0_100")
+    bbox_left: Mapped[float] = mapped_column(Float, nullable=True)
+    bbox_top: Mapped[float] = mapped_column(Float, nullable=True)
+    bbox_width: Mapped[float] = mapped_column(Float, nullable=True)
+    bbox_height: Mapped[float] = mapped_column(Float, nullable=True)
+    bbox_units: Mapped[str] = mapped_column(String(32), nullable=False, default="ratio")
+    polygon: Mapped[list] = mapped_column(JSON, nullable=True)
+    rotation_degrees: Mapped[float] = mapped_column(Float, nullable=True)
+    reading_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    relationships: Mapped[list] = mapped_column(JSON, nullable=True)
+
+    ocr_run = relationship("OCRRun", back_populates="spans")
+    ingestion_page = relationship("IngestionPage", back_populates="ocr_spans")
+    corrections = relationship("OCRCorrection", back_populates="ocr_text_span")
+    evidence_links = relationship("LogbookEntryEvidence", back_populates="ocr_text_span")
+
+
+class OCRCorrection(TimestampMixin, Base):
+    __tablename__ = "ocr_corrections"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("cor"))
+    ingestion_job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), nullable=False, index=True)
+    ingestion_page_id: Mapped[str] = mapped_column(ForeignKey("ingestion_pages.id"), nullable=False, index=True)
+    ocr_text_span_id: Mapped[str] = mapped_column(ForeignKey("ocr_text_spans.id"), nullable=False, index=True)
+    corrected_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    original_text: Mapped[str] = mapped_column(Text, nullable=False)
+    corrected_text: Mapped[str] = mapped_column(Text, nullable=False)
+    original_confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    correction_reason: Mapped[str] = mapped_column(String(64), nullable=False, default="low_confidence")
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+
+    ingestion_job = relationship("IngestionJob", back_populates="corrections")
+    ingestion_page = relationship("IngestionPage", back_populates="corrections")
+    ocr_text_span = relationship("OCRTextSpan", back_populates="corrections")
+    corrected_by_user = relationship("User")
+    evidence_links = relationship("LogbookEntryEvidence", back_populates="ocr_correction")
+
+
+class LogbookEntryEvidence(Base):
+    __tablename__ = "logbook_entry_evidence"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("evd"))
+    logbook_entry_id: Mapped[str] = mapped_column(ForeignKey("logbook_entries.id"), nullable=False, index=True)
+    upload_id: Mapped[str] = mapped_column(ForeignKey("uploads.id"), nullable=False, index=True)
+    ingestion_job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), nullable=False, index=True)
+    ingestion_page_id: Mapped[str] = mapped_column(ForeignKey("ingestion_pages.id"), nullable=True, index=True)
+    ocr_text_span_id: Mapped[str] = mapped_column(ForeignKey("ocr_text_spans.id"), nullable=True, index=True)
+    ocr_correction_id: Mapped[str] = mapped_column(ForeignKey("ocr_corrections.id"), nullable=True, index=True)
+    evidence_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    field_name: Mapped[str] = mapped_column(String(128), nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    extraction_provider_name: Mapped[str] = mapped_column(String(128), nullable=True)
+    extraction_provider_version: Mapped[str] = mapped_column(String(128), nullable=True)
+    extraction_schema_version: Mapped[str] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    logbook_entry = relationship("LogbookEntry", back_populates="evidence_links")
+    upload = relationship("Upload")
+    ingestion_job = relationship("IngestionJob", back_populates="evidence_links")
+    ingestion_page = relationship("IngestionPage", back_populates="evidence_links")
+    ocr_text_span = relationship("OCRTextSpan", back_populates="evidence_links")
+    ocr_correction = relationship("OCRCorrection", back_populates="evidence_links")

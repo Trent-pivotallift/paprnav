@@ -28,6 +28,7 @@ Read these before starting feature work:
 - `.ai/REQUIREMENTS.md`
 - `.ai/DECISIONS.md`
 - `.ai/GOAL_TASKS.md`
+- `.ai/ENVIRONMENT.md`
 - `.ai/AD_INGESTION_REVIEW.md`
 
 ## Frontend
@@ -38,15 +39,17 @@ npm install
 npm run dev
 npm run lint
 npm run build
+npm run smoke
 ```
 
 ## Backend
 
 ```bash
 cd backend
-docker compose up db
-uvicorn main:app --reload
+docker compose up api
+docker compose run --rm migrate
+docker compose run --rm seed
+docker compose exec -T api python -m pytest
 ```
 
-The backend is currently minimal and exposes only the placeholder FastAPI app.
-
+The backend exposes local MVP auth, aircraft, assignment, logbook entry, upload, download, deterministic OCR ingestion, page verification, OCR correction, and structured OCR-to-logbook extraction endpoints. AD ingestion is not implemented yet.

@@ -128,14 +128,17 @@ def seed_logbook_sections(db: Session) -> None:
 def demo_data(db_session: Session) -> dict[str, object]:
     owner_user = create_user(db_session, "owner.test@paprnav.local", "Olivia Owner")
     shop_user = create_user(db_session, "shop.test@paprnav.local", "Miles Mechanic")
+    unassigned_shop_user = create_user(db_session, "unassigned.shop@paprnav.local", "Una Mechanic")
     stranger_user = create_user(db_session, "stranger.test@paprnav.local", "Una Stranger")
 
     owner_org = create_organization(db_session, "Owner Hangar", "owner")
     shop_org = create_organization(db_session, "Maintenance Shop", "maintenance_shop")
+    unassigned_shop_org = create_organization(db_session, "Unassigned Maintenance Shop", "maintenance_shop")
     stranger_org = create_organization(db_session, "Other Hangar", "owner")
 
     add_membership(db_session, owner_org, owner_user, "owner_admin")
     add_membership(db_session, shop_org, shop_user, "maintenance_admin")
+    add_membership(db_session, unassigned_shop_org, unassigned_shop_user, "maintenance_admin")
     add_membership(db_session, stranger_org, stranger_user, "owner_admin")
     seed_logbook_sections(db_session)
 
@@ -147,6 +150,7 @@ def demo_data(db_session: Session) -> dict[str, object]:
         "aircraft": aircraft,
         "owner_user": owner_user,
         "shop_user": shop_user,
+        "unassigned_shop_user": unassigned_shop_user,
         "stranger_user": stranger_user,
     }
 

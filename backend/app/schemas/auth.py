@@ -25,6 +25,10 @@ class CurrentUserResponse(BaseModel):
     memberships: list[MembershipResponse] = []
 
 
+class ProfileUpdateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
 class AuthResponse(BaseModel):
     user: CurrentUserResponse
 

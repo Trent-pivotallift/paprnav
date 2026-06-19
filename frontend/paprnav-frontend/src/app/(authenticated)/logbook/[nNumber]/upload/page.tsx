@@ -7,7 +7,13 @@ import { ChevronLeft, Upload, FileText, X, CheckCircle, AlertCircle } from "luci
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
-import { listAircraft, LogbookSection, uploadLogbookFile, Upload as StoredUpload } from "@/lib/api";
+import {
+  IngestionJobSummary,
+  listAircraft,
+  LogbookSection,
+  uploadLogbookFile,
+  Upload as StoredUpload,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function normalizeNNumber(nNumber: string) {
@@ -39,6 +45,7 @@ export default function LogbookUploadPage() {
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [storedUpload, setStoredUpload] = useState<StoredUpload | null>(null);
+  const [ingestionJob, setIngestionJob] = useState<IngestionJobSummary | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,6 +54,7 @@ export default function LogbookUploadPage() {
       setUploadStatus("idle");
       setUploadMessage(null);
       setStoredUpload(null);
+      setIngestionJob(null);
     }
   };
 
@@ -68,6 +76,7 @@ export default function LogbookUploadPage() {
       setUploadStatus("idle");
       setUploadMessage(null);
       setStoredUpload(null);
+      setIngestionJob(null);
     }
   };
 
@@ -82,6 +91,7 @@ export default function LogbookUploadPage() {
     setUploadMessage("Uploading...");
     setUploadStatus("idle");
     setStoredUpload(null);
+    setIngestionJob(null);
 
     try {
       const aircraftResponse = await listAircraft();
@@ -92,7 +102,8 @@ export default function LogbookUploadPage() {
 
       const response = await uploadLogbookFile(aircraft.id, selectedFile, section);
       setStoredUpload(response.upload);
-      setUploadMessage(`Stored ${response.upload.originalFilename}`);
+      setIngestionJob(response.ingestionJob);
+      setUploadMessage(`Stored ${response.upload.originalFilename} and queued OCR ingestion.`);
       setUploadStatus("success");
       setSelectedFile(null);
     } catch (caught) {
@@ -108,6 +119,7 @@ export default function LogbookUploadPage() {
     setUploadStatus("idle");
     setUploadMessage(null);
     setStoredUpload(null);
+    setIngestionJob(null);
   };
 
   return (
@@ -213,6 +225,14 @@ export default function LogbookUploadPage() {
                   <Link href={`/logbook/${displayNNumber}?logbook=${section}`} className="underline underline-offset-4">
                     Back to logbook
                   </Link>
+                  {ingestionJob ? (
+                    <Link
+                      href={`/logbook/${displayNNumber}/ingestion/${ingestionJob.id}`}
+                      className="underline underline-offset-4"
+                    >
+                      Review OCR
+                    </Link>
+                  ) : null}
                   <Link href={proxyDownloadUrl(storedUpload.downloadUrl)} className="underline underline-offset-4">
                     Download
                   </Link>

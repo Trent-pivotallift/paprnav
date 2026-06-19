@@ -1,6 +1,6 @@
 # paprnav Backend
 
-This directory contains the early FastAPI backend for paprnav. It supports the current local MVP API surface for auth, aircraft, logbook entries, and file uploads, but it is not yet a complete OCR or AD-compliance backend.
+This directory contains the early FastAPI backend for paprnav. It supports the current local MVP API surface for auth, aircraft, logbook entries, file uploads, deterministic OCR ingestion, and OCR-to-logbook extraction, but it is not yet an AD-compliance backend.
 
 ## Current Status
 
@@ -18,9 +18,11 @@ This directory contains the early FastAPI backend for paprnav. It supports the c
   - `GET /version` returns the app name and version.
   - `/api/v1/auth/*` provides local cookie-backed auth/session endpoints.
   - `/api/v1/aircraft/*` provides authenticated aircraft endpoints.
+  - `/api/v1/aircraft/{aircraftId}/assignments` provides owner-managed maintenance organization assignment endpoints.
   - `/api/v1/aircraft/{aircraftId}/logbook-entries/*` provides authenticated logbook entry endpoints.
   - `/api/v1/aircraft/{aircraftId}/uploads` stores uploaded PDF/JPG/PNG files and metadata.
   - `/api/v1/uploads/{uploadId}/download` retrieves stored original uploads for authorized users.
+  - `/api/v1/ingestion-jobs/*` provides OCR ingestion status, page verification, correction, and structured entry extraction endpoints.
 
 ## Setup
 
@@ -85,6 +87,12 @@ Seed repeatable local demo data:
 
 ```bash
 docker compose run --rm seed
+```
+
+Process queued OCR ingestion jobs locally:
+
+```bash
+docker compose exec -T api python -m app.workers.ocr
 ```
 
 Seeded demo users use the local-only password `demo-password`.
@@ -160,15 +168,16 @@ The backend currently has:
 - Root, health, and version endpoints
 - Cookie-backed local auth/session endpoints under `/api/v1/auth`
 - Authenticated aircraft list, create, view, and update endpoints under `/api/v1/aircraft`
+- Owner-only aircraft assignment endpoints for granting maintenance shop access
 - Authenticated logbook entry list, create, view, and update endpoints under `/api/v1/aircraft/{aircraftId}/logbook-entries`
 - Authenticated upload create and download endpoints
+- Deterministic local OCR ingestion job, page verification, OCR correction, and structured extraction endpoints
 - Owner-versus-maintenance aircraft visibility boundaries
 
 ## Missing Backend Pieces
 
 The backend does not yet have:
 
-- OCR ingestion jobs
 - FAA Airworthiness Directive ingestion or matching
 
 See `.ai/GOAL_TASKS.md` from the project root for the current implementation roadmap.
