@@ -31,6 +31,7 @@ The current codebase is an early local MVP build:
 - AD ingestion review: `.ai/AD_INGESTION_REVIEW.md`
 - Backend/OCR data model plan: `.ai/DATA_MODEL.md`
 - MVP AD ingestion spec: `.ai/AD_INGESTION_MVP_SPEC.md`
+- AD collection handoff findings: `.ai/AD_COLLECTION_HANDOFF.md`
 - AD matching rules: `.ai/AD_MATCHING_RULES.md`
 - Interim API contract: `.ai/API_CONTRACT.md`
 - Environment variable guide: `.ai/ENVIRONMENT.md`
