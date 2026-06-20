@@ -14,6 +14,7 @@ from app.models.core import Upload, User, new_id
 from app.schemas.ingestion import IngestionJobSummary
 from app.schemas.uploads import UploadCreateResponse, UploadResponse
 from app.services.ingestion import create_ingestion_job
+from app.services.observability import record_product_event, record_workflow_status
 from app.services.storage import store_local_file
 
 router = APIRouter(prefix="/api/v1/aircraft/{aircraft_id}/uploads", tags=["uploads"])
@@ -125,6 +126,30 @@ def upload_logbook_file(
     db.add(upload)
     db.flush()
     ingestion_job = create_ingestion_job(db, upload, current_user.id, section)
+    record_product_event(
+        db,
+        event_type="upload_created",
+        subject_type="upload",
+        subject_id=upload.id,
+        actor=current_user,
+        aircraft_id=aircraft_id,
+        properties={
+            "contentType": upload.content_type,
+            "fileSizeBytes": upload.file_size_bytes,
+            "section": section,
+            "ingestionJobId": ingestion_job.id,
+        },
+    )
+    record_workflow_status(
+        db,
+        workflow_type="upload_ingestion",
+        workflow_id=ingestion_job.id,
+        previous_status=None,
+        new_status=ingestion_job.status,
+        reason="upload_created",
+        actor_type="user",
+        actor=current_user,
+    )
     db.commit()
     db.refresh(upload)
     db.refresh(ingestion_job)

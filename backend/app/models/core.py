@@ -524,7 +524,65 @@ class ADMatchAdjudication(TimestampMixin, Base):
     decision: Mapped[str] = mapped_column(String(64), nullable=True)
     reviewer_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     notes: Mapped[str] = mapped_column(Text, nullable=True)
+    future_improvement_tags: Mapped[list] = mapped_column(JSON, nullable=True)
     reviewed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     match_result = relationship("ADMatchResult", back_populates="adjudication")
     reviewer = relationship("User")
+
+
+class ProductEvent(Base):
+    __tablename__ = "product_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("pev"))
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=True, index=True)
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    event_source: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    subject_type: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    event_time: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    properties_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    request_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    session_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    actor = relationship("User", foreign_keys=[actor_user_id])
+    organization = relationship("Organization")
+    aircraft = relationship("Aircraft")
+
+
+class UserFeedback(TimestampMixin, Base):
+    __tablename__ = "user_feedback"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ufb"))
+    submitted_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=True, index=True)
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=True, index=True)
+    subject_type: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    feedback_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False, default="medium", index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="open", index=True)
+
+    submitted_by = relationship("User", foreign_keys=[submitted_by_user_id])
+    organization = relationship("Organization")
+    aircraft = relationship("Aircraft")
+
+
+class WorkflowStatusEvent(Base):
+    __tablename__ = "workflow_status_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("wse"))
+    workflow_type: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    workflow_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    previous_status: Mapped[str] = mapped_column(String(128), nullable=True)
+    new_status: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=True)
+    actor_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+    actor = relationship("User", foreign_keys=[actor_user_id])

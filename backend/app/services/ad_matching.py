@@ -17,6 +17,7 @@ from app.models.core import (
     AirworthinessDirective,
     LogbookEntry,
 )
+from app.services.observability import record_product_event, record_workflow_status
 
 ALGORITHM_NAME = "deterministic_ad_logbook_matcher"
 ALGORITHM_VERSION = "0.1.0"
@@ -57,6 +58,23 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
             stats["unresolved"] += 1
             if result.adjudication and result.adjudication.status == "pending":
                 stats["review_tasks"] += 1
+    record_product_event(
+        db,
+        event_type="ad_matching_completed",
+        subject_type="aircraft",
+        subject_id=aircraft.id,
+        aircraft_id=aircraft.id,
+        event_source="worker",
+        properties=stats,
+    )
+    record_workflow_status(
+        db,
+        workflow_type="ad_matching",
+        workflow_id=aircraft.id,
+        new_status="complete",
+        reason=f"matched={stats['matched']} unresolved={stats['unresolved']}",
+        actor_type="worker",
+    )
     db.commit()
     return stats
 

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.core import ADExtraction, ADExtractionReview, AirworthinessDirective
 from app.services.ad_discovery import extract_ad_number
+from app.services.observability import record_product_event, record_workflow_status
 
 PROVIDER_NAME = "deterministic_ad_extractor"
 PROVIDER_VERSION = "0.1.0"
@@ -31,6 +32,22 @@ def process_pending_ad_extractions(db: Session, limit: int = 20) -> dict[str, in
             stats["review_queued"] += 1
         if extraction.status == "approved":
             stats["approved"] += 1
+    record_product_event(
+        db,
+        event_type="ad_extraction_worker_completed",
+        subject_type="ad_extraction",
+        subject_id="batch",
+        event_source="worker",
+        properties=stats,
+    )
+    record_workflow_status(
+        db,
+        workflow_type="ad_extraction",
+        workflow_id="batch",
+        new_status="complete",
+        reason=f"extracted={stats['extracted']} review_queued={stats['review_queued']}",
+        actor_type="worker",
+    )
     db.commit()
     return stats
 

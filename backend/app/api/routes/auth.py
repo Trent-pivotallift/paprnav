@@ -18,6 +18,7 @@ from app.schemas.auth import (
     ProfileUpdateRequest,
     RegisterRequest,
 )
+from app.services.observability import record_product_event
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -73,6 +74,7 @@ def register(payload: RegisterRequest, request: Request, response: Response, db:
     db.add(user)
     db.flush()
     create_session(db, user, request, response)
+    record_product_event(db, event_type="auth_register", subject_type="auth", subject_id=user.id, actor=user)
     db.commit()
     db.refresh(user)
     return AuthResponse(user=serialize_user(user))
@@ -88,6 +90,7 @@ def login(payload: LoginRequest, request: Request, response: Response, db: Sessi
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not active")
 
     create_session(db, user, request, response)
+    record_product_event(db, event_type="auth_login", subject_type="auth", subject_id=user.id, actor=user)
     db.commit()
     db.refresh(user)
     return AuthResponse(user=serialize_user(user))
@@ -105,6 +108,13 @@ def update_profile(
     db: Session = Depends(get_db),
 ) -> AuthResponse:
     current_user.name = payload.name.strip()
+    record_product_event(
+        db,
+        event_type="profile_updated",
+        subject_type="profile",
+        subject_id=current_user.id,
+        actor=current_user,
+    )
     db.commit()
     db.refresh(current_user)
     return AuthResponse(user=serialize_user(current_user))

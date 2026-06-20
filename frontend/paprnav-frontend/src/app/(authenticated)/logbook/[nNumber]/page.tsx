@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -16,6 +17,7 @@ import {
   AircraftAssignment,
   ADMatchResult,
   createAircraftAssignment,
+  decideAdMatch,
   listAircraftAdMatches,
   listAircraft,
   listAircraftAssignments,
@@ -57,6 +59,9 @@ export default function AircraftLogbookPage() {
   const [error, setError] = useState<string | null>(null);
   const [assignmentMessage, setAssignmentMessage] = useState<string | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [adjudicationNotes, setAdjudicationNotes] = useState<Record<string, string>>({});
+  const [adjudicationTags, setAdjudicationTags] = useState<Record<string, string>>({});
+  const [adjudicationMessage, setAdjudicationMessage] = useState<string | null>(null);
 
   const displayNNumber = useMemo(() => normalizeNNumber(nNumber), [nNumber]);
   const canManageAssignments = useMemo(
@@ -122,6 +127,27 @@ export default function AircraftLogbookPage() {
       setAssignmentError(caught instanceof Error ? caught.message : "Unable to assign maintenance access.");
     } finally {
       setIsAssigning(false);
+    }
+  }
+
+  async function handleAdjudication(
+    match: ADMatchResult,
+    decision: "satisfied" | "not_satisfied" | "not_applicable" | "needs_more_info" | "deferred",
+  ) {
+    setAdjudicationMessage(null);
+    try {
+      await decideAdMatch(match.id, {
+        decision,
+        notes: adjudicationNotes[match.id] || null,
+        futureImprovementTags: (adjudicationTags[match.id] ?? "")
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+      });
+      setAdjudicationMessage(`AD match marked ${decision.replaceAll("_", " ")}.`);
+      await loadEntries();
+    } catch (caught) {
+      setAdjudicationMessage(caught instanceof Error ? caught.message : "Unable to save AD adjudication.");
     }
   }
 
@@ -215,12 +241,13 @@ export default function AircraftLogbookPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <ShieldCheck className="h-5 w-5" />
-              AD Matching
+              AD Compliance Worklist
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {adjudicationMessage ? <p className="rounded-md border p-3 text-sm">{adjudicationMessage}</p> : null}
             {adMatches.length ? (
-              adMatches.slice(0, 5).map((match) => (
+              adMatches.map((match) => (
                 <div key={match.id} className="rounded-md border p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -232,6 +259,22 @@ export default function AircraftLogbookPage() {
                     </span>
                   </div>
                   <p className="mt-3 text-sm">{match.rationale}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Aircraft facts: {match.aircraftFacts.make} {match.aircraftFacts.model}
+                    {match.aircraftFacts.serialNumber ? ` · SN ${match.aircraftFacts.serialNumber}` : ""}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    {match.directive.htmlUrl ? (
+                      <a className="rounded-md border px-2 py-1 hover:bg-muted" href={match.directive.htmlUrl} target="_blank" rel="noreferrer">
+                        Federal Register
+                      </a>
+                    ) : null}
+                    {match.directive.pdfUrl ? (
+                      <a className="rounded-md border px-2 py-1 hover:bg-muted" href={match.directive.pdfUrl} target="_blank" rel="noreferrer">
+                        Source PDF
+                      </a>
+                    ) : null}
+                  </div>
                   {match.unresolvedReasons.length ? (
                     <p className="mt-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
                       <FileWarning className="h-4 w-4" />
@@ -251,6 +294,32 @@ export default function AircraftLogbookPage() {
                         </Link>
                       ))}
                     </div>
+                  ) : null}
+                  {match.status === "needs_adjudication" || match.adjudication?.status === "pending" ? (
+                    <div className="mt-4 space-y-3 rounded-md bg-muted/30 p-3">
+                      <Textarea
+                        placeholder="Reviewer notes"
+                        value={adjudicationNotes[match.id] ?? ""}
+                        onChange={(event) => setAdjudicationNotes((current) => ({ ...current, [match.id]: event.target.value }))}
+                      />
+                      <Input
+                        placeholder="Future improvement tags, comma-separated"
+                        value={adjudicationTags[match.id] ?? ""}
+                        onChange={(event) => setAdjudicationTags((current) => ({ ...current, [match.id]: event.target.value }))}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" type="button" onClick={() => handleAdjudication(match, "satisfied")}>Satisfied</Button>
+                        <Button size="sm" type="button" variant="outline" onClick={() => handleAdjudication(match, "not_satisfied")}>Not Satisfied</Button>
+                        <Button size="sm" type="button" variant="outline" onClick={() => handleAdjudication(match, "not_applicable")}>Not Applicable</Button>
+                        <Button size="sm" type="button" variant="outline" onClick={() => handleAdjudication(match, "needs_more_info")}>Needs More Info</Button>
+                        <Button size="sm" type="button" variant="ghost" onClick={() => handleAdjudication(match, "deferred")}>Defer</Button>
+                      </div>
+                    </div>
+                  ) : match.adjudication?.decision ? (
+                    <p className="mt-3 rounded-md bg-muted/40 p-3 text-sm">
+                      Human decision: {match.adjudication.decision.replaceAll("_", " ")}
+                      {match.adjudication.notes ? ` · ${match.adjudication.notes}` : ""}
+                    </p>
                   ) : null}
                 </div>
               ))

@@ -19,6 +19,7 @@ from app.schemas.ingestion import (
     PageVerificationResponse,
 )
 from app.services.ingestion import extract_entries_from_job
+from app.services.observability import record_product_event, record_workflow_status
 
 router = APIRouter(prefix="/api/v1/ingestion-jobs", tags=["ingestion"])
 
@@ -157,11 +158,36 @@ def verify_pages(
         )
     )
     job.verification_status = "verified" if payload.isOrderConfirmed and payload.isComplete else "needs_review"
+    previous_status = job.status
     if job.verification_status == "verified":
         has_low_confidence = any((span.confidence or 0) < 80 for page in job.pages for span in page.ocr_spans)
         job.status = "awaiting_ocr_corrections" if has_low_confidence else "ready_for_entry_extraction"
         job.entry_extraction_status = "ready"
 
+    record_product_event(
+        db,
+        event_type="page_verification_saved",
+        subject_type="ingestion_job",
+        subject_id=job.id,
+        actor=current_user,
+        aircraft_id=job.aircraft_id,
+        properties={
+            "isOrderConfirmed": payload.isOrderConfirmed,
+            "isComplete": payload.isComplete,
+            "verificationStatus": job.verification_status,
+            "pageCount": len(payload.pages),
+        },
+    )
+    record_workflow_status(
+        db,
+        workflow_type="page_verification",
+        workflow_id=job.id,
+        previous_status=previous_status,
+        new_status=job.status,
+        reason=job.verification_status,
+        actor_type="user",
+        actor=current_user,
+    )
     db.commit()
     job = get_visible_job_or_404(db, current_user, job_id)
     return IngestionJobDetailResponse(
@@ -195,8 +221,33 @@ def create_ocr_correction(
         notes=payload.notes,
     )
     db.add(correction)
+    db.flush()
+    previous_status = job.status
     job.status = "ready_for_entry_extraction"
     job.entry_extraction_status = "ready"
+    record_product_event(
+        db,
+        event_type="ocr_correction_created",
+        subject_type="ocr_correction",
+        subject_id=correction.id,
+        actor=current_user,
+        aircraft_id=job.aircraft_id,
+        properties={
+            "ingestionJobId": job.id,
+            "originalConfidence": span.confidence,
+            "correctionReason": payload.correctionReason,
+        },
+    )
+    record_workflow_status(
+        db,
+        workflow_type="ocr_correction",
+        workflow_id=job.id,
+        previous_status=previous_status,
+        new_status=job.status,
+        reason="correction_created",
+        actor_type="user",
+        actor=current_user,
+    )
     db.commit()
     db.refresh(correction)
     return serialize_correction(correction)
@@ -214,6 +265,26 @@ def extract_logbook_entries(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
+    record_product_event(
+        db,
+        event_type="logbook_entries_extracted",
+        subject_type="ingestion_job",
+        subject_id=job.id,
+        actor=current_user,
+        aircraft_id=job.aircraft_id,
+        properties={"entryCount": len(entries), "status": job.status},
+    )
+    record_workflow_status(
+        db,
+        workflow_type="upload_ingestion",
+        workflow_id=job.id,
+        previous_status="ready_for_entry_extraction",
+        new_status=job.status,
+        reason="entries_extracted",
+        actor_type="user",
+        actor=current_user,
+    )
+    db.commit()
     return ExtractLogbookEntriesResponse(
         entries=[
             ExtractedLogbookEntryResponse(

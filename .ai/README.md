@@ -17,7 +17,7 @@ The current codebase is an early local MVP build:
 - Backend endpoint tests now cover auth, aircraft visibility, logbook entry, upload/download, and unauthorized access boundaries.
 - There is no AWS infrastructure code or GitHub Actions workflow in this checkout.
 - Deterministic local OCR ingestion, page verification, OCR correction, and structured logbook extraction are implemented for the local MVP slice.
-- Federal Register AD discovery, AD persistence, deterministic structured extraction, AD extraction review, and first-pass AD-to-logbook matching are implemented locally.
+- Federal Register AD discovery, AD persistence, deterministic structured extraction, AD extraction review, first-pass AD-to-logbook matching, HITL match adjudication, compliance worklist, and human product observability are implemented locally.
 
 ## Important Paths
 

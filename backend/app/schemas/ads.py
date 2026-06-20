@@ -88,11 +88,13 @@ class ADMatchAdjudicationResponse(BaseModel):
     status: str
     decision: Optional[str]
     notes: Optional[str]
+    futureImprovementTags: list[str]
 
 
 class ADMatchResultResponse(BaseModel):
     id: str
     aircraftId: str
+    aircraftFacts: dict[str, Optional[str]]
     directive: AirworthinessDirectiveResponse
     status: str
     matchType: str
@@ -108,3 +110,13 @@ class ADMatchResultResponse(BaseModel):
 
 class ADMatchResultListResponse(BaseModel):
     matches: list[ADMatchResultResponse]
+
+
+class ADMatchAdjudicationDecisionRequest(BaseModel):
+    decision: str
+    notes: Optional[str] = None
+    futureImprovementTags: list[str] = []
+
+
+class ADMatchAdjudicationDecisionResponse(BaseModel):
+    match: ADMatchResultResponse

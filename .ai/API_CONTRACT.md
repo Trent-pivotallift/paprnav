@@ -629,6 +629,70 @@ cd backend
 python -m app.workers.ad_matching
 ```
 
+### Decide AD Match Adjudication
+
+`POST /api/v1/ads/matches/{matchId}/adjudication`
+
+Request:
+
+```json
+{
+  "decision": "needs_more_info",
+  "notes": "Need component serial confirmation.",
+  "futureImprovementTags": ["serial_lookup", "component_identity"]
+}
+```
+
+Allowed decisions are `satisfied`, `not_satisfied`, `not_applicable`, `needs_more_info`, and `deferred`. The decision stores reviewer, notes, timestamp, and future-improvement tags, and writes product/workflow observability events.
+
+## Product Observability
+
+### List Observability Events
+
+`GET /api/v1/observability?aircraftId=ac_123&eventType=upload_created&subjectType=upload&status=complete`
+
+Returns recent product events, workflow status events, and user feedback visible to the authenticated user.
+
+Response:
+
+```json
+{
+  "events": [],
+  "workflowEvents": [],
+  "feedback": []
+}
+```
+
+Event properties are sanitized and must not contain raw uploaded file content, raw OCR text, passwords, secrets, or token values.
+
+### Create Feedback
+
+`POST /api/v1/observability/feedback`
+
+Request:
+
+```json
+{
+  "subjectType": "ad_match",
+  "subjectId": "adm_123",
+  "feedbackType": "demo_note",
+  "message": "Reviewer hesitated here.",
+  "severity": "medium"
+}
+```
+
+### Triage Feedback
+
+`PATCH /api/v1/observability/feedback/{feedbackId}`
+
+Request:
+
+```json
+{
+  "status": "triaged"
+}
+```
+
 ## Open Contract Items
 
 - Exact pagination shape for list endpoints.

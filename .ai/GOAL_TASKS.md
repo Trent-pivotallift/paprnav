@@ -771,7 +771,7 @@ These tasks add human-visible product observability: demo/support timelines, use
 
 ### T055: Add product observability data model and migration
 
-Status: ready after T017
+Status: completed 2026-06-19
 
 Goal: Add persisted models for product events, user feedback, and workflow status events based on `.ai/DATA_MODEL.md`.
 
@@ -789,9 +789,16 @@ cd backend
 python -m py_compile main.py
 ```
 
+Evidence:
+
+- Added `ProductEvent`, `UserFeedback`, and `WorkflowStatusEvent` models.
+- Added migration `20260619_0006_add_observability_and_adjudication.py`.
+- Event properties are sanitized by `backend/app/services/observability.py`.
+- Feedback can link to aircraft and workflow subjects.
+
 ### T056: Add backend product observability capture helpers
 
-Status: ready after T016 and T055
+Status: completed 2026-06-19
 
 Goal: Add a backend service/helper for recording product events and workflow status transitions from API routes and workers.
 
@@ -809,9 +816,15 @@ cd backend
 python -m py_compile main.py
 ```
 
+Evidence:
+
+- Added `record_product_event`, `record_workflow_status`, and `sanitize_properties` helpers.
+- Sensitive keys such as password, token, secret, raw text, OCR text, and file content are stripped before persistence.
+- Health/version routes remain unchanged.
+
 ### T057: Instrument core MVP workflow events
 
-Status: ready after T019, T021, T023, T027, T040, and T056
+Status: completed 2026-06-19
 
 Goal: Record product events for auth, aircraft creation, logbook entry creation, upload, ingestion job creation/status changes, page verification, OCR correction, and AD review actions as those workflows become available.
 
@@ -829,9 +842,15 @@ cd backend
 python -m py_compile main.py
 ```
 
+Evidence:
+
+- Instrumented auth registration/login/profile update, aircraft creation/assignment, logbook entry creation, upload/ingestion job creation, page verification, OCR correction, logbook extraction, AD extraction review decisions, AD discovery, AD extraction, AD matching, and HITL adjudication.
+- Worker events use `event_source=worker`.
+- Events store IDs, statuses, counts, confidence/status summaries, and avoid raw uploaded/OCR/logbook text payloads.
+
 ### T058: Build internal product observability view
 
-Status: ready after T020, T022, T028, T040, and T057
+Status: completed 2026-06-19
 
 Goal: Add a lightweight authenticated internal/admin view for recent product events, workflow timelines, and user feedback.
 
@@ -852,6 +871,13 @@ npm run build
 cd ../../backend
 python -m py_compile main.py
 ```
+
+Evidence:
+
+- Added `/api/v1/observability` list endpoint with filters for aircraft, user, event type, subject type, status, and workflow id.
+- Added feedback create and triage endpoints.
+- Added authenticated frontend page `/observability` with filters, workflow timeline, product event stream, and feedback capture/triage.
+- Added desktop and mobile navigation links.
 
 ### T033: Add environment variable documentation and examples
 
@@ -1369,7 +1395,7 @@ Evidence:
 
 ### T053: Build HITL AD adjudication workflow
 
-Status: ready after T052
+Status: completed 2026-06-19
 
 Goal: Add UI and API for humans to adjudicate unresolved AD/logbook matches.
 
@@ -1390,9 +1416,17 @@ cd ../../backend
 python -m py_compile main.py
 ```
 
+Evidence:
+
+- Added `POST /api/v1/ads/matches/{match_id}/adjudication`.
+- Reviewer can mark satisfied, not satisfied, not applicable, needs more info, or deferred.
+- Decision stores reviewer, notes, timestamp, and future-improvement tags.
+- Aircraft logbook AD Compliance Worklist shows AD, aircraft facts, candidate logbook evidence, system rationale, source links, unresolved reasons, and reviewer controls.
+- Backend test covers adjudication decision persistence and event recording.
+
 ### T054: Build aircraft compliance worklist
 
-Status: ready after T052 and T053
+Status: completed 2026-06-19
 
 Goal: Replace simple compliance status badges with an evidence-backed worklist of AD candidates, matched items, unresolved items, and HITL decisions.
 
@@ -1410,3 +1444,10 @@ cd frontend/paprnav-frontend
 npm run lint
 npm run build
 ```
+
+Evidence:
+
+- Aircraft logbook page now renders an evidence-backed AD Compliance Worklist instead of a simple status-only view.
+- Each item links to Federal Register/source PDF evidence and logbook entry evidence when available.
+- Unresolved items show review controls and unresolved reasons instead of implying compliance.
+- Human decisions render after adjudication.

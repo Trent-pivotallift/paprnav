@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.core import ADDiscoveryRecord, AirworthinessDirective
+from app.services.observability import record_product_event, record_workflow_status
 
 FEDERAL_REGISTER_API_BASE_URL = "https://www.federalregister.gov"
 FEDERAL_REGISTER_DOCUMENTS_PATH = "/api/v1/documents.json"
@@ -75,6 +76,22 @@ def discover_federal_register_ads(
             ensure_directive_for_record(db, record)
         else:
             stats["rejected"] += 1
+    record_product_event(
+        db,
+        event_type="ad_discovery_completed",
+        subject_type="ad_ingestion",
+        subject_id="federal_register",
+        event_source="worker",
+        properties=stats,
+    )
+    record_workflow_status(
+        db,
+        workflow_type="ad_ingestion",
+        workflow_id="federal_register",
+        new_status="complete",
+        reason=f"seen={stats['seen']} candidates={stats['candidates']}",
+        actor_type="worker",
+    )
     db.commit()
     return stats
 

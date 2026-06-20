@@ -15,6 +15,7 @@ from app.schemas.logbook_entries import (
     LogbookEntryUpdateRequest,
     LogbookSectionKey,
 )
+from app.services.observability import record_product_event
 
 router = APIRouter(prefix="/api/v1/aircraft/{aircraft_id}/logbook-entries", tags=["logbook-entries"])
 
@@ -112,6 +113,21 @@ def create_logbook_entry(
         review_status="verified",
     )
     db.add(entry)
+    db.flush()
+    record_product_event(
+        db,
+        event_type="logbook_entry_created",
+        subject_type="logbook_entry",
+        subject_id=entry.id,
+        actor=current_user,
+        aircraft_id=aircraft_id,
+        properties={
+            "section": section.key,
+            "entryDate": entry.entry_date.isoformat(),
+            "sourceType": entry.source_type,
+            "reviewStatus": entry.review_status,
+        },
+    )
     db.commit()
     db.refresh(entry)
     return serialize_entry(entry)

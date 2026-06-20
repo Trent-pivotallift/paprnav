@@ -258,11 +258,13 @@ export interface ADMatchAdjudication {
   status: string;
   decision: string | null;
   notes: string | null;
+  futureImprovementTags: string[];
 }
 
 export interface ADMatchResult {
   id: string;
   aircraftId: string;
+  aircraftFacts: Record<string, string | null>;
   directive: AirworthinessDirective;
   status: string;
   matchType: string;
@@ -274,6 +276,50 @@ export interface ADMatchResult {
   inputHash: string;
   evidence: ADMatchEvidence[];
   adjudication: ADMatchAdjudication | null;
+}
+
+export interface ProductEvent {
+  id: string;
+  actorUserId: string | null;
+  organizationId: string | null;
+  aircraftId: string | null;
+  eventType: string;
+  eventSource: string;
+  subjectType: string;
+  subjectId: string | null;
+  eventTime: string;
+  properties: Record<string, unknown>;
+}
+
+export interface WorkflowStatusEvent {
+  id: string;
+  workflowType: string;
+  workflowId: string;
+  previousStatus: string | null;
+  newStatus: string;
+  reason: string | null;
+  actorType: string;
+  actorUserId: string | null;
+  createdAt: string;
+}
+
+export interface UserFeedback {
+  id: string;
+  submittedByUserId: string;
+  organizationId: string | null;
+  aircraftId: string | null;
+  subjectType: string;
+  subjectId: string | null;
+  feedbackType: string;
+  message: string;
+  severity: string;
+  status: string;
+}
+
+export interface ObservabilityListResponse {
+  events: ProductEvent[];
+  workflowEvents: WorkflowStatusEvent[];
+  feedback: UserFeedback[];
 }
 
 export interface ADMatchResultListResponse {
@@ -462,4 +508,45 @@ export function decideAdExtractionReview(
 
 export function listAircraftAdMatches(aircraftId: string) {
   return apiFetch<ADMatchResultListResponse>(`/api/v1/ads/aircraft/${aircraftId}/matches`);
+}
+
+export function decideAdMatch(
+  matchId: string,
+  payload: {
+    decision: "satisfied" | "not_satisfied" | "not_applicable" | "needs_more_info" | "deferred";
+    notes?: string | null;
+    futureImprovementTags?: string[];
+  },
+) {
+  return apiFetch<{ match: ADMatchResult }>(`/api/v1/ads/matches/${matchId}/adjudication`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listObservability(params: Record<string, string> = {}) {
+  const query = new URLSearchParams(params);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiFetch<ObservabilityListResponse>(`/api/v1/observability${suffix}`);
+}
+
+export function createFeedback(payload: {
+  subjectType: string;
+  subjectId?: string | null;
+  aircraftId?: string | null;
+  feedbackType?: string;
+  message: string;
+  severity?: string;
+}) {
+  return apiFetch<{ feedback: UserFeedback }>("/api/v1/observability/feedback", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateFeedbackStatus(feedbackId: string, status: string) {
+  return apiFetch<{ feedback: UserFeedback }>(`/api/v1/observability/feedback/${feedbackId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }

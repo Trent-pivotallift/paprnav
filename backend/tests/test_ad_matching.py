@@ -13,6 +13,9 @@ from app.models.core import (
     AirworthinessDirective,
     LogbookEntry,
     LogbookSection,
+    ProductEvent,
+    UserFeedback,
+    WorkflowStatusEvent,
 )
 from app.services.ad_discovery import hash_json
 from app.services.ad_matching import match_aircraft_ads
@@ -114,6 +117,39 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     candidate = next(match for match in matches if match["status"] == "candidate_satisfied")
     assert candidate["evidence"][0]["logbookEntryId"]
     assert "logbook evidence" in candidate["rationale"]
+
+    unresolved = next(match for match in matches if match["status"] == "needs_adjudication")
+    decision_response = client.post(
+        f"/api/v1/ads/matches/{unresolved['id']}/adjudication",
+        json={
+            "decision": "needs_more_info",
+            "notes": "Need component serial confirmation.",
+            "futureImprovementTags": ["serial_lookup", "component_identity"],
+        },
+    )
+    assert decision_response.status_code == 200
+    decided_match = decision_response.json()["match"]
+    assert decided_match["status"] == "adjudicated_needs_more_info"
+    assert decided_match["adjudication"]["futureImprovementTags"] == ["serial_lookup", "component_identity"]
+
+    assert db_session.scalar(select(ProductEvent).where(ProductEvent.event_type == "ad_match_adjudicated")) is not None
+    assert db_session.scalar(select(WorkflowStatusEvent).where(WorkflowStatusEvent.workflow_type == "hitl_adjudication")) is not None
+
+    feedback_response = client.post(
+        "/api/v1/observability/feedback",
+        json={"subjectType": "ad_match", "subjectId": unresolved["id"], "feedbackType": "demo_note", "message": "Reviewer hesitated here."},
+    )
+    assert feedback_response.status_code == 201
+    feedback_id = feedback_response.json()["feedback"]["id"]
+    triage_response = client.patch(f"/api/v1/observability/feedback/{feedback_id}", json={"status": "triaged"})
+    assert triage_response.status_code == 200
+    assert db_session.get(UserFeedback, feedback_id).status == "triaged"
+
+    observability_response = client.get("/api/v1/observability")
+    assert observability_response.status_code == 200
+    assert observability_response.json()["events"]
+    assert observability_response.json()["workflowEvents"]
+    assert observability_response.json()["feedback"]
 
 
 def create_approved_extraction(

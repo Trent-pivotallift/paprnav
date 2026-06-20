@@ -16,6 +16,7 @@ from app.schemas.aircraft import (
     AircraftResponse,
     AircraftUpdateRequest,
 )
+from app.services.observability import record_product_event
 
 router = APIRouter(prefix="/api/v1/aircraft", tags=["aircraft"])
 
@@ -198,6 +199,17 @@ def create_aircraft(
         propeller_serial_number=optional_str(payload.propellerSerialNumber),
     )
     db.add(aircraft)
+    db.flush()
+    record_product_event(
+        db,
+        event_type="aircraft_created",
+        subject_type="aircraft",
+        subject_id=aircraft.id,
+        actor=current_user,
+        aircraft_id=aircraft.id,
+        organization_id=aircraft.owner_organization_id,
+        properties={"nNumber": aircraft.n_number_normalized, "make": aircraft.make, "model": aircraft.model},
+    )
     db.commit()
     db.refresh(aircraft)
     return serialize_aircraft(db, aircraft)
@@ -290,6 +302,16 @@ def create_aircraft_assignment(
         )
         db.add(assignment)
 
+    record_product_event(
+        db,
+        event_type="aircraft_assignment_created",
+        subject_type="aircraft_assignment",
+        subject_id=assignment.id,
+        actor=current_user,
+        aircraft_id=aircraft.id,
+        organization_id=aircraft.owner_organization_id,
+        properties={"assignedOrganizationId": assignment.organization_id, "role": assignment.role},
+    )
     db.commit()
     db.refresh(assignment)
     return serialize_assignment(assignment)

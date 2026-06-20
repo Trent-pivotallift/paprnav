@@ -1,6 +1,6 @@
 # paprnav Backend
 
-This directory contains the early FastAPI backend for paprnav. It supports the current local MVP API surface for auth, aircraft, logbook entries, file uploads, deterministic OCR ingestion, and OCR-to-logbook extraction, but it is not yet an AD-compliance backend.
+This directory contains the early FastAPI backend for paprnav. It supports the current local MVP API surface for auth, aircraft, logbook entries, file uploads, deterministic OCR ingestion, OCR-to-logbook extraction, Federal Register AD ingestion, first-pass AD matching, HITL adjudication, and product observability.
 
 ## Current Status
 
@@ -173,13 +173,14 @@ The backend currently has:
 - Authenticated upload create and download endpoints
 - Deterministic local OCR ingestion job, page verification, OCR correction, and structured extraction endpoints
 - Federal Register AD discovery, structured AD extraction, AD extraction review, and first-pass AD-to-logbook match endpoints
+- HITL AD match adjudication endpoints
+- Product observability and feedback endpoints
 - Owner-versus-maintenance aircraft visibility boundaries
 
 ## Missing Backend Pieces
 
 The backend does not yet have:
 
-- HITL AD match adjudication decisions
 - Production AWS worker scheduling or object storage
 
 See `.ai/GOAL_TASKS.md` from the project root for the current implementation roadmap.

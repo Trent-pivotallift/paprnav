@@ -441,6 +441,7 @@ Required fields:
 - `decision`
 - `reviewer_user_id`
 - `notes`
+- `future_improvement_tags`
 - `reviewed_at`
 
 Audit notes:

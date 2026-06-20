@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FileWarning, User, LogOut, Sun, Moon, Monitor } from "lucide-react";
+import { LayoutDashboard, FileWarning, User, LogOut, Sun, Moon, Monitor, Activity } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/logbook", label: "Dashboard", icon: LayoutDashboard },
   { href: "/logbook/ads", label: "ADs", icon: FileWarning },
+  { href: "/observability", label: "Observability", icon: Activity },
   { href: "/profile", label: "Profile", icon: User },
 ];
 

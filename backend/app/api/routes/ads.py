@@ -24,6 +24,8 @@ from app.schemas.ads import (
     ADExtractionReviewListResponse,
     ADExtractionReviewResponse,
     ADMatchAdjudicationResponse,
+    ADMatchAdjudicationDecisionRequest,
+    ADMatchAdjudicationDecisionResponse,
     ADMatchEvidenceResponse,
     ADMatchResultListResponse,
     ADMatchResultResponse,
@@ -32,6 +34,7 @@ from app.schemas.ads import (
     AirworthinessDirectiveResponse,
 )
 from app.services.ad_extraction import validate_extraction_output
+from app.services.observability import record_product_event, record_workflow_status
 
 router = APIRouter(prefix="/api/v1/ads", tags=["airworthiness-directives"])
 
@@ -89,6 +92,7 @@ def list_aircraft_matches(
         select(ADMatchResult)
         .where(ADMatchResult.aircraft_id == aircraft_id)
         .options(
+            selectinload(ADMatchResult.aircraft),
             selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.discovery_record),
             selectinload(ADMatchResult.evidence_links).selectinload(ADMatchEvidence.logbook_entry).selectinload(LogbookEntry.logbook_section),
             selectinload(ADMatchResult.adjudication),
@@ -96,6 +100,79 @@ def list_aircraft_matches(
         .order_by(ADMatchResult.status.desc(), ADMatchResult.confidence.desc(), ADMatchResult.created_at.desc())
     ).all()
     return ADMatchResultListResponse(matches=[serialize_match_result(match) for match in matches])
+
+
+@router.post("/matches/{match_id}/adjudication", response_model=ADMatchAdjudicationDecisionResponse)
+def decide_match_adjudication(
+    match_id: str,
+    payload: ADMatchAdjudicationDecisionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADMatchAdjudicationDecisionResponse:
+    allowed = {"satisfied", "not_satisfied", "not_applicable", "needs_more_info", "deferred"}
+    if payload.decision not in allowed:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported adjudication decision")
+    match = db.scalar(
+        select(ADMatchResult)
+        .where(ADMatchResult.id == match_id)
+        .options(
+            selectinload(ADMatchResult.aircraft),
+            selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.discovery_record),
+            selectinload(ADMatchResult.evidence_links).selectinload(ADMatchEvidence.logbook_entry).selectinload(LogbookEntry.logbook_section),
+            selectinload(ADMatchResult.adjudication),
+        )
+    )
+    if not match:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AD match not found")
+    get_visible_aircraft_or_404(db, current_user, match.aircraft_id)
+    adjudication = match.adjudication
+    if adjudication is None:
+        adjudication = ADMatchAdjudication(match_result_id=match.id)
+        db.add(adjudication)
+        db.flush()
+        match.adjudication = adjudication
+    adjudication.status = "reviewed"
+    adjudication.decision = payload.decision
+    adjudication.reviewer_user_id = current_user.id
+    adjudication.notes = payload.notes
+    adjudication.future_improvement_tags = payload.futureImprovementTags
+    adjudication.reviewed_at = datetime.now(timezone.utc)
+    match.status = f"adjudicated_{payload.decision}"
+    record_product_event(
+        db,
+        event_type="ad_match_adjudicated",
+        subject_type="ad_match",
+        subject_id=match.id,
+        actor=current_user,
+        aircraft_id=match.aircraft_id,
+        properties={
+            "decision": payload.decision,
+            "tags": payload.futureImprovementTags,
+            "matchStatus": match.status,
+        },
+    )
+    record_workflow_status(
+        db,
+        workflow_type="hitl_adjudication",
+        workflow_id=adjudication.id,
+        previous_status="pending",
+        new_status="reviewed",
+        reason=payload.decision,
+        actor_type="reviewer",
+        actor=current_user,
+    )
+    db.commit()
+    match = db.scalar(
+        select(ADMatchResult)
+        .where(ADMatchResult.id == match_id)
+        .options(
+            selectinload(ADMatchResult.aircraft),
+            selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.discovery_record),
+            selectinload(ADMatchResult.evidence_links).selectinload(ADMatchEvidence.logbook_entry).selectinload(LogbookEntry.logbook_section),
+            selectinload(ADMatchResult.adjudication),
+        )
+    )
+    return ADMatchAdjudicationDecisionResponse(match=serialize_match_result(match))
 
 
 @router.post("/extraction-reviews/{review_id}/decision", response_model=ADReviewDecisionResponse)
@@ -139,6 +216,28 @@ def decide_extraction_review(
     review.reviewer_user_id = current_user.id
     review.notes = payload.notes
     review.reviewed_at = datetime.now(timezone.utc)
+    record_product_event(
+        db,
+        event_type="ad_extraction_review_decided",
+        subject_type="ad_review",
+        subject_id=review.id,
+        actor=current_user,
+        properties={
+            "decision": payload.decision,
+            "directiveId": review.extraction.directive_id,
+            "extractionStatus": review.extraction.status,
+        },
+    )
+    record_workflow_status(
+        db,
+        workflow_type="ad_extraction",
+        workflow_id=review.extraction_id,
+        previous_status="needs_review",
+        new_status=review.extraction.status,
+        reason=payload.decision,
+        actor_type="reviewer",
+        actor=current_user,
+    )
     db.commit()
     db.refresh(review)
     return ADReviewDecisionResponse(review=serialize_review(review))
@@ -212,6 +311,16 @@ def serialize_match_result(match: ADMatchResult) -> ADMatchResultResponse:
     return ADMatchResultResponse(
         id=match.id,
         aircraftId=match.aircraft_id,
+        aircraftFacts={
+            "nNumber": match.aircraft.n_number_normalized if match.aircraft else None,
+            "make": match.aircraft.make if match.aircraft else None,
+            "model": match.aircraft.model if match.aircraft else None,
+            "serialNumber": match.aircraft.serial_number if match.aircraft else None,
+            "engineMake": match.aircraft.engine_make if match.aircraft else None,
+            "engineModel": match.aircraft.engine_model if match.aircraft else None,
+            "propellerMake": match.aircraft.propeller_make if match.aircraft else None,
+            "propellerModel": match.aircraft.propeller_model if match.aircraft else None,
+        },
         directive=serialize_directive(match.directive),
         status=match.status,
         matchType=match.match_type,
@@ -247,4 +356,5 @@ def serialize_match_adjudication(adjudication: ADMatchAdjudication) -> ADMatchAd
         status=adjudication.status,
         decision=adjudication.decision,
         notes=adjudication.notes,
+        futureImprovementTags=adjudication.future_improvement_tags or [],
     )
