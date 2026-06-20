@@ -34,11 +34,16 @@ class FederalRegisterClient:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
 
-    def search_airworthiness_directive_candidates(self, page: int = 1, per_page: int = 20) -> FederalRegisterSearchResult:
+    def search_airworthiness_directive_candidates(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        term: str = "Airworthiness Directives",
+    ) -> FederalRegisterSearchResult:
         params: list[tuple[str, str | int]] = [
             ("conditions[agencies][]", "federal-aviation-administration"),
             ("conditions[type][]", "RULE"),
-            ("conditions[term]", "Airworthiness Directives"),
+            ("conditions[term]", term),
             ("order", "newest"),
             ("page", page),
             ("per_page", per_page),
@@ -63,9 +68,10 @@ def discover_federal_register_ads(
     client: FederalRegisterClient | None = None,
     page: int = 1,
     per_page: int = 20,
+    term: str = "Airworthiness Directives",
 ) -> dict[str, int]:
     client = client or FederalRegisterClient()
-    search_result = client.search_airworthiness_directive_candidates(page=page, per_page=per_page)
+    search_result = client.search_airworthiness_directive_candidates(page=page, per_page=per_page, term=term)
     stats = {"seen": 0, "created": 0, "updated": 0, "candidates": 0, "rejected": 0}
     for document in search_result.results:
         stats["seen"] += 1
@@ -82,7 +88,7 @@ def discover_federal_register_ads(
         subject_type="ad_ingestion",
         subject_id="federal_register",
         event_source="worker",
-        properties=stats,
+        properties={**stats, "term": term, "page": page, "perPage": per_page},
     )
     record_workflow_status(
         db,

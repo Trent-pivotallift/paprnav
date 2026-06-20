@@ -11,9 +11,15 @@ from tests.conftest import login
 
 
 class FakeFederalRegisterClient:
-    def search_airworthiness_directive_candidates(self, page: int = 1, per_page: int = 20) -> FederalRegisterSearchResult:
+    def search_airworthiness_directive_candidates(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        term: str = "Airworthiness Directives",
+    ) -> FederalRegisterSearchResult:
         _ = page
         _ = per_page
+        _ = term
         return FederalRegisterSearchResult(
             description="Federal Aviation Administration Rule documents matching Airworthiness Directives",
             count=2,
