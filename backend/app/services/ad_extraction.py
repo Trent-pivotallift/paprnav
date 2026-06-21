@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -6,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.core import ADExtraction, ADExtractionReview, AirworthinessDirective
+from app.services.ad_applicability import populate_applicability_from_extraction
 from app.services.ad_discovery import extract_ad_number
 from app.services.observability import record_product_event, record_workflow_status
 
@@ -93,6 +96,7 @@ def ensure_review_for_extraction(db: Session, directive: AirworthinessDirective,
         directive.extraction_status = "complete"
         directive.review_status = "approved"
         directive.approved_at = directive.approved_at or datetime.now(timezone.utc)
+        populate_applicability_from_extraction(db, extraction)
         return
 
     directive.extraction_status = "needs_review"
@@ -112,8 +116,9 @@ def ensure_review_for_extraction(db: Session, directive: AirworthinessDirective,
 
 def build_extraction_output(directive: AirworthinessDirective) -> tuple[dict[str, Any], float, list[dict[str, str]]]:
     record = directive.discovery_record
-    source_text = "\n".join(filter(None, [record.title, record.abstract, record.excerpts]))
-    title_subject = subject_from_title(record.title)
+    source_text = "\n".join(filter(None, [record.title, record.abstract, record.excerpts])) if record else directive.title
+    title = record.title if record else directive.title
+    title_subject = subject_from_title(title)
     ad_number = directive.ad_number or extract_ad_number(source_text)
     superseded_numbers = sorted({match for match in AD_NUMBER_PATTERN.findall(source_text) if match != ad_number})
     confidence = 0.72
@@ -127,17 +132,17 @@ def build_extraction_output(directive: AirworthinessDirective) -> tuple[dict[str
 
     output = {
         "adNumber": ad_number,
-        "title": record.title,
-        "effectiveDate": record.effective_date.isoformat() if record.effective_date else None,
-        "publicationDate": record.publication_date.isoformat() if record.publication_date else None,
+        "title": title,
+        "effectiveDate": record.effective_date.isoformat() if record and record.effective_date else None,
+        "publicationDate": record.publication_date.isoformat() if record and record.publication_date else None,
         "affectedProducts": [title_subject] if title_subject else [],
         "complianceActions": [],
         "complianceIntervals": [],
         "supersedesAdNumbers": superseded_numbers,
         "sourceUrls": {
-            "html": record.html_url,
-            "pdf": record.pdf_url,
-            "publicInspectionPdf": record.public_inspection_pdf_url,
+            "html": record.html_url if record else None,
+            "pdf": record.pdf_url if record else None,
+            "publicInspectionPdf": record.public_inspection_pdf_url if record else None,
         },
     }
     if "airworthiness directive" in source_text.lower():
@@ -146,8 +151,8 @@ def build_extraction_output(directive: AirworthinessDirective) -> tuple[dict[str
     citations = [
         {
             "field": "title",
-            "source": "federal_register",
-            "text": record.title,
+            "source": "federal_register" if record else "directive",
+            "text": title,
         }
     ]
     return output, confidence, citations

@@ -38,6 +38,17 @@ class AircraftUpdateRequest(BaseModel):
     propellerSerialNumber: Optional[str] = Field(default=None, max_length=128)
 
 
+class InstalledComponentResponse(BaseModel):
+    id: str
+    role: str
+    componentType: str
+    make: Optional[str]
+    model: Optional[str]
+    serialNumber: Optional[str]
+    source: str
+    confidence: Optional[float]
+
+
 class AircraftResponse(BaseModel):
     id: str
     nNumber: str
@@ -53,6 +64,7 @@ class AircraftResponse(BaseModel):
     propellerMake: Optional[str]
     propellerModel: Optional[str]
     propellerSerialNumber: Optional[str]
+    installedComponents: list[InstalledComponentResponse] = []
     lastLogEntryDate: Optional[date]
     complianceStatus: str
 

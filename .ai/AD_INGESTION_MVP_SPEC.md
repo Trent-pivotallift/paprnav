@@ -1,6 +1,8 @@
 # paprnav AD Ingestion MVP Spec
 
-Last updated: 2026-06-16
+Last updated: 2026-06-20
+
+> Supersession note: D017 in `.ai/DECISIONS.md` changes the source ordering for the revised AD ingestion build. This file remains useful for the local Federal Register prototype and retention/review guidance, but its Federal Register-primary sections are superseded. The revised build should ingest the FAA DRS bulk ZIP/Access database first, then compare/enrich those ADs with Federal Register publications.
 
 This spec replaces the legacy AWS-first AD ingestion draft for MVP implementation planning. It uses the legacy `ad-ingestion-spec.md` for domain context and `.ai/AD_INGESTION_REVIEW.md` for current architecture guidance.
 
@@ -8,8 +10,8 @@ The MVP architecture is local/service-first: FastAPI plus Python workers, Postgr
 
 ## Goals
 
-- Discover FAA Airworthiness Directive candidates from the Federal Register API.
-- Classify FAA `Rule` documents so non-AD rules do not enter the AD corpus as authoritative ADs.
+- Discover FAA Airworthiness Directive candidates by importing the DRS bulk ZIP/Access database, then compare/enrich them with Federal Register records when available.
+- Classify FAA `Rule` documents from Federal Register delta/reconciliation flows so non-AD rules do not enter the AD corpus as authoritative ADs.
 - Persist source metadata, raw/source snapshots, extracted structured AD data, confidence, supersession, and review status.
 - Retain AD data after ingestion for audit, deterministic matching, cache reuse, and future algorithm replay.
 - Provide structured AD records for aircraft/component applicability matching against logbook entries.
@@ -27,9 +29,11 @@ The MVP architecture is local/service-first: FastAPI plus Python workers, Postgr
 - No foreign authority ingestion such as EASA or TCCA.
 - No official regulatory compliance attestation.
 
-## Primary Source
+## Source Ordering
 
-Use the Federal Register API as the primary discovery source:
+Revised decision D017: use FAA DRS bulk ZIP/Access database ingestion as the primary AD corpus and applicability path, then compare/enrich discovered ADs with Federal Register records.
+
+The existing Federal Register API prototype remains useful for publication matching, XML/body enrichment, corrections/supersession, and delta monitoring:
 
 ```text
 https://www.federalregister.gov/api/v1/documents.json?conditions[agencies][]=federal-aviation-administration&conditions[type][]=RULE&order=newest
@@ -39,17 +43,24 @@ Important constraint:
 
 - FAA `Rule` documents include ADs and non-AD rules. The ingester must classify/filter for Airworthiness Directives instead of trusting agency/type filters alone.
 
-Secondary source:
+FAA DRS requirements:
 
-- FAA DRS can be used later for reconciliation/backfill only. It should not be the primary MVP ingestion path.
+- DRS bulk ZIP retrieval and Access database parsing are the default source path.
+- DRS bulk fixtures should include the ZIP/database hash, table/column inventory, parser version, and sampled normalized rows.
+- Live DRS Web UI scraping is not the default ingestion path. It may be used only for validation/diagnostics unless a later decision accepts it as a fallback.
+- Any Web UI automation must be resumable, idempotent, rate-limited, manually gated, and disabled in CI.
+- Pre-1994 ADs present in the DRS bulk data should be ingested. Complete pre-1994 historical coverage must remain unclaimed until validated against DRS Web UI samples and historical FAA/index sources.
 
 ## MVP Architecture
 
 ```mermaid
 flowchart LR
-  FR["Federal Register API"] --> Poller["AD discovery worker"]
-  Poller --> DB["Postgres"]
-  Poller --> Obj["Object storage abstraction"]
+  DRS["FAA DRS bulk ZIP / Access DB"] --> Importer["DRS bulk import worker"]
+  Importer --> DB["Postgres"]
+  Importer --> Obj["Object storage abstraction"]
+  FR["Federal Register API"] --> Enrich["FR comparison / enrichment worker"]
+  Enrich --> DB
+  Enrich --> Obj
   DB --> Extract["AD extraction worker"]
   Obj --> Extract
   Extract --> DB

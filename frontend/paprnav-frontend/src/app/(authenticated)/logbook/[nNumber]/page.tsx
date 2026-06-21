@@ -43,6 +43,35 @@ function getPerformer(entry: LogbookEntry) {
   return [entry.performerName, entry.performerCredential].filter(Boolean).join(", ") || "Not recorded";
 }
 
+function formatRole(role: string | null | undefined) {
+  return role ? role.replaceAll("_", " ") : "component";
+}
+
+function formatComponent(match: ADMatchResult) {
+  const component = match.applicability?.component;
+  if (!component) {
+    return null;
+  }
+  const name = component.displayName || [component.make, component.model].filter(Boolean).join(" ") || component.componentType;
+  return `${formatRole(component.role)}: ${name}${component.serialNumber ? ` · SN ${component.serialNumber}` : ""}`;
+}
+
+function formatTarget(match: ADMatchResult) {
+  const target = match.applicability?.target;
+  if (!target) {
+    return null;
+  }
+  return [target.productType, target.productSubtype, target.make, target.model].filter(Boolean).join(" ");
+}
+
+function sourceWarning(match: ADMatchResult) {
+  const sourceStatus = match.applicability?.sourceStatus;
+  if (!sourceStatus || ["current", "active", "published"].includes(sourceStatus)) {
+    return null;
+  }
+  return `Source ${sourceStatus.replaceAll("_", " ")}`;
+}
+
 export default function AircraftLogbookPage() {
   const { user } = useAuth();
   const params = useParams();
@@ -263,6 +292,45 @@ export default function AircraftLogbookPage() {
                     Aircraft facts: {match.aircraftFacts.make} {match.aircraftFacts.model}
                     {match.aircraftFacts.serialNumber ? ` · SN ${match.aircraftFacts.serialNumber}` : ""}
                   </p>
+                  {formatComponent(match) || formatTarget(match) ? (
+                    <div className="mt-3 grid gap-2 rounded-md bg-muted/30 p-3 text-xs sm:grid-cols-2">
+                      {formatComponent(match) ? (
+                        <p>
+                          <span className="font-medium">Component</span>
+                          <br />
+                          <span className="text-muted-foreground">{formatComponent(match)}</span>
+                        </p>
+                      ) : null}
+                      {formatTarget(match) ? (
+                        <p>
+                          <span className="font-medium">Applicability target</span>
+                          <br />
+                          <span className="text-muted-foreground">{formatTarget(match)}</span>
+                        </p>
+                      ) : null}
+                      {match.applicability?.basis ? (
+                        <p>
+                          <span className="font-medium">Basis</span>
+                          <br />
+                          <span className="text-muted-foreground">
+                            {match.applicability.basis.replaceAll("_", " ")}
+                            {match.applicability.serialStatus ? ` · Serial ${match.applicability.serialStatus}` : ""}
+                          </span>
+                        </p>
+                      ) : null}
+                      {match.applicability?.publications.length ? (
+                        <p>
+                          <span className="font-medium">Sources</span>
+                          <br />
+                          <span className="text-muted-foreground">
+                            {match.applicability.publications
+                              .map((publication) => `${publication.sourceSystem.replaceAll("_", " ")} ${publication.sourceIdentifier}`)
+                              .join(", ")}
+                          </span>
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     {match.directive.htmlUrl ? (
                       <a className="rounded-md border px-2 py-1 hover:bg-muted" href={match.directive.htmlUrl} target="_blank" rel="noreferrer">
@@ -274,11 +342,24 @@ export default function AircraftLogbookPage() {
                         Source PDF
                       </a>
                     ) : null}
+                    {match.applicability?.publications
+                      .filter((publication) => publication.htmlUrl || publication.pdfUrl)
+                      .map((publication) => (
+                        <a
+                          key={`${publication.sourceSystem}-${publication.sourceIdentifier}`}
+                          className="rounded-md border px-2 py-1 hover:bg-muted"
+                          href={publication.htmlUrl ?? publication.pdfUrl ?? "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {publication.sourceSystem.replaceAll("_", " ")}
+                        </a>
+                      ))}
                   </div>
-                  {match.unresolvedReasons.length ? (
+                  {sourceWarning(match) || match.unresolvedReasons.length ? (
                     <p className="mt-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
                       <FileWarning className="h-4 w-4" />
-                      {match.unresolvedReasons.join(", ").replaceAll("_", " ")}
+                      {[sourceWarning(match), ...match.unresolvedReasons.map((reason) => reason.replaceAll("_", " "))].filter(Boolean).join(", ")}
                     </p>
                   ) : null}
                   {match.evidence.length ? (

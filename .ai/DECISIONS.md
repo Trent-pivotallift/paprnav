@@ -1,6 +1,6 @@
 # paprnav Decisions
 
-Last updated: 2026-06-18
+Last updated: 2026-06-20
 
 Record decisions here when they affect future implementation. Keep entries short and include the reason.
 
@@ -185,6 +185,31 @@ Acceptance expectations for affected tasks:
 - Explain any provider-neutral normalization, units, confidence scales, IDs, pagination, rate limits, or async behavior.
 - Keep raw provider artifacts or hashes where needed for audit/replay.
 
+### D017: Use DRS bulk data first, then Federal Register comparison
+
+Status: accepted
+
+For the revised AD ingestion build, the primary AD corpus and applicability path should start from the FAA DRS bulk download. The current public DRS bulk package was validated on 2026-06-20 as a ZIP containing an Access database (`ADFinalRulesEmergencyADs_05312026.accdb`) with AD identifiers from 1941 through 2026. Federal Register ingestion remains mandatory, but its role shifts to comparison, enrichment, source-of-record metadata for published rules, XML/body extraction when available, correction/supersession reconciliation, and scheduled delta monitoring.
+
+Reason:
+
+- The product question is aircraft/component-specific: "which ADs apply to this aircraft and installed equipment?"
+- DRS is closer to the indexed applicability workflow for aircraft, engine, propeller, and appliance targets, including older ADs that may not be covered cleanly by modern Federal Register API discovery.
+- The DRS bulk ZIP validation found 100% full-source coverage for the 2024 Federal Register AD identifier set. The weaker 91.58% AD-year surrogate coverage was a date-window artifact because early-2024 Federal Register publications included late-2023 AD numbers that were present in the full DRS ZIP.
+- Federal Register is still valuable for authoritative publication metadata and text, but FR-first discovery can miss or delay the target-specific applicability universe the app needs for a compliance worklist.
+
+Implementation expectations:
+
+- DRS bulk ZIP retrieval and Access database parsing are the default implementation path. Browser/UI scraping is not the default ingestion path.
+- The pipeline should store the DRS bulk ZIP/Access artifact or a content-hashed retained source snapshot, parse DRS rows into directives/publications/applicability targets, and then match each AD to Federal Register records when possible.
+- If future DRS bulk retrieval fails, the system should fail visibly and create admin repair work rather than silently switching to an apparently complete Federal Register-only corpus.
+- DRS Web UI automation may be used as a validation or diagnostic path to compare sampled UI results against the bulk database, but it must remain manually gated, rate-limited, fixture-backed, and disabled in CI.
+- Federal Register delta polling should still detect new FAA AD publications and mark affected targets stale or in need of reconciliation.
+- If DRS bulk ingestion fails or appears stale/broken, the app must show a degraded-coverage warning instead of implying a complete AD universe. Do not claim pre-1994 coverage is unavailable by default; the current DRS bulk data contains substantial pre-1994 coverage. Warn that historical and DRS-indexed AD coverage is unverified or may be incomplete until DRS collection is restored.
+- DRS failures must create admin-visible reconciliation/workflow issues so maintainers know source retrieval, parser logic, or fixture assumptions need review.
+- Pre-1994 completeness is not proven by the current validation. Treat it as supported where present in DRS bulk data, and add separate validation against DRS Web UI samples and historical FAA/index sources before claiming complete historical coverage.
+- The user-facing output remains decision support, not compliance attestation.
+
 ## Proposed Decisions To Resolve Soon
 
 ### P001: Authentication provider
@@ -214,3 +239,7 @@ Resolved by D014.
 ### P007: AD extraction provider
 
 Resolved by D015.
+
+### P008: AD source ordering
+
+Resolved by D017.

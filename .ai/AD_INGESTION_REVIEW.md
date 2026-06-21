@@ -1,19 +1,21 @@
 # AD Ingestion Spec Review
 
-Last updated: 2026-06-16
+Last updated: 2026-06-20
+
+> Supersession note: D017 in `.ai/DECISIONS.md` supersedes this review's Federal Register-primary recommendation. Keep the local-first/Postgres/retention/review guidance, but use FAA DRS bulk ZIP/Access database ingestion first and Federal Register comparison/enrichment second for the revised AD ingestion build. DRS Web UI crawling is validation/diagnostic tooling, not the default ingestion path.
 
 Reviewed source: `ad-ingestion-spec.md`
 
 ## Summary
 
-The legacy AD ingestion spec has strong domain instincts: use Federal Register as the primary source, preserve raw source artifacts, extract structured applicability and compliance timing, track supersession, and route low-confidence results to human review.
+The legacy AD ingestion spec has strong domain instincts: preserve raw source artifacts, extract structured applicability and compliance timing, track supersession, and route low-confidence results to human review. The source-ordering recommendation has changed: DRS bulk data is now primary for the AD corpus/applicability source, with Federal Register used for comparison/enrichment and delta reconciliation.
 
 The main conflicts are scope and architecture. The current paprnav repo is a FastAPI/Postgres/Next app with no AWS IaC. The legacy spec jumps directly to EventBridge, Lambda, SQS, S3 Object Lock, DynamoDB, OpenSearch Serverless, and Bedrock. That may be a good future production architecture, but it is too much for the MVP and conflicts with the repo's existing Postgres direction.
 
 ## Keep
 
-- Federal Register API as the primary discovery source.
-- FAA DRS as reconciliation/backfill only, not primary ingestion.
+- FAA DRS bulk ZIP/Access database ingestion as the primary AD corpus/applicability source.
+- Federal Register API for publication comparison, source text enrichment, corrections/supersession, and delta reconciliation.
 - Raw/source artifact retention for audit and reprocessing.
 - Content hashing to avoid duplicate extraction work.
 - Applicability extraction with confidence scores.
@@ -101,4 +103,3 @@ https://www.federalregister.gov/api/v1/documents.json?conditions[agencies][]=fed
 ## Recommended Spec Status
 
 Do not delete `ad-ingestion-spec.md`; mark it as a legacy AWS production architecture concept and point readers to this review plus `.ai/MVP_COMPLETION.md`.
-

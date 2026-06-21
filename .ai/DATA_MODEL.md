@@ -733,8 +733,10 @@ AD ingestion, extraction, supersession, matching, and adjudication are specified
 
 - Postgres stores structured AD records and review state.
 - Object storage stores raw/source artifacts or snapshots.
-- Matching output links AD records to aircraft, component facts, and logbook entry evidence.
+- Matching output links AD records to aircraft, installed components, applicability targets, source publications, and logbook entry evidence.
 - HITL adjudications are explicit records, not just status strings.
+- Installed component roles/types must not assume fixed-wing-only aircraft. The schema should support airframe, engine, propeller, rotorcraft airframe, rotor system, drivetrain/transmission, appliance, unknown, and other roles.
+- Rotorcraft/rotorwing component identity should be represented explicitly when known; do not overload propeller fields for rotor or drivetrain components.
 
 ## Suggested Migration Grouping
 

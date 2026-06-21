@@ -13,6 +13,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
 from app.models.core import Aircraft, AircraftAssignment, LogbookSection, Organization, OrganizationMembership, User
+from app.services.installed_components import sync_installed_components_from_aircraft
 
 
 TEST_PASSWORD = "test-password"
@@ -97,6 +98,7 @@ def create_aircraft(db: Session, owner: Organization, created_by: User, n_number
     )
     db.add(aircraft)
     db.flush()
+    sync_installed_components_from_aircraft(db, aircraft)
     return aircraft
 
 

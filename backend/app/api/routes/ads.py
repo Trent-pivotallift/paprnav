@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,6 +16,7 @@ from app.models.core import (
     ADMatchAdjudication,
     ADMatchEvidence,
     ADMatchResult,
+    ADTargetApplicability,
     AirworthinessDirective,
     LogbookEntry,
     User,
@@ -26,14 +29,20 @@ from app.schemas.ads import (
     ADMatchAdjudicationResponse,
     ADMatchAdjudicationDecisionRequest,
     ADMatchAdjudicationDecisionResponse,
+    ADMatchApplicabilityResponse,
+    ADMatchComponentResponse,
     ADMatchEvidenceResponse,
     ADMatchResultListResponse,
     ADMatchResultResponse,
+    ADMatchPublicationResponse,
+    ADMatchTargetResponse,
     ADReviewDecisionRequest,
     ADReviewDecisionResponse,
     AirworthinessDirectiveResponse,
 )
 from app.services.ad_extraction import validate_extraction_output
+from app.services.ad_applicability import populate_applicability_from_extraction
+from app.services.installed_components import component_display_name
 from app.services.observability import record_product_event, record_workflow_status
 
 router = APIRouter(prefix="/api/v1/ads", tags=["airworthiness-directives"])
@@ -94,6 +103,10 @@ def list_aircraft_matches(
         .options(
             selectinload(ADMatchResult.aircraft),
             selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.discovery_record),
+            selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.publications),
+            selectinload(ADMatchResult.installed_component),
+            selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.target),
+            selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.source_publication),
             selectinload(ADMatchResult.evidence_links).selectinload(ADMatchEvidence.logbook_entry).selectinload(LogbookEntry.logbook_section),
             selectinload(ADMatchResult.adjudication),
         )
@@ -118,6 +131,10 @@ def decide_match_adjudication(
         .options(
             selectinload(ADMatchResult.aircraft),
             selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.discovery_record),
+            selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.publications),
+            selectinload(ADMatchResult.installed_component),
+            selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.target),
+            selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.source_publication),
             selectinload(ADMatchResult.evidence_links).selectinload(ADMatchEvidence.logbook_entry).selectinload(LogbookEntry.logbook_section),
             selectinload(ADMatchResult.adjudication),
         )
@@ -168,6 +185,10 @@ def decide_match_adjudication(
         .options(
             selectinload(ADMatchResult.aircraft),
             selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.discovery_record),
+            selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.publications),
+            selectinload(ADMatchResult.installed_component),
+            selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.target),
+            selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.source_publication),
             selectinload(ADMatchResult.evidence_links).selectinload(ADMatchEvidence.logbook_entry).selectinload(LogbookEntry.logbook_section),
             selectinload(ADMatchResult.adjudication),
         )
@@ -206,6 +227,7 @@ def decide_extraction_review(
         review.extraction.directive.extraction_status = "complete"
         review.extraction.directive.review_status = "approved"
         review.extraction.directive.approved_at = datetime.now(timezone.utc)
+        populate_applicability_from_extraction(db, review.extraction)
     else:
         review.extraction.status = "rejected"
         review.extraction.directive.review_status = "rejected"
@@ -269,10 +291,10 @@ def serialize_directive(directive: AirworthinessDirective) -> AirworthinessDirec
         status=directive.status,
         extractionStatus=directive.extraction_status,
         reviewStatus=directive.review_status,
-        federalRegisterDocumentNumber=record.federal_register_document_number,
-        publicationDate=record.publication_date,
-        htmlUrl=record.html_url,
-        pdfUrl=record.pdf_url,
+        federalRegisterDocumentNumber=record.federal_register_document_number if record else None,
+        publicationDate=record.publication_date if record else first_publication_date(directive),
+        htmlUrl=record.html_url if record else first_publication_url(directive, "html_url"),
+        pdfUrl=record.pdf_url if record else first_publication_url(directive, "pdf_url"),
     )
 
 
@@ -293,7 +315,7 @@ def serialize_extraction(extraction: ADExtraction) -> ADExtractionResponse:
 
 def serialize_review(review: ADExtractionReview) -> ADExtractionReviewResponse:
     record = review.extraction.directive.discovery_record
-    source_text = "\n\n".join(filter(None, [record.title, record.abstract, record.excerpts]))
+    source_text = "\n\n".join(filter(None, [record.title, record.abstract, record.excerpts])) if record else review.extraction.directive.title
     return ADExtractionReviewResponse(
         id=review.id,
         status=review.status,
@@ -327,12 +349,78 @@ def serialize_match_result(match: ADMatchResult) -> ADMatchResultResponse:
         confidence=match.confidence,
         rationale=match.rationale,
         unresolvedReasons=match.unresolved_reasons or [],
+        applicability=serialize_match_applicability(match),
         algorithmName=match.algorithm_name,
         algorithmVersion=match.algorithm_version,
         inputHash=match.input_hash,
         evidence=[serialize_match_evidence(evidence) for evidence in match.evidence_links],
         adjudication=serialize_match_adjudication(match.adjudication) if match.adjudication else None,
     )
+
+
+def serialize_match_applicability(match: ADMatchResult) -> ADMatchApplicabilityResponse | None:
+    applicability = match.target_applicability
+    component = match.installed_component
+    publications = []
+    if applicability and applicability.source_publication:
+        publications.append(applicability.source_publication)
+    publications.extend([publication for publication in match.directive.publications if publication not in publications])
+    if not applicability and not component and not publications and not match.applicability_snapshot:
+        return None
+    target = applicability.target if applicability else None
+    return ADMatchApplicabilityResponse(
+        component=ADMatchComponentResponse(
+            id=component.id if component else None,
+            role=component.role if component else None,
+            componentType=component.component_type if component else None,
+            displayName=component_display_name(component),
+            make=component.make if component else None,
+            model=component.model if component else None,
+            serialNumber=component.serial_number if component else None,
+            source=component.source if component else None,
+        )
+        if component
+        else None,
+        target=ADMatchTargetResponse(
+            id=target.id,
+            productType=target.product_type,
+            productSubtype=target.product_subtype,
+            make=target.make,
+            model=target.model,
+        )
+        if target
+        else None,
+        basis=applicability.applicability_basis if applicability else None,
+        confidence=applicability.confidence if applicability else None,
+        status=applicability.status if applicability else None,
+        sourceStatus=(publications[0].status if publications else None),
+        serialStatus=(match.applicability_snapshot or {}).get("serialStatus"),
+        publications=[
+            ADMatchPublicationResponse(
+                sourceSystem=publication.source_system,
+                sourceType=publication.source_type,
+                sourceIdentifier=publication.source_identifier,
+                status=publication.status,
+                htmlUrl=publication.html_url,
+                pdfUrl=publication.pdf_url,
+            )
+            for publication in publications
+        ],
+        snapshot=match.applicability_snapshot,
+    )
+
+
+def first_publication_date(directive: AirworthinessDirective):
+    publication = next(iter(directive.publications), None)
+    return publication.publication_date if publication else None
+
+
+def first_publication_url(directive: AirworthinessDirective, field_name: str) -> str | None:
+    for publication in directive.publications:
+        value = getattr(publication, field_name)
+        if value:
+            return value
+    return None
 
 
 def serialize_match_evidence(evidence: ADMatchEvidence) -> ADMatchEvidenceResponse:

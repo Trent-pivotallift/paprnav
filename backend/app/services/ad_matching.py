@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import re
@@ -13,10 +15,13 @@ from app.models.core import (
     ADMatchAdjudication,
     ADMatchEvidence,
     ADMatchResult,
+    ADTargetApplicability,
     Aircraft,
     AirworthinessDirective,
+    InstalledComponent,
     LogbookEntry,
 )
+from app.services.ad_applicability import infer_component_role
 from app.services.observability import record_product_event, record_workflow_status
 
 ALGORITHM_NAME = "deterministic_ad_logbook_matcher"
@@ -33,7 +38,7 @@ class CandidateEvidence:
 
 
 def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
-    aircraft = db.scalar(select(Aircraft).where(Aircraft.id == aircraft_id))
+    aircraft = db.scalar(select(Aircraft).where(Aircraft.id == aircraft_id).options(selectinload(Aircraft.installed_components)))
     if not aircraft:
         raise ValueError("Aircraft not found")
 
@@ -48,10 +53,22 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
     for extraction in extractions:
         stats["directives_seen"] += 1
         output = extraction.output
-        if not is_potentially_applicable(aircraft, output):
+        applicability = select_applicable_component(aircraft, extraction)
+        has_structured_applicability = bool(extraction.directive.target_applicabilities)
+        if has_structured_applicability and applicability is None:
             stats["skipped_not_applicable"] += 1
             continue
-        result = upsert_match_result(db, aircraft, entries, extraction)
+        if not has_structured_applicability and not is_potentially_applicable(aircraft, output):
+            stats["skipped_not_applicable"] += 1
+            continue
+        result = upsert_match_result(
+            db,
+            aircraft,
+            entries,
+            extraction,
+            installed_component=applicability[0] if applicability else None,
+            target_applicability=applicability[1] if applicability else None,
+        )
         if result.status == "candidate_satisfied":
             stats["matched"] += 1
         else:
@@ -85,6 +102,12 @@ def approved_current_extractions(db: Session) -> list[ADExtraction]:
         .where(ADExtraction.status == "approved")
         .options(
             selectinload(ADExtraction.directive).selectinload(AirworthinessDirective.discovery_record),
+            selectinload(ADExtraction.directive)
+            .selectinload(AirworthinessDirective.target_applicabilities)
+            .selectinload(ADTargetApplicability.target),
+            selectinload(ADExtraction.directive)
+            .selectinload(AirworthinessDirective.target_applicabilities)
+            .selectinload(ADTargetApplicability.source_publication),
             selectinload(ADExtraction.directive).selectinload(AirworthinessDirective.superseded_by_edges),
         )
         .order_by(ADExtraction.created_at.desc())
@@ -96,16 +119,22 @@ def upsert_match_result(
     aircraft: Aircraft,
     entries: list[LogbookEntry],
     extraction: ADExtraction,
+    installed_component: InstalledComponent | None = None,
+    target_applicability: ADTargetApplicability | None = None,
 ) -> ADMatchResult:
     output = extraction.output
     evidence = rank_candidate_entries(entries, output)
     match_type, unresolved_reasons = classify_match_type(output)
-    status = "candidate_satisfied" if evidence and not unresolved_reasons else "needs_adjudication"
     confidence = evidence[0].confidence if evidence else 0.42
     if unresolved_reasons:
         confidence = min(confidence, 0.68)
+    applicability_snapshot = build_applicability_snapshot(installed_component, target_applicability)
+    if target_applicability and not installed_component.serial_number:
+        unresolved_reasons = sorted(set(unresolved_reasons + ["component_serial_unknown"]))
+        confidence = min(confidence, 0.72)
+    status = "candidate_satisfied" if evidence and not unresolved_reasons else "needs_adjudication"
     rationale = build_rationale(output, evidence, unresolved_reasons)
-    input_hash = build_input_hash(aircraft, entries, extraction)
+    input_hash = build_input_hash(aircraft, entries, extraction, installed_component, target_applicability)
 
     existing = db.scalar(
         select(ADMatchResult).where(
@@ -119,11 +148,14 @@ def upsert_match_result(
     if existing:
         result = existing
         result.extraction_id = extraction.id
+        result.installed_component_id = installed_component.id if installed_component else None
+        result.target_applicability_id = target_applicability.id if target_applicability else None
         result.status = status
         result.match_type = match_type
         result.confidence = confidence
         result.rationale = rationale
         result.unresolved_reasons = unresolved_reasons
+        result.applicability_snapshot = applicability_snapshot
         result.computed_at = datetime.now(timezone.utc)
         db.execute(delete(ADMatchEvidence).where(ADMatchEvidence.match_result_id == result.id))
     else:
@@ -131,11 +163,14 @@ def upsert_match_result(
             aircraft_id=aircraft.id,
             directive_id=extraction.directive_id,
             extraction_id=extraction.id,
+            installed_component_id=installed_component.id if installed_component else None,
+            target_applicability_id=target_applicability.id if target_applicability else None,
             status=status,
             match_type=match_type,
             confidence=confidence,
             rationale=rationale,
             unresolved_reasons=unresolved_reasons,
+            applicability_snapshot=applicability_snapshot,
             algorithm_name=ALGORITHM_NAME,
             algorithm_version=ALGORITHM_VERSION,
             input_hash=input_hash,
@@ -195,6 +230,100 @@ def is_potentially_applicable(aircraft: Aircraft, output: dict[str, Any]) -> boo
     }
     joined_aircraft = " ".join(sorted(aircraft_terms))
     return any(product in joined_aircraft or any(term in product for term in aircraft_terms) for product in products)
+
+
+def select_applicable_component(aircraft: Aircraft, extraction: ADExtraction) -> tuple[InstalledComponent, ADTargetApplicability] | None:
+    active_components = [component for component in aircraft.installed_components if component.removed_at is None]
+    best: tuple[InstalledComponent, ADTargetApplicability, float] | None = None
+    for applicability in extraction.directive.target_applicabilities:
+        target = applicability.target
+        if applicability.status not in {"current", "active", "unknown"}:
+            continue
+        target_role = infer_component_role(target.product_type, target.product_subtype)
+        for component in active_components:
+            score = component_target_score(component, applicability, target_role)
+            if score <= 0:
+                continue
+            if best is None or score > best[2]:
+                best = (component, applicability, score)
+    if best is None:
+        return None
+    return best[0], best[1]
+
+
+def component_target_score(component: InstalledComponent, applicability: ADTargetApplicability, target_role: str) -> float:
+    target = applicability.target
+    score = 0.0
+    compatible_roles = {
+        "airframe": {"airframe", "rotorcraft_airframe"},
+        "rotorcraft_airframe": {"airframe", "rotorcraft_airframe"},
+        "engine": {"engine"},
+        "propeller": {"propeller", "rotor_system"},
+        "rotor_system": {"rotor_system", "propeller"},
+        "drivetrain_transmission": {"drivetrain_transmission"},
+        "appliance": {"appliance", "other", "unknown"},
+        "unknown": {"airframe", "engine", "propeller", "rotorcraft_airframe", "rotor_system", "drivetrain_transmission", "appliance", "other", "unknown"},
+    }
+    if component.role not in compatible_roles.get(target_role, {target_role}):
+        return 0.0
+    score += 0.25
+    if text_matches(component.make, target.make):
+        score += 0.35
+    elif target.make:
+        return 0.0
+    if text_matches(component.model, target.model):
+        score += 0.35
+    elif target.model:
+        return 0.0
+    return score
+
+
+def text_matches(component_value: str | None, target_value: str | None) -> bool:
+    if not target_value:
+        return True
+    if not component_value:
+        return False
+    component_text = normalize_match_text(component_value)
+    target_text = normalize_match_text(target_value)
+    return component_text in target_text or target_text in component_text
+
+
+def normalize_match_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def build_applicability_snapshot(
+    component: InstalledComponent | None,
+    applicability: ADTargetApplicability | None,
+) -> dict[str, Any] | None:
+    if component is None and applicability is None:
+        return None
+    target = applicability.target if applicability else None
+    publication = applicability.source_publication if applicability else None
+    return {
+        "component": {
+            "id": component.id,
+            "role": component.role,
+            "make": component.make,
+            "model": component.model,
+            "serialNumber": component.serial_number,
+        }
+        if component
+        else None,
+        "target": {
+            "id": target.id,
+            "productType": target.product_type,
+            "productSubtype": target.product_subtype,
+            "make": target.make,
+            "model": target.model,
+        }
+        if target
+        else None,
+        "basis": applicability.applicability_basis if applicability else None,
+        "sourceSystem": publication.source_system if publication else None,
+        "sourceStatus": publication.status if publication else None,
+        "serialStatus": "known" if component and component.serial_number else "unknown",
+    }
 
 
 def rank_candidate_entries(entries: list[LogbookEntry], output: dict[str, Any]) -> list[CandidateEvidence]:
@@ -263,7 +392,13 @@ def build_rationale(output: dict[str, Any], evidence: list[CandidateEvidence], u
     return f"Needs adjudication: no logbook entry cites or strongly matches {ad_number}."
 
 
-def build_input_hash(aircraft: Aircraft, entries: list[LogbookEntry], extraction: ADExtraction) -> str:
+def build_input_hash(
+    aircraft: Aircraft,
+    entries: list[LogbookEntry],
+    extraction: ADExtraction,
+    installed_component: InstalledComponent | None = None,
+    target_applicability: ADTargetApplicability | None = None,
+) -> str:
     payload = {
         "aircraft": {
             "id": aircraft.id,
@@ -274,6 +409,22 @@ def build_input_hash(aircraft: Aircraft, entries: list[LogbookEntry], extraction
             "engineModel": aircraft.engine_model,
             "propellerMake": aircraft.propeller_make,
             "propellerModel": aircraft.propeller_model,
+            "components": [
+                {
+                    "id": component.id,
+                    "role": component.role,
+                    "type": component.component_type,
+                    "make": component.make,
+                    "model": component.model,
+                    "serial": component.serial_number,
+                }
+                for component in sorted(aircraft.installed_components, key=lambda item: item.id)
+                if component.removed_at is None
+            ],
+        },
+        "selectedApplicability": {
+            "componentId": installed_component.id if installed_component else None,
+            "targetApplicabilityId": target_applicability.id if target_applicability else None,
         },
         "extraction": {
             "id": extraction.id,

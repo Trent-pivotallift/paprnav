@@ -1211,7 +1211,7 @@ Acceptance:
 
 - Current official Federal Register API docs are checked and recorded in `.ai/PROVIDER_REFERENCES.md`.
 - API query parameters, pagination/limits, source URLs, publication dates, document numbers, and raw response retention are mapped before implementation.
-- Uses Federal Register API as primary source.
+- Historical prototype used Federal Register API as its source; D017 later changed the revised ingestion architecture to DRS bulk ZIP/Access ingestion first, then Federal Register comparison/enrichment.
 - Does not assume every FAA Rule is an AD.
 - Stores discovery metadata and candidate/rejected classification.
 - Can run locally without applying AWS changes.
@@ -1451,3 +1451,406 @@ Evidence:
 - Each item links to Federal Register/source PDF evidence and logbook entry evidence when available.
 - Unresolved items show review controls and unresolved reasons instead of implying compliance.
 - Human decisions render after adjudication.
+
+## Revised AD Ingestion Completion Tasks
+
+These tasks incorporate the 2026-06-20 review of `/Users/hostiletakeover/Downloads/ad-pipeline-spec-v2.md`. See `.ai/AD_PIPELINE_SPEC_V2_REVIEW.md` before starting these tasks.
+
+The completed T045-T054 work is a useful prototype path, not the final AD ingestion architecture. Future agents should extend the existing `backend/app` implementation rather than creating a separate `ad_pipeline/` project.
+
+### T059: Confirm AD pipeline architecture decisions
+
+Status: completed 2026-06-20
+
+Goal: Update `.ai/DECISIONS.md` with the durable choices from `.ai/AD_PIPELINE_SPEC_V2_REVIEW.md`.
+
+Implementation:
+
+- Added D017 to `.ai/DECISIONS.md`.
+- Accepted the revised DRS-first source ordering: DRS bulk ZIP/Access database ingestion first, then Federal Register comparison/enrichment/delta reconciliation.
+- Added the degraded-mode expectation: if DRS bulk ingestion breaks or goes stale, users see incomplete historical/DRS-indexed coverage warnings and admins get repair/reconciliation alerts.
+- Do not warn that pre-1994 is unavailable by default while DRS bulk ingestion is healthy; current validation found substantial pre-1994 coverage, but complete historical coverage remains unproven.
+- Kept Postgres, integrated backend implementation, fixture-first DRS research, and non-attestation guardrails.
+
+Acceptance:
+
+- Confirms Postgres remains the structured store for MVP and near-term AWS.
+- Confirms DRS bulk ZIP/Access ingestion is the primary AD corpus/applicability path.
+- Confirms Federal Register remains required for comparison, enrichment, and delta reconciliation.
+- Confirms implementation stays inside the existing backend package unless explicitly approved otherwise.
+- Lists any human-debate items that remain unresolved.
+
+Suggested checks:
+
+```bash
+sed -n '1,360p' .ai/DECISIONS.md
+```
+
+### T060: Add applicability target and installed component schema
+
+Status: completed 2026-06-20
+
+Goal: Add relational support for applicability targets, installed components, AD publications, AD-target applicability, and reconciliation/source issues.
+
+Acceptance:
+
+- Adds SQLAlchemy models and Alembic migration for the new tables.
+- `installed_components` can represent airframe, engine, propeller, rotorcraft, drivetrain, and appliance targets.
+- Component role/type enums avoid fixed-wing-only assumptions and explicitly support rotorcraft/rotorwing structures such as rotorcraft airframe, rotor system, drivetrain/transmission, engine, and appliance.
+- `ad_publications` can store Federal Register and DRS artifacts with source URLs, storage keys, hashes, and publication type.
+- `ad_target_applicability` links directives to targets with serial ranges, conditions, compliance times, confidence, and citations or source references.
+- Existing AD discovery/extraction/review/matching tables remain intact.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m py_compile main.py
+python -m pytest tests/test_ad_ingestion.py tests/test_ad_matching.py
+```
+
+Evidence:
+
+- Added SQLAlchemy models in `backend/app/models/core.py` and migration `backend/app/db/migrations/versions/20260620_0007_add_component_applicability.py`.
+- Verified with full backend test suite: `cd backend && ../backend/.venv/bin/python -m pytest`.
+
+### T061: Backfill and maintain installed components from aircraft facts
+
+Status: completed 2026-06-20
+
+Goal: Make existing aircraft make/model/engine/propeller fields populate installed component rows and keep them synchronized through aircraft create/update flows.
+
+Acceptance:
+
+- Existing seeded aircraft get airframe, engine, and propeller installed component rows when source fields exist.
+- Aircraft create/update endpoints maintain component rows without duplicating unchanged components.
+- Component serial numbers and roles are preserved.
+- Matching code can read component rows even while the UI still displays flat aircraft facts.
+- Rotorcraft/rotorwing aircraft are not forced into fixed-wing propeller assumptions; missing rotor/drivetrain fields remain unknown components until the UI/API supports explicit capture.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_mvp_endpoints.py tests/test_ad_matching.py
+```
+
+Evidence:
+
+- Added aircraft-facts component synchronization in `backend/app/services/installed_components.py`.
+- Wired aircraft create/update and test fixture creation to maintain component rows.
+- Verified with full backend test suite.
+
+### T064: Research and validate DRS collection path
+
+Status: completed 2026-06-20
+
+Goal: Validate DRS as the primary source before building production ingestion.
+
+Implementation:
+
+- Checked current FAA AD and DRS public behavior and recorded findings in `.ai/PROVIDER_REFERENCES.md`.
+- Confirmed DRS is a JavaScript app shell for root and target browse URLs; no supported public API or static result schema was established.
+- Confirmed `/robots.txt` did not return a conventional robots file during the T064 check, so live crawling permission/rate behavior remains unresolved.
+- Added fixture contract metadata at `backend/tests/fixtures/drs/pa28_180_target_crawl.metadata.json`.
+- Defined required fixture artifacts, normalized row fields, crawl states, degraded coverage states, and when live DRS access is allowed.
+- Added one-shot validation tooling under `tools/drs_zip_validation/` and confirmed the public DRS bulk download currently provides `ADFinalRulesEmergencyADs_05312026.zip` containing `ADFinalRulesEmergencyADs_05312026.accdb`.
+- Validated the DRS bulk AD identifier set against the 2024 Federal Register AD identifier set: 273/273 FR AD identifiers were present in the full DRS ZIP set, for 100.00% full-source coverage.
+- Confirmed the current DRS bulk identifier extraction includes 19,731 normalized AD identifiers from 1941 through 2026, including 6,792 pre-1994 identifiers. This proves pre-1994 is present, not complete.
+
+Acceptance:
+
+- Checks current public DRS behavior, robots/rate-limit constraints, and records findings in `.ai/PROVIDER_REFERENCES.md`.
+- Adds saved fixture HTML/PDF metadata for one small target crawl without relying on live DRS in CI.
+- Defines target crawl states and resumability behavior.
+- Documents when live DRS access is allowed during local manual runs.
+- Validates whether the DRS bulk package can be used as the primary ingestion source and records the coverage evidence.
+
+Evidence:
+
+- `.ai/PROVIDER_REFERENCES.md` section `FAA DRS Bulk Data And Target Validation`.
+- `backend/tests/fixtures/drs/pa28_180_target_crawl.metadata.json`.
+- `tools/drs_zip_validation/validate_drs_zip.py`.
+- `tools/drs_zip_validation/findings.md`.
+- Read-only checks used `https://drs.faa.gov/`, `https://drs.faa.gov/robots.txt`, and the PA-28-180 DRS browse URL.
+- Live validation used `https://drs.faa.gov/browse/ADFREAD/doctypeDetails` and the Federal Register API.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*.md' -print
+```
+
+### T065: Implement fixture-first DRS bulk importer
+
+Status: completed 2026-06-20
+
+Goal: Add a DRS bulk importer that can process saved DRS ZIP/Access fixtures into directives, publications, source state, reconciliation issues, and target/applicability rows without live DRS network access.
+
+Acceptance:
+
+- Given a saved DRS bulk ZIP/Access fixture, importer stores source artifact metadata, content hashes, table/column inventory, parser version, and source capture timestamp.
+- Importer parses AD rows into or updates directive records, DRS publication/provenance records, applicability targets, and baseline AD-target applicability links where the Access columns provide enough data.
+- Importer validates required fixture metadata and produces a clear failure/reconciliation issue when the ZIP, Access database, required table, required columns, or normalized rows are missing.
+- Importer supports source states `fixture_ready`, `in_progress`, `complete`, `partial`, `stale`, `failed`, and `unavailable`.
+- Import runs are idempotent and resumable.
+- Live DRS Web UI scraping is disabled by default and never required for tests.
+- Source status and reconciliation issues are visible to backend services.
+- Failed or stale DRS bulk imports create admin-visible reconciliation/workflow issues.
+- Failed or stale DRS bulk imports expose a state the UI can use to warn that historical and DRS-indexed AD coverage is unverified or may be incomplete.
+- Pre-1994 ADs present in the DRS bulk data are ingested; completeness is tracked separately and not claimed.
+
+Implementation notes:
+
+- Start with a fixture loader/service for the bulk ZIP/Access data, not browser automation.
+- Do not use reverse-engineered DRS endpoints.
+- Store enough provenance to distinguish DRS applicability evidence from Federal Register publication evidence.
+- Do not treat the existing PA-28-180 target fixture as the primary source now that the bulk ZIP path has validated. Keep it as a Web UI validation fixture.
+- Access row parsing must be explicit and tested; the one-shot validator's UTF-16 identifier extraction is enough for source coverage validation, not enough for production row ingestion.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_ad_ingestion.py
+```
+
+Evidence:
+
+- Added fixture-first DRS row/ZIP importer in `backend/app/services/drs_bulk_import.py`.
+- Added `backend/tests/test_drs_bulk_import.py`, including pre-1994 AD import coverage.
+- Verified with full backend test suite.
+
+### T071: Validate pre-1994 DRS historical completeness
+
+Status: ready after T065
+
+Goal: Build confidence in pre-1994 historical coverage without claiming completeness from the DRS bulk package alone.
+
+Acceptance:
+
+- Samples pre-1994 AD identifiers and target queries from the DRS bulk import and compares them against DRS Web UI result snapshots.
+- Compares selected pre-1994 years or high-value legacy aircraft/components against available FAA historical indexes, AD summary PDFs, biweekly lists, or other primary/near-primary source lists where available.
+- Records methodology, source limitations, sample size, gaps, and confidence level in `.ai/PROVIDER_REFERENCES.md` or a dedicated validation note.
+- Produces reconciliation issues for missing or ambiguous historical ADs.
+- Product copy remains conservative: pre-1994 ADs are included when present in DRS bulk data, but complete historical coverage is not claimed until this validation passes.
+
+Implementation notes:
+
+- Treat ZIP-vs-Web-UI as necessary but insufficient; it validates consistency within current DRS, not historical completeness.
+- Do not run Web UI validation in CI. Use saved snapshots/fixtures for tests.
+- Prefer aircraft/component samples relevant to likely GA users, such as PA-28, C172, Bonanza, Lycoming O-320/O-360, Continental O-200/O-470, Hartzell, and McCauley.
+
+Suggested checks:
+
+```bash
+find .ai -maxdepth 1 -type f -name '*.md' -print
+```
+
+### T062: Upgrade Federal Register client for comparison and enrichment
+
+Status: completed 2026-06-20
+
+Goal: Extend Federal Register support so DRS-discovered ADs can be compared, enriched, cited, and monitored against Federal Register publications.
+
+Acceptance:
+
+- Current official Federal Register API docs are checked and `.ai/PROVIDER_REFERENCES.md` is updated.
+- Client supports document detail lookup, term search, XML/body fetch, and scheduled publication-date delta queries.
+- Source artifacts are stored through the existing storage abstraction with hashes.
+- Federal Register matches can enrich DRS-discovered directives with publication metadata, source text, citations, corrections, and supersession clues.
+- Delta polling can mark affected targets stale or needing reconciliation rather than acting as the primary applicability source.
+- Non-AD FAA rules are retained only as lightweight discovery/classification records.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_ad_ingestion.py
+```
+
+Evidence:
+
+- Added Federal Register AD-number search and DRS-to-FR reconciliation in `backend/app/services/ad_discovery.py`.
+- DRS-only directives now tolerate missing FR discovery records while retaining FR enrichment hooks.
+- Verified with full backend test suite.
+
+### T063: Add AD identity normalization and FR matching
+
+Status: completed 2026-06-20
+
+Goal: Add normalization utilities and AD-to-Federal-Register matching for directives discovered from DRS bulk data.
+
+Acceptance:
+
+- Normalizes AD numbers, including two-digit pre-2000 numbers, amendment numbers, docket numbers, and FR citations.
+- Given an AD number and optional amendment number, searches Federal Register, validates the AD identifier in fetched source text/XML, and links matching publications.
+- Handles original, correction, withdrawal, and supersession candidate publications without collapsing them into one source.
+- Includes fixture tests for two-digit-year AD numbers and correction/supersession cases.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_ad_ingestion.py
+```
+
+Evidence:
+
+- Added AD-number normalization in `backend/app/services/ad_identity.py`, including two-digit historical AD years.
+- FR reconciliation links matching publications or opens reconciliation issues.
+- Verified with `backend/tests/test_drs_bulk_import.py` and full backend test suite.
+
+### T066: Populate queryable applicability and compliance rows from extraction
+
+Status: completed 2026-06-20
+
+Goal: Evolve AD extraction from shallow JSON output into schema-validated applicability and compliance records that power matching.
+
+Acceptance:
+
+- Extraction output validates against a versioned schema before persistence.
+- Approved extraction populates `ad_target_applicability` rows with target type, make, model, serial ranges, conditions, compliance times, confidence, and citations.
+- Low-confidence or incomplete applicability creates review/reconciliation issues.
+- Existing extraction review flow can approve/edit/reject the structured output.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_ad_ingestion.py tests/test_ad_matching.py
+```
+
+Evidence:
+
+- Added `backend/app/services/ad_applicability.py` to create queryable targets/applicability rows from DRS rows and approved extractions.
+- Wired approved extraction review and deterministic approved extraction flow to populate applicability.
+- Verified with `backend/tests/test_ad_matching.py` and full backend test suite.
+
+### T072: Update AD API contract and frontend types for component-aware data
+
+Status: completed 2026-06-20
+
+Goal: Make the API contract and frontend type layer understand installed components, DRS source status, and component-aware AD applicability before changing the visible worklist UI.
+
+Acceptance:
+
+- `.ai/API_CONTRACT.md` documents component-aware AD worklist response fields, including installed component identity, component role/type, target make/model, serial applicability, applicability confidence, source publications, and DRS source status.
+- Frontend API client/types include the new AD worklist shape without breaking existing worklist rendering.
+- Component role/type display handles fixed-wing and rotorcraft/rotorwing cases: airframe, engine, propeller, rotorcraft airframe, rotor system, drivetrain/transmission, appliance, and unknown/other.
+- Existing pages tolerate missing component fields and render unknown applicability explicitly instead of hiding the AD.
+- No visual redesign is required in this task; it is a data-contract/type readiness step for T069.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+```
+
+Evidence:
+
+- Backend match responses now include nullable component-aware applicability details and DRS/FR source publications.
+- Frontend API types now include installed components and match applicability.
+- Verified with `npm run build`.
+
+### T067: Add provider-backed AD extraction behind cache and review
+
+Status: ready after T066
+
+Goal: Add LLM-assisted extraction behind the existing provider metadata, cache, schema validation, and review thresholds.
+
+Acceptance:
+
+- Current official provider docs are checked and recorded before implementation.
+- Extractions are cached by input content hash, prompt/ruleset hash, model, and schema version.
+- Re-running unchanged extraction makes no provider call.
+- Provider output must validate before it can create applicability rows.
+- Disagreements or low confidence route to review rather than silently affecting matching.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_ad_ingestion.py
+```
+
+### T068: Refactor AD matching around installed components and target applicability
+
+Status: completed 2026-06-20
+
+Goal: Compute applicable ADs from installed component targets before searching logbook evidence.
+
+Acceptance:
+
+- Matching unions applicable ADs across all current installed components.
+- Applies serial range, status, supersession, and condition filters where data exists.
+- Keeps uncertain component/condition/serial applicability separate from uncertain compliance evidence.
+- Produces match results, evidence, and adjudication tasks without implying compliance attestation.
+- Existing AD worklist still renders.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_ad_matching.py
+cd ../frontend/paprnav-frontend
+npm run lint
+```
+
+Evidence:
+
+- AD matcher now selects applicable directives through installed components and target applicability rows before logbook evidence ranking.
+- Match results persist selected component, target applicability, and applicability snapshot.
+- Verified with `backend/tests/test_ad_matching.py` and full backend test suite.
+
+### T069: Extend AD worklist with component applicability and source status
+
+Status: completed 2026-06-20
+
+Goal: Show why an AD is in the worklist: which installed component/target caused applicability, which source publications support it, and which uncertainty remains.
+
+Acceptance:
+
+- Worklist items show component role, target make/model, serial applicability when known, AD source publication links, and DRS source/extraction status.
+- Worklist layout supports multiple installed components per aircraft and does not assume fixed-wing-only airframe/engine/propeller structure.
+- Rotorcraft/rotorwing component roles render clearly without forcing them into propeller or generic aircraft labels.
+- When DRS bulk source status is failed, stale, or unavailable, the worklist shows a degraded-coverage warning and notes that historical and DRS-indexed coverage is unverified or may be incomplete.
+- Applicability uncertainty and compliance-evidence uncertainty are visually distinct.
+- Reviewer decisions remain available and audited.
+- No item claims official compliance attestation.
+
+Suggested checks:
+
+```bash
+cd frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+Evidence:
+
+- AD worklist renders component role/name/serial, applicability target, basis, serial status, source publications, and degraded source warnings.
+- Rotorcraft/rotorwing role labels are data-driven and do not force rotor roles into propeller fields.
+- Verified with `npm run build`.
+
+### T070: Add AD reconciliation worker
+
+Status: ready after T063 and T066
+
+Goal: Add a worker that finds missing FR matches, stale targets, extraction gaps, supersession/correction conflicts, and incomplete applicability rows.
+
+Acceptance:
+
+- Worker creates or updates reconciliation issues with type, payload, severity, and resolution state.
+- Issues link to directives, publications, targets, or aircraft where applicable.
+- DRS bulk collection failures and stale source snapshots generate admin-visible repair issues.
+- Running the worker repeatedly is idempotent.
+- Observability events summarize issue counts without raw source text.
+
+Suggested checks:
+
+```bash
+cd backend
+python -m pytest tests/test_ad_ingestion.py
+```

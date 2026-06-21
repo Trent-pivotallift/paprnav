@@ -18,6 +18,7 @@ from app.models.core import (
     WorkflowStatusEvent,
 )
 from app.services.ad_discovery import hash_json
+from app.services.ad_applicability import populate_applicability_from_extraction
 from app.services.ad_matching import match_aircraft_ads
 from tests.conftest import login
 
@@ -117,6 +118,8 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     candidate = next(match for match in matches if match["status"] == "candidate_satisfied")
     assert candidate["evidence"][0]["logbookEntryId"]
     assert "logbook evidence" in candidate["rationale"]
+    assert candidate["applicability"]["component"]["role"] == "airframe"
+    assert candidate["applicability"]["target"]["make"] == "Cessna"
 
     unresolved = next(match for match in matches if match["status"] == "needs_adjudication")
     decision_response = client.post(
@@ -225,4 +228,5 @@ def create_approved_extraction(
     )
     db.add(extraction)
     db.flush()
+    populate_applicability_from_extraction(db, extraction)
     return extraction

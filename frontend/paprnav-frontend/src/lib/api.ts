@@ -36,8 +36,20 @@ export interface Aircraft {
   propellerMake: string | null;
   propellerModel: string | null;
   propellerSerialNumber: string | null;
+  installedComponents: InstalledComponent[];
   lastLogEntryDate: string | null;
   complianceStatus: string;
+}
+
+export interface InstalledComponent {
+  id: string;
+  role: string;
+  componentType: string;
+  make: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  source: string;
+  confidence: number | null;
 }
 
 export interface AircraftListResponse {
@@ -200,13 +212,13 @@ export interface ExtractLogbookEntriesResponse {
 
 export interface AirworthinessDirective {
   id: string;
-  discoveryRecordId: string;
+  discoveryRecordId: string | null;
   adNumber: string | null;
   title: string;
   status: string;
   extractionStatus: string;
   reviewStatus: string;
-  federalRegisterDocumentNumber: string;
+  federalRegisterDocumentNumber: string | null;
   publicationDate: string | null;
   htmlUrl: string | null;
   pdfUrl: string | null;
@@ -261,6 +273,46 @@ export interface ADMatchAdjudication {
   futureImprovementTags: string[];
 }
 
+export interface ADMatchComponent {
+  id: string | null;
+  role: string | null;
+  componentType: string | null;
+  displayName: string | null;
+  make: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  source: string | null;
+}
+
+export interface ADMatchTarget {
+  id: string | null;
+  productType: string | null;
+  productSubtype: string | null;
+  make: string | null;
+  model: string | null;
+}
+
+export interface ADMatchPublication {
+  sourceSystem: string;
+  sourceType: string;
+  sourceIdentifier: string;
+  status: string | null;
+  htmlUrl: string | null;
+  pdfUrl: string | null;
+}
+
+export interface ADMatchApplicability {
+  component: ADMatchComponent | null;
+  target: ADMatchTarget | null;
+  basis: string | null;
+  confidence: number | null;
+  status: string | null;
+  sourceStatus: string | null;
+  serialStatus: string | null;
+  publications: ADMatchPublication[];
+  snapshot: Record<string, unknown> | null;
+}
+
 export interface ADMatchResult {
   id: string;
   aircraftId: string;
@@ -271,6 +323,7 @@ export interface ADMatchResult {
   confidence: number;
   rationale: string;
   unresolvedReasons: string[];
+  applicability: ADMatchApplicability | null;
   algorithmName: string;
   algorithmVersion: string;
   inputHash: string;

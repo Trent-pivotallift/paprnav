@@ -20,13 +20,13 @@ class ADDiscoveryRecordResponse(BaseModel):
 
 class AirworthinessDirectiveResponse(BaseModel):
     id: str
-    discoveryRecordId: str
+    discoveryRecordId: Optional[str]
     adNumber: Optional[str]
     title: str
     status: str
     extractionStatus: str
     reviewStatus: str
-    federalRegisterDocumentNumber: str
+    federalRegisterDocumentNumber: Optional[str]
     publicationDate: Optional[date]
     htmlUrl: Optional[str]
     pdfUrl: Optional[str]
@@ -91,6 +91,46 @@ class ADMatchAdjudicationResponse(BaseModel):
     futureImprovementTags: list[str]
 
 
+class ADMatchComponentResponse(BaseModel):
+    id: Optional[str]
+    role: Optional[str]
+    componentType: Optional[str]
+    displayName: Optional[str]
+    make: Optional[str]
+    model: Optional[str]
+    serialNumber: Optional[str]
+    source: Optional[str]
+
+
+class ADMatchTargetResponse(BaseModel):
+    id: Optional[str]
+    productType: Optional[str]
+    productSubtype: Optional[str]
+    make: Optional[str]
+    model: Optional[str]
+
+
+class ADMatchPublicationResponse(BaseModel):
+    sourceSystem: str
+    sourceType: str
+    sourceIdentifier: str
+    status: Optional[str]
+    htmlUrl: Optional[str]
+    pdfUrl: Optional[str]
+
+
+class ADMatchApplicabilityResponse(BaseModel):
+    component: Optional[ADMatchComponentResponse]
+    target: Optional[ADMatchTargetResponse]
+    basis: Optional[str]
+    confidence: Optional[float]
+    status: Optional[str]
+    sourceStatus: Optional[str]
+    serialStatus: Optional[str]
+    publications: list[ADMatchPublicationResponse]
+    snapshot: Optional[dict[str, Any]]
+
+
 class ADMatchResultResponse(BaseModel):
     id: str
     aircraftId: str
@@ -101,6 +141,7 @@ class ADMatchResultResponse(BaseModel):
     confidence: float
     rationale: str
     unresolvedReasons: list[str]
+    applicability: Optional[ADMatchApplicabilityResponse]
     algorithmName: str
     algorithmVersion: str
     inputHash: str

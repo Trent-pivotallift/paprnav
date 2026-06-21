@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import re
@@ -9,7 +11,8 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.core import ADDiscoveryRecord, AirworthinessDirective
+from app.models.core import ADDiscoveryRecord, ADPublication, ADReconciliationIssue, AirworthinessDirective
+from app.services.ad_identity import normalize_ad_number
 from app.services.observability import record_product_event, record_workflow_status
 
 FEDERAL_REGISTER_API_BASE_URL = "https://www.federalregister.gov"
@@ -61,6 +64,9 @@ class FederalRegisterClient:
             results=list(payload.get("results") or []),
             raw_response=payload,
         )
+
+    def search_by_ad_number(self, ad_number: str, per_page: int = 5) -> FederalRegisterSearchResult:
+        return self.search_airworthiness_directive_candidates(page=1, per_page=per_page, term=ad_number)
 
 
 def discover_federal_register_ads(
@@ -150,7 +156,10 @@ def upsert_discovery_record(db: Session, document: dict[str, Any]) -> tuple[ADDi
 def ensure_directive_for_record(db: Session, record: ADDiscoveryRecord) -> AirworthinessDirective:
     existing = db.scalar(select(AirworthinessDirective).where(AirworthinessDirective.discovery_record_id == record.id))
     ad_number = extract_ad_number(record.title, record.abstract, record.excerpts)
+    if existing is None and ad_number:
+        existing = db.scalar(select(AirworthinessDirective).where(AirworthinessDirective.ad_number == ad_number))
     if existing:
+        existing.discovery_record_id = record.id
         existing.ad_number = ad_number or existing.ad_number
         existing.title = record.title
         existing.source_content_hash = record.content_hash
@@ -171,6 +180,115 @@ def ensure_directive_for_record(db: Session, record: ADDiscoveryRecord) -> Airwo
     return directive
 
 
+def reconcile_directive_with_federal_register(
+    db: Session,
+    directive: AirworthinessDirective,
+    client: FederalRegisterClient | None = None,
+) -> tuple[ADPublication | None, ADReconciliationIssue | None]:
+    if not directive.ad_number:
+        issue = ensure_reconciliation_issue(
+            db,
+            directive,
+            "fr_match_missing_ad_number",
+            "high",
+            {"directiveId": directive.id},
+        )
+        return None, issue
+
+    client = client or FederalRegisterClient()
+    search_result = client.search_by_ad_number(directive.ad_number)
+    normalized = normalize_ad_number(directive.ad_number)
+    for document in search_result.results:
+        searchable = " ".join(
+            filter(None, [document.get("title"), document.get("abstract"), flatten_excerpts(document.get("excerpts"))])
+        )
+        if normalize_ad_number(searchable) != normalized:
+            continue
+        record, _ = upsert_discovery_record(db, document)
+        linked = ensure_directive_for_record(db, record)
+        if linked.id != directive.id and linked.ad_number == directive.ad_number:
+            linked.status = "duplicate_fr_match"
+        directive.discovery_record_id = record.id
+        publication = upsert_federal_register_publication(db, directive, record)
+        db.flush()
+        return publication, None
+
+    issue = ensure_reconciliation_issue(
+        db,
+        directive,
+        "missing_federal_register_match",
+        "medium",
+        {
+            "adNumber": directive.ad_number,
+            "searchCount": search_result.count,
+            "resultDocumentNumbers": [item.get("document_number") for item in search_result.results],
+        },
+    )
+    return None, issue
+
+
+def upsert_federal_register_publication(
+    db: Session,
+    directive: AirworthinessDirective,
+    record: ADDiscoveryRecord,
+) -> ADPublication:
+    publication = db.scalar(
+        select(ADPublication).where(
+            ADPublication.directive_id == directive.id,
+            ADPublication.source_system == "federal_register",
+            ADPublication.source_type == "rule",
+            ADPublication.source_identifier == record.federal_register_document_number,
+        )
+    )
+    if publication is None:
+        publication = ADPublication(
+            directive_id=directive.id,
+            source_system="federal_register",
+            source_type="rule",
+            source_identifier=record.federal_register_document_number,
+        )
+        db.add(publication)
+    publication.title = record.title
+    publication.publication_date = record.publication_date
+    publication.effective_date = record.effective_date
+    publication.html_url = record.html_url
+    publication.pdf_url = record.pdf_url
+    publication.status = "current"
+    publication.content_hash = record.content_hash
+    publication.metadata_json = record.api_snapshot
+    db.flush()
+    return publication
+
+
+def ensure_reconciliation_issue(
+    db: Session,
+    directive: AirworthinessDirective,
+    issue_type: str,
+    severity: str,
+    payload: dict[str, Any],
+) -> ADReconciliationIssue:
+    issue = db.scalar(
+        select(ADReconciliationIssue).where(
+            ADReconciliationIssue.directive_id == directive.id,
+            ADReconciliationIssue.issue_type == issue_type,
+            ADReconciliationIssue.status == "open",
+        )
+    )
+    if issue is None:
+        issue = ADReconciliationIssue(
+            directive_id=directive.id,
+            issue_type=issue_type,
+            severity=severity,
+            payload=payload,
+        )
+        db.add(issue)
+    else:
+        issue.severity = severity
+        issue.payload = payload
+    db.flush()
+    return issue
+
+
 def classify_document(document: dict[str, Any]) -> tuple[str, float, str]:
     title = str(document.get("title") or "")
     abstract = str(document.get("abstract") or "")
@@ -189,11 +307,9 @@ def classify_document(document: dict[str, Any]) -> tuple[str, float, str]:
 
 def extract_ad_number(*values: str | None) -> str | None:
     for value in values:
-        if not value:
-            continue
-        match = AD_NUMBER_PATTERN.search(value)
-        if match:
-            return match.group(1)
+        normalized = normalize_ad_number(value)
+        if normalized:
+            return normalized
     return None
 
 

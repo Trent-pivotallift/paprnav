@@ -2,6 +2,8 @@
 
 Last updated: 2026-06-19
 
+> Supersession note 2026-06-20: this handoff captured the pre-validation uncertainty around DRS collection. Subsequent validation found the preferred path is FAA DRS bulk ZIP/Access database ingestion, not DRS Web UI scraping. Keep the Federal Register-vs-DRS applicability distinction, but use `.ai/DECISIONS.md` D017, `.ai/PROVIDER_REFERENCES.md`, and `.ai/GOAL_TASKS.md` T065/T071 for current tasking.
+
 This note captures the current AD ingestion/collection findings for a new chat or `/goal` run. It is intentionally focused on the unresolved collection problem, not the already-implemented local AD review and matching workflow.
 
 ## Current Implementation Baseline
@@ -63,36 +65,37 @@ The DRS result set differed from the Federal Register query. That difference is 
 - A quick page-source inspection showed a JavaScript/Angular application shell rather than direct result data in static HTML.
 - Bundle inspection suggested internal API usage may exist, but no supported stable endpoint was established.
 - Treat browser scraping or reverse-engineered DRS endpoints as brittle until explicitly accepted as a product/engineering tradeoff.
+- Later validation found a public DRS bulk ZIP containing an Access database. Prefer bulk ZIP/Access ingestion over browser scraping for production tasking.
 
 ## Recommended Collection Architecture
 
-Use a two-source bridge:
+Use a two-source bridge, updated after the 2026-06-20 validation:
 
-1. DRS is the applicability/index source.
+1. DRS bulk ZIP/Access data is the primary AD corpus/applicability source.
 2. Federal Register/govinfo is the publication/source-evidence source.
 
 The MVP-safe path is:
 
-1. Collect AD numbers from DRS for an aircraft make/model/status filter.
+1. Import AD rows from the DRS bulk ZIP/Access database.
 2. Resolve each AD number against Federal Register and/or govinfo.
 3. Persist both provenance layers:
-   - DRS query/filter/source context for applicability discovery.
+   - DRS bulk source artifact, parser, row, and applicability context.
    - Federal Register/govinfo document metadata, source URLs, PDFs, and raw snapshots for publication evidence.
 4. Route unresolved or ambiguous AD numbers to human review instead of silently dropping them.
 
 ## Next Discussion Questions
 
-- Should the first DRS bridge be human-assisted AD number entry/import, browser automation, or a brittle internal endpoint adapter?
+- How should production parse the Access database rows and preserve parser/source provenance?
 - What is the minimum demo set for PA-28-180: latest 2 DRS ADs, all active DRS ADs, or a curated small known set?
 - Should the app add a dedicated `source_system=drs` discovery/provenance table before building any scraper/import flow?
 - How should DRS applicability evidence be displayed beside Federal Register/govinfo publication evidence in the AD review UI?
 
 ## Recommended Next Task
 
-Implement a small DRS-to-Federal-Register bridge slice:
+Implement a small DRS-bulk-to-Federal-Register bridge slice:
 
-1. Add a source/provenance model or fields for DRS AD-number collection.
-2. Add a worker/service that accepts AD numbers from a DRS-derived list.
+1. Add a source/provenance model or fields for DRS bulk ZIP/Access source artifacts and parsed rows.
+2. Add a worker/service that imports AD numbers and applicability fields from a saved DRS bulk fixture.
 3. Resolve each AD number through Federal Register search.
 4. Persist links between DRS applicability context and Federal Register/govinfo publication records.
 5. Add tests proving AD-number resolution and unresolved-number review behavior.

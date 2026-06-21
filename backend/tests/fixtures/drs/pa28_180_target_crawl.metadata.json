@@ -1,0 +1,98 @@
+{
+  "fixtureVersion": "drs_target_crawl_metadata_v1",
+  "fixtureType": "contract_metadata",
+  "createdAt": "2026-06-20",
+  "target": {
+    "targetId": "airframe:Piper Aircraft Inc.:PA-28-180",
+    "componentType": "airframe",
+    "make": "Piper Aircraft Inc.",
+    "model": "PA-28-180"
+  },
+  "drsQuery": {
+    "sourceSystem": "faa_drs",
+    "doctypeGroup": "ADFRAWD",
+    "url": "https://drs.faa.gov/browse/ADFRAWD/doctypeDetails?Status=all&Make=Piper%20Aircraft%20Inc.&Model=PA-28-180",
+    "filters": {
+      "Status": "all",
+      "Make": "Piper Aircraft Inc.",
+      "Model": "PA-28-180"
+    }
+  },
+  "capturePolicy": {
+    "liveDrsDisabledInCi": true,
+    "fixtureFirst": true,
+    "notes": [
+      "This file defines the metadata contract for a small DRS target crawl fixture.",
+      "It is not an authoritative current DRS result set.",
+      "Live DRS capture, when explicitly allowed, should save app-shell HTML, rendered result-list HTML or JSON-like row data if available, detail-page HTML, and linked PDFs or PDF metadata."
+    ]
+  },
+  "expectedArtifacts": [
+    {
+      "artifactType": "drs_app_shell_html",
+      "required": true,
+      "suggestedPath": "backend/tests/fixtures/drs/pa28_180/app-shell.html",
+      "sourceUrl": "https://drs.faa.gov/browse/ADFRAWD/doctypeDetails?Status=all&Make=Piper%20Aircraft%20Inc.&Model=PA-28-180"
+    },
+    {
+      "artifactType": "drs_result_list_snapshot",
+      "required": true,
+      "suggestedPath": "backend/tests/fixtures/drs/pa28_180/result-list.json",
+      "description": "Rendered result rows or a normalized manual export of rows observed in DRS for this target."
+    },
+    {
+      "artifactType": "drs_detail_html",
+      "required": true,
+      "suggestedPathPattern": "backend/tests/fixtures/drs/pa28_180/details/{adNumber}.html"
+    },
+    {
+      "artifactType": "drs_pdf_metadata",
+      "required": true,
+      "suggestedPathPattern": "backend/tests/fixtures/drs/pa28_180/pdfs/{adNumber}.metadata.json"
+    }
+  ],
+  "normalizedRows": [
+    {
+      "adNumber": "2020-26-16",
+      "title": "Airworthiness Directives; Piper Aircraft, Inc. Airplanes",
+      "status": "fixture_sample",
+      "publicationDate": "2021-01-15",
+      "federalRegisterDocumentNumber": "2021-00044",
+      "sourceProvenance": "Existing local Federal Register PA-28-180 evidence; replace with captured DRS row before treating as DRS-authoritative."
+    },
+    {
+      "adNumber": "2020-24-05",
+      "title": "Airworthiness Directives; Piper Aircraft, Inc. Airplanes",
+      "status": "fixture_sample",
+      "publicationDate": "2020-11-23",
+      "federalRegisterDocumentNumber": "2020-25690",
+      "sourceProvenance": "Existing local Federal Register PA-28-180 evidence; replace with captured DRS row before treating as DRS-authoritative."
+    }
+  ],
+  "crawlerContract": {
+    "idempotencyKey": "targetId + drsQuery.filters + adNumber + artifact hashes",
+    "minimumOutput": [
+      "applicability_target row",
+      "target crawl state",
+      "directive rows for normalized AD numbers",
+      "DRS publication/provenance rows",
+      "baseline ad_target_applicability rows",
+      "reconciliation issue when DRS capture fails, is stale, or lacks parseable rows"
+    ],
+    "crawlStates": [
+      "never_crawled",
+      "fixture_ready",
+      "in_progress",
+      "complete",
+      "partial",
+      "stale",
+      "failed",
+      "unavailable"
+    ],
+    "degradedCoverageStates": [
+      "failed",
+      "stale",
+      "unavailable"
+    ]
+  }
+}

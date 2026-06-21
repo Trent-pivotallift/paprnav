@@ -575,6 +575,8 @@ Allowed decisions are `approved`, `edited`, and `rejected`. Approved and edited 
 
 Returns first-pass AD-to-logbook matching results visible to the authenticated user for the aircraft.
 
+> Future component-aware shape: T072/T069 should extend this response rather than replace it abruptly. The frontend must tolerate absent component fields while T060-T068 are rolling out.
+
 Response:
 
 ```json
@@ -598,6 +600,41 @@ Response:
       "status": "candidate_satisfied",
       "matchType": "one_time",
       "confidence": 0.9,
+      "applicability": {
+        "sourceStatus": "complete",
+        "sourceSystem": "drs_bulk",
+        "component": {
+          "id": "cmp_123",
+          "role": "airframe",
+          "type": "aircraft",
+          "displayName": "Cessna 172R",
+          "make": "Cessna",
+          "model": "172R",
+          "serialNumber": "17280001"
+        },
+        "target": {
+          "id": "target_123",
+          "productType": "Aircraft",
+          "productSubtype": "Small Airplane",
+          "make": "Cessna",
+          "model": "172R"
+        },
+        "serialApplicability": "known_applicable",
+        "conditions": [],
+        "confidence": 0.88,
+        "sourcePublications": [
+          {
+            "sourceSystem": "drs",
+            "sourceType": "bulk_access_row",
+            "status": "current"
+          },
+          {
+            "sourceSystem": "federal_register",
+            "documentNumber": "2026-99001",
+            "htmlUrl": "https://www.federalregister.gov/..."
+          }
+        ]
+      },
       "rationale": "Candidate satisfied: found logbook evidence...",
       "unresolvedReasons": [],
       "algorithmName": "deterministic_ad_logbook_matcher",
@@ -621,6 +658,18 @@ Response:
   ]
 }
 ```
+
+Component-aware frontend display must support at least these roles/types without fixed-wing assumptions:
+
+- `airframe`
+- `engine`
+- `propeller`
+- `rotorcraft_airframe`
+- `rotor_system`
+- `drivetrain_transmission`
+- `appliance`
+- `unknown`
+- `other`
 
 Matching is produced by the local worker:
 

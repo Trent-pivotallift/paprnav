@@ -1,6 +1,6 @@
 # paprnav MVP Completion Definition
 
-Last updated: 2026-06-16
+Last updated: 2026-06-20
 
 This is the working definition of "webapp complete" for the MVP. It supersedes earlier CRUD-oriented task summaries.
 
@@ -21,7 +21,7 @@ The product is decision support, not an official compliance attestation.
 7. User corrections are saved as structured HITL annotations tied to the source page, bounding region, OCR output, corrected text, user, timestamp, and confidence reason.
 8. The ingestion pipeline converts verified OCR plus corrections into normalized logbook entries.
 9. Logbook entries persist in the database with links back to original source artifacts and OCR evidence.
-10. Once aircraft make/model and relevant component data are known, an AD ingestion process pulls FAA Airworthiness Directive data from the Federal Register API.
+10. The AD ingestion process imports the FAA DRS bulk ZIP/Access database as the primary AD corpus and applicability source, then compares/enriches those ADs with Federal Register publication records when available.
 11. AD ingestion stores source metadata, source documents or source references, structured applicability, compliance requirements, supersession relationships, and extraction confidence.
 12. The app matches applicable ADs against structured logbook entries.
 13. Matching accounts for one-time, recurring/cyclical, conditional, component-specific, and superseded ADs.
@@ -55,10 +55,14 @@ The product is decision support, not an official compliance attestation.
 
 ### AD Ingestion
 
-- The AD process uses the Federal Register API as the primary discovery source.
-- FAA `Rule` documents must be filtered/classified for actual Airworthiness Directives; not every FAA rule is an AD.
-- AD source metadata is persisted, including Federal Register document number, title, publication date, HTML URL, PDF URL when present, and content hash.
+- The revised AD process uses FAA DRS bulk ZIP/Access database ingestion as the primary AD corpus and applicability path, then uses Federal Register comparison/enrichment for publication metadata, XML/body text when available, corrections, supersession, and delta monitoring.
+- DRS Web UI automation is validation/diagnostic only unless a later human decision accepts it as an ingestion fallback.
+- FAA `Rule` documents from Federal Register must still be filtered/classified for actual Airworthiness Directives; not every FAA rule is an AD.
+- AD source metadata is persisted, including DRS source context, Federal Register document number when matched, title, publication date, HTML URL, PDF URL when present, and content hash.
 - AD structured extraction captures applicability, affected aircraft/components, compliance actions, compliance intervals, effective date, supersedes/superseded-by relationships, and extraction confidence.
+- If DRS bulk ingestion fails or is stale, the user sees an explicit degraded-coverage warning that the applicable AD universe may be incomplete and historical/DRS-indexed AD coverage is unverified.
+- Pre-1994 ADs are supported when present in DRS bulk data, but complete historical coverage must not be claimed until separate validation passes.
+- DRS failures create admin-visible repair/reconciliation work items instead of silently falling back to an apparently complete Federal Register-only result.
 - Low-confidence AD extraction routes to a review queue instead of silently becoming authoritative.
 
 ### AD Storage Recommendation
@@ -88,7 +92,7 @@ The product is decision support, not an official compliance attestation.
 - Foreign authority AD ingestion such as EASA or TCCA.
 - Fully automated no-review compliance determination.
 - Real-time emergency AD notification beyond a documented future hook.
-- Full historical AD backfill beyond enough data to validate the MVP workflow.
+- Complete historical AD coverage claims beyond the current DRS bulk data and validation evidence.
 
 ## MVP Done Checklist
 
@@ -97,11 +101,11 @@ The product is decision support, not an official compliance attestation.
 - A user can verify page order/completeness.
 - A user can correct low-confidence OCR snippets.
 - Corrected ingestion produces persisted structured logbook entries.
-- The AD ingester can pull and classify FAA AD documents from the Federal Register API.
+- The AD ingester can fixture-load or import FAA DRS bulk ZIP/Access data and compare/enrich discovered ADs with Federal Register records.
 - Structured AD data persists and is queryable by aircraft/component applicability.
 - The app can produce candidate AD-to-logbook matches.
+- DRS outage/staleness produces visible coverage warnings and admin repair alerts.
 - Uncertain matches create HITL adjudication tasks.
 - HITL decisions are persisted and visible for admin/software review.
 - Critical flows have automated tests or documented manual verification.
 - The UI uses API-backed data for the above flows instead of inline mock arrays.
-

@@ -100,6 +100,37 @@ class Aircraft(TimestampMixin, Base):
     logbook_entries = relationship("LogbookEntry", back_populates="aircraft")
     uploads = relationship("Upload", back_populates="aircraft")
     ad_match_results = relationship("ADMatchResult", back_populates="aircraft")
+    installed_components = relationship("InstalledComponent", back_populates="aircraft")
+
+
+class InstalledComponent(TimestampMixin, Base):
+    __tablename__ = "installed_components"
+    __table_args__ = (
+        UniqueConstraint(
+            "aircraft_id",
+            "role",
+            "make",
+            "model",
+            "serial_number",
+            "installed_at",
+            name="uq_installed_component_identity",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("cmp"))
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    component_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    make: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    model: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    serial_number: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    installed_at: Mapped[Date] = mapped_column(Date, nullable=True)
+    removed_at: Mapped[Date] = mapped_column(Date, nullable=True, index=True)
+    source: Mapped[str] = mapped_column(String(64), nullable=False, default="aircraft_facts")
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.8)
+
+    aircraft = relationship("Aircraft", back_populates="installed_components")
+    match_results = relationship("ADMatchResult", back_populates="installed_component")
 
 
 class AircraftAssignment(TimestampMixin, Base):
@@ -359,13 +390,36 @@ class ADDiscoveryRecord(TimestampMixin, Base):
     directive = relationship("AirworthinessDirective", back_populates="discovery_record", uselist=False)
 
 
+class ADSourceSnapshot(TimestampMixin, Base):
+    __tablename__ = "ad_source_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("src"))
+    source_system: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_url: Mapped[str] = mapped_column(String(1024), nullable=True)
+    storage_backend: Mapped[str] = mapped_column(String(64), nullable=True)
+    storage_key: Mapped[str] = mapped_column(String(1024), nullable=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(512), nullable=True)
+    captured_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="complete", index=True)
+    parser_name: Mapped[str] = mapped_column(String(128), nullable=True)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=True)
+    row_count: Mapped[int] = mapped_column(Integer, nullable=True)
+    table_inventory: Mapped[dict] = mapped_column(JSON, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    publications = relationship("ADPublication", back_populates="source_snapshot")
+    reconciliation_issues = relationship("ADReconciliationIssue", back_populates="source_snapshot")
+
+
 class AirworthinessDirective(TimestampMixin, Base):
     __tablename__ = "airworthiness_directives"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ad"))
     discovery_record_id: Mapped[str] = mapped_column(
         ForeignKey("ad_discovery_records.id"),
-        nullable=False,
+        nullable=True,
         unique=True,
         index=True,
     )
@@ -380,6 +434,8 @@ class AirworthinessDirective(TimestampMixin, Base):
     discovery_record = relationship("ADDiscoveryRecord", back_populates="directive")
     extractions = relationship("ADExtraction", back_populates="directive")
     match_results = relationship("ADMatchResult", back_populates="directive")
+    publications = relationship("ADPublication", back_populates="directive")
+    target_applicabilities = relationship("ADTargetApplicability", back_populates="directive")
     supersedes_edges = relationship(
         "ADSupersession",
         foreign_keys="ADSupersession.superseding_ad_id",
@@ -415,6 +471,112 @@ class ADSupersession(TimestampMixin, Base):
         foreign_keys=[superseded_ad_id],
         back_populates="superseded_by_edges",
     )
+
+
+class ApplicabilityTarget(TimestampMixin, Base):
+    __tablename__ = "applicability_targets"
+    __table_args__ = (
+        UniqueConstraint(
+            "product_type",
+            "product_subtype",
+            "make",
+            "model",
+            name="uq_applicability_target_identity",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("tgt"))
+    product_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    product_subtype: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    make: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
+    model: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
+    normalized_key: Mapped[str] = mapped_column(String(512), nullable=False, unique=True, index=True)
+
+    applicabilities = relationship("ADTargetApplicability", back_populates="target")
+
+
+class ADPublication(TimestampMixin, Base):
+    __tablename__ = "ad_publications"
+    __table_args__ = (
+        UniqueConstraint(
+            "directive_id",
+            "source_system",
+            "source_type",
+            "source_identifier",
+            name="uq_ad_publication_identity",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("pub"))
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    source_snapshot_id: Mapped[str] = mapped_column(ForeignKey("ad_source_snapshots.id"), nullable=True, index=True)
+    source_system: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_identifier: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=True)
+    publication_date: Mapped[Date] = mapped_column(Date, nullable=True, index=True)
+    effective_date: Mapped[Date] = mapped_column(Date, nullable=True)
+    html_url: Mapped[str] = mapped_column(String(1024), nullable=True)
+    pdf_url: Mapped[str] = mapped_column(String(1024), nullable=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    directive = relationship("AirworthinessDirective", back_populates="publications")
+    source_snapshot = relationship("ADSourceSnapshot", back_populates="publications")
+
+
+class ADTargetApplicability(TimestampMixin, Base):
+    __tablename__ = "ad_target_applicability"
+    __table_args__ = (
+        UniqueConstraint(
+            "directive_id",
+            "target_id",
+            "source_publication_id",
+            "applicability_basis",
+            name="uq_ad_target_applicability",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ata"))
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    target_id: Mapped[str] = mapped_column(ForeignKey("applicability_targets.id"), nullable=False, index=True)
+    source_publication_id: Mapped[str] = mapped_column(ForeignKey("ad_publications.id"), nullable=True, index=True)
+    applicability_basis: Mapped[str] = mapped_column(String(64), nullable=False, default="source_row")
+    serial_range: Mapped[dict] = mapped_column(JSON, nullable=True)
+    conditions: Mapped[list] = mapped_column(JSON, nullable=True)
+    compliance_actions: Mapped[list] = mapped_column(JSON, nullable=True)
+    compliance_intervals: Mapped[list] = mapped_column(JSON, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.8)
+    citations: Mapped[list] = mapped_column(JSON, nullable=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="current", index=True)
+
+    directive = relationship("AirworthinessDirective", back_populates="target_applicabilities")
+    target = relationship("ApplicabilityTarget", back_populates="applicabilities")
+    source_publication = relationship("ADPublication")
+    match_results = relationship("ADMatchResult", back_populates="target_applicability")
+
+
+class ADReconciliationIssue(TimestampMixin, Base):
+    __tablename__ = "ad_reconciliation_issues"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ari"))
+    issue_type: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False, default="medium", index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="open", index=True)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=True, index=True)
+    publication_id: Mapped[str] = mapped_column(ForeignKey("ad_publications.id"), nullable=True, index=True)
+    target_id: Mapped[str] = mapped_column(ForeignKey("applicability_targets.id"), nullable=True, index=True)
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=True, index=True)
+    source_snapshot_id: Mapped[str] = mapped_column(ForeignKey("ad_source_snapshots.id"), nullable=True, index=True)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=True)
+    resolved_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    directive = relationship("AirworthinessDirective")
+    publication = relationship("ADPublication")
+    target = relationship("ApplicabilityTarget")
+    aircraft = relationship("Aircraft")
+    source_snapshot = relationship("ADSourceSnapshot", back_populates="reconciliation_issues")
 
 
 class ADExtraction(TimestampMixin, Base):
@@ -482,11 +644,14 @@ class ADMatchResult(TimestampMixin, Base):
     aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
     directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
     extraction_id: Mapped[str] = mapped_column(ForeignKey("ad_extractions.id"), nullable=False, index=True)
+    installed_component_id: Mapped[str] = mapped_column(ForeignKey("installed_components.id"), nullable=True, index=True)
+    target_applicability_id: Mapped[str] = mapped_column(ForeignKey("ad_target_applicability.id"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     match_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
     unresolved_reasons: Mapped[list] = mapped_column(JSON, nullable=True)
+    applicability_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
     algorithm_name: Mapped[str] = mapped_column(String(128), nullable=False)
     algorithm_version: Mapped[str] = mapped_column(String(128), nullable=False)
     input_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -495,6 +660,8 @@ class ADMatchResult(TimestampMixin, Base):
     aircraft = relationship("Aircraft", back_populates="ad_match_results")
     directive = relationship("AirworthinessDirective", back_populates="match_results")
     extraction = relationship("ADExtraction", back_populates="match_results")
+    installed_component = relationship("InstalledComponent", back_populates="match_results")
+    target_applicability = relationship("ADTargetApplicability", back_populates="match_results")
     evidence_links = relationship("ADMatchEvidence", back_populates="match_result")
     adjudication = relationship("ADMatchAdjudication", back_populates="match_result", uselist=False)
 

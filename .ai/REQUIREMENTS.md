@@ -1,6 +1,6 @@
 # paprnav Requirements
 
-Last updated: 2026-06-16
+Last updated: 2026-06-20
 
 These requirements describe the intended product direction and the current known implementation gaps. They should be refined as the project gains real backend behavior and customer validation.
 
@@ -33,7 +33,7 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - Users can manually add logbook entries.
 - Users can open individual logbook entry details.
 - Users can manage profile/account details.
-- The system ingests FAA Airworthiness Directives from the Federal Register API.
+- The system ingests FAA Airworthiness Directives from the FAA DRS bulk ZIP/Access database first, then compares and enriches those ADs with Federal Register publication records.
 - The system matches AD requirements against structured logbook entries and creates HITL adjudication tasks when judgment is required.
 
 ## Compliance And Aviation Domain Requirements
@@ -43,8 +43,11 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - Each logbook entry should track at minimum aircraft, logbook section, date, description, performer, source type, created user, and timestamps.
 - Compliance status should distinguish compliant, warning/upcoming, and overdue states.
 - Airworthiness Directive tracking is a core MVP compliance domain.
-- AD ingestion must preserve source metadata, structured extraction, confidence, supersession, and review status.
+- AD ingestion must preserve DRS applicability provenance, Federal Register publication metadata when matched, structured extraction, confidence, supersession, and review status.
 - AD matching must handle recurring/cyclical ADs, component-specific applicability, conditional applicability, and superseded ADs.
+- If DRS bulk ingestion fails, users must see a degraded-coverage warning rather than a false complete worklist; the warning should mention that historical and DRS-indexed AD coverage is unverified or may be incomplete.
+- Pre-1994 ADs are supported when present in DRS bulk data, but the product must not claim complete historical coverage until validation against DRS Web UI samples and historical FAA/index sources is complete.
+- DRS collection failures must create admin-visible repair or reconciliation work items.
 - HITL adjudications must be documented for software/admin review and future rule/model improvements.
 - Auditability matters: future changes to maintenance records should retain history rather than silently overwrite.
 
@@ -75,16 +78,20 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 
 ## Known Gaps
 
-- Auth screens are non-functional.
-- Dashboard data is hardcoded.
-- Upload flow simulates success and does not call an API.
-- No OCR pipeline exists.
-- No page-order/completeness verification exists.
-- No low-confidence OCR correction workflow exists.
-- No AD ingestion or AD/logbook matching exists.
-- No HITL adjudication model exists.
-- Backend exposes only placeholder/local-readiness endpoints: `/`, `/health`, and `/version`.
-- No database schema or migrations exist.
-- No tests exist in the checked files reviewed for this note.
-- Frontend README has been replaced, but backend and root project docs are still thin.
-- No deployment/infrastructure automation exists.
+Code review on 2026-06-20 confirms the earlier gap list was stale. The local MVP codebase now includes functional auth/session routes and UI, API-backed aircraft dashboards, manual logbook entries, upload/download APIs, ingestion job state, deterministic fixture-backed OCR processing, page verification, OCR correction, structured logbook extraction, Federal Register AD discovery, deterministic AD extraction, AD extraction review, first-pass AD/logbook matching, HITL AD adjudication, an evidence-backed compliance worklist, product observability, Alembic migrations, and backend tests.
+
+Remaining known gaps:
+
+- OCR is still deterministic fixture-backed for the local MVP slice; real OCR provider integration, rendered page/image artifacts, and production Textract/Tesseract behavior remain future work.
+- AD ingestion is still a Federal Register discovery/extraction prototype. The revised target architecture is DRS bulk ZIP/Access ingestion first, then Federal Register comparison/enrichment. DRS bulk parsing, DRS provenance storage, full Federal Register XML/body artifact persistence, and durable Federal Register delta monitoring remain incomplete.
+- AD applicability is not yet modeled with first-class `applicability_targets`, `installed_components`, `ad_publications`, or `ad_target_applicability` tables. Existing matching still relies on approved extraction JSON and flat aircraft/component fields.
+- Aircraft component identity is still mostly represented as flat aircraft fields. Installed component history, roles, serial-specific applicability, removals, appliances, twin-engine cases, and rotorcraft/drivetrain cases remain to be modeled.
+- AD extraction is shallow and deterministic. Full applicability/compliance extraction, source-section citations, structured compliance intervals, provider-backed LLM extraction, cache behavior, and richer review reconciliation remain incomplete.
+- AD matching handles first-pass one-time and simple recurring cases, but does not yet fully apply serial ranges, conditional applicability, component installation history, pre-1994 ADs present in DRS bulk data, DRS applicability rows, or stale-source reconciliation.
+- FAA DRS bulk ZIP/Access parsing is not implemented. Browser/Web UI scraping is not the default ingestion path and should be limited to validation/diagnostics unless a later decision changes that.
+- DRS degraded-mode UX and admin repair alerts are not implemented.
+- Federal Register AD-to-FR matching for ADs discovered from DRS bulk data is not implemented.
+- OpenAPI export and generated frontend TypeScript types are not wired yet; frontend types are still manually maintained.
+- CI is not established in committed repository state. A local workflow draft may exist, but GitHub Actions cannot be treated as active until it is committed and pushed with proper credentials.
+- No production infrastructure as code or deployment automation is committed. AWS work remains blocked until infrastructure, state, secrets, and rollback plans are explicitly modeled.
+- Authorization is sufficient for the local owner/maintenance MVP flows, but full administrator workflows, invite flows, revocation UI, and fine-grained permissions remain future work.

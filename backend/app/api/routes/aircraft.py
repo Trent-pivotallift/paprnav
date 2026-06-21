@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
@@ -15,7 +17,9 @@ from app.schemas.aircraft import (
     AircraftListResponse,
     AircraftResponse,
     AircraftUpdateRequest,
+    InstalledComponentResponse,
 )
+from app.services.installed_components import sync_installed_components_from_aircraft
 from app.services.observability import record_product_event
 
 router = APIRouter(prefix="/api/v1/aircraft", tags=["aircraft"])
@@ -52,6 +56,7 @@ def visible_aircraft_statement(user: User):
     )
     return (
         select(Aircraft)
+        .options(selectinload(Aircraft.installed_components))
         .where(
             Aircraft.status == "active",
             or_(
@@ -95,6 +100,20 @@ def serialize_aircraft(db: Session, aircraft: Aircraft) -> AircraftResponse:
         propellerMake=aircraft.propeller_make,
         propellerModel=aircraft.propeller_model,
         propellerSerialNumber=aircraft.propeller_serial_number,
+        installedComponents=[
+            InstalledComponentResponse(
+                id=component.id,
+                role=component.role,
+                componentType=component.component_type,
+                make=component.make,
+                model=component.model,
+                serialNumber=component.serial_number,
+                source=component.source,
+                confidence=component.confidence,
+            )
+            for component in sorted(aircraft.installed_components, key=lambda item: (item.role, item.created_at))
+            if component.removed_at is None
+        ],
         lastLogEntryDate=last_log_entry_date,
         complianceStatus="needs_review",
     )
@@ -200,6 +219,7 @@ def create_aircraft(
     )
     db.add(aircraft)
     db.flush()
+    sync_installed_components_from_aircraft(db, aircraft)
     record_product_event(
         db,
         event_type="aircraft_created",
@@ -242,6 +262,7 @@ def update_aircraft(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Aircraft N-number already exists")
 
     apply_aircraft_fields(aircraft, payload)
+    sync_installed_components_from_aircraft(db, aircraft)
     db.commit()
     db.refresh(aircraft)
     return serialize_aircraft(db, aircraft)
