@@ -61,7 +61,7 @@ The product is decision support, not an official compliance attestation.
 - AD source metadata is persisted, including DRS source context, Federal Register document number when matched, title, publication date, HTML URL, PDF URL when present, and content hash.
 - AD structured extraction captures applicability, affected aircraft/components, compliance actions, compliance intervals, effective date, supersedes/superseded-by relationships, and extraction confidence.
 - If DRS bulk ingestion fails or is stale, the user sees an explicit degraded-coverage warning that the applicable AD universe may be incomplete and historical/DRS-indexed AD coverage is unverified.
-- Pre-1994 ADs are supported when present in DRS bulk data, but complete historical coverage must not be claimed until separate validation passes.
+- Pre-1994 ADs are supported when present in DRS bulk data, but complete historical coverage must not be claimed. The 2026-06-21 T071 validation result is conditional and requires more rendered DRS Web UI snapshots or independent historical indexes before any completeness claim.
 - DRS failures create admin-visible repair/reconciliation work items instead of silently falling back to an apparently complete Federal Register-only result.
 - Low-confidence AD extraction routes to a review queue instead of silently becoming authoritative.
 

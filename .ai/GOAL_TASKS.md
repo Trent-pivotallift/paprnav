@@ -1623,7 +1623,7 @@ Evidence:
 
 ### T071: Validate pre-1994 DRS historical completeness
 
-Status: ready after T065
+Status: completed 2026-06-21
 
 Goal: Build confidence in pre-1994 historical coverage without claiming completeness from the DRS bulk package alone.
 
@@ -1633,7 +1633,7 @@ Acceptance:
 - Compares selected pre-1994 years or high-value legacy aircraft/components against available FAA historical indexes, AD summary PDFs, biweekly lists, or other primary/near-primary source lists where available.
 - Records methodology, source limitations, sample size, gaps, and confidence level in `.ai/PROVIDER_REFERENCES.md` or a dedicated validation note.
 - Produces reconciliation issues for missing or ambiguous historical ADs.
-- Product copy remains conservative: pre-1994 ADs are included when present in DRS bulk data, but complete historical coverage is not claimed until this validation passes.
+- Product copy remains conservative: pre-1994 ADs are included when present in DRS bulk data, but complete historical coverage is not claimed until validation proves completeness.
 
 Implementation notes:
 
@@ -1646,6 +1646,15 @@ Suggested checks:
 ```bash
 find .ai -maxdepth 1 -type f -name '*.md' -print
 ```
+
+Evidence:
+
+- Added fixture-backed pre-1994 validation inputs in `tools/drs_zip_validation/pre1994_validation_sources.json`.
+- Added report generator `tools/drs_zip_validation/validate_pre1994.py`.
+- Generated `tools/drs_zip_validation/pre1994_findings.md` and `tools/drs_zip_validation/pre1994_validation_report.json`.
+- Added backend reconciliation issue recorder `backend/app/services/ad_historical_validation.py`.
+- Added `backend/tests/test_ad_historical_validation.py`.
+- Validation result is conditional: sampled identifiers are present in the local DRS bulk set, but Web UI target snapshots and independent historical/index sources remain incomplete, so complete pre-1994 historical coverage is not claimed.
 
 ### T062: Upgrade Federal Register client for comparison and enrichment
 

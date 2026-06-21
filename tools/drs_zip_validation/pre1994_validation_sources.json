@@ -1,0 +1,155 @@
+{
+  "validationVersion": "pre1994_historical_validation_v1",
+  "createdAt": "2026-06-21",
+  "bulkSource": {
+    "sourceSystem": "faa_drs_bulk_zip",
+    "sourceFilename": "ADFinalRulesEmergencyADs_05312026.zip",
+    "accessDatabase": "ADFinalRulesEmergencyADs_05312026.accdb",
+    "normalizedAdIdentifierCount": 19731,
+    "pre1994IdentifierCount": 6792,
+    "earliestPre1994AdNumber": "1941-47-01",
+    "latestPre1994AdNumber": "1993-25-17",
+    "sampleMethod": "decade-stratified sample from the extracted DRS bulk identifier set"
+  },
+  "samples": [
+    {
+      "sampleId": "pre1994-id-1941-47-01",
+      "adNumber": "1941-47-01",
+      "status": "historical_source_unavailable",
+      "targetQuery": {
+        "componentType": "unknown",
+        "make": null,
+        "model": null
+      },
+      "drsWebUiSnapshot": {
+        "snapshotType": "not_captured",
+        "comparison": "identifier is present in DRS bulk extraction but no rendered DRS detail snapshot is committed"
+      },
+      "historicalSources": [
+        {
+          "sourceId": "faa-current-ad-page",
+          "url": "https://www.faa.gov/regulations_policies/airworthiness_directives",
+          "status": "current FAA page links AD access to DRS but does not expose a static 1940s index"
+        }
+      ],
+      "notes": "Earliest extracted pre-1994 sample; keep as presence-only until an independent historical index is captured."
+    },
+    {
+      "sampleId": "pre1994-id-1965-01-02",
+      "adNumber": "1965-01-02",
+      "status": "historical_source_unavailable",
+      "targetQuery": {
+        "componentType": "unknown",
+        "make": null,
+        "model": null
+      },
+      "drsWebUiSnapshot": {
+        "snapshotType": "not_captured",
+        "comparison": "identifier is present in DRS bulk extraction but no rendered DRS detail snapshot is committed"
+      },
+      "historicalSources": [
+        {
+          "sourceId": "faa-current-ad-page",
+          "url": "https://www.faa.gov/regulations_policies/airworthiness_directives",
+          "status": "current FAA page links AD access to DRS but does not expose a static 1965 index"
+        }
+      ],
+      "notes": "Decade-stratified sample; unresolved until historical index or rendered DRS detail is captured."
+    },
+    {
+      "sampleId": "pre1994-engine-lycoming-o320",
+      "adNumber": "1977-01-08",
+      "status": "historical_source_unavailable",
+      "targetQuery": {
+        "componentType": "engine",
+        "make": "Lycoming",
+        "model": "O-320"
+      },
+      "drsWebUiSnapshot": {
+        "snapshotType": "not_captured",
+        "comparison": "no committed DRS Web UI result snapshot for this engine sample"
+      },
+      "historicalSources": [
+        {
+          "sourceId": "faa-current-ad-page",
+          "url": "https://www.faa.gov/regulations_policies/airworthiness_directives",
+          "status": "does_not_provide_static_pre1994_engine_index"
+        }
+      ],
+      "notes": "High-value GA engine sample; requires a rendered DRS result-list snapshot or independent historical FAA index."
+    },
+    {
+      "sampleId": "pre1994-target-pa28-180",
+      "adNumber": "1992-26-01",
+      "status": "snapshot_unparseable",
+      "targetQuery": {
+        "componentType": "airframe",
+        "make": "Piper Aircraft Inc.",
+        "model": "PA-28-180"
+      },
+      "drsWebUiSnapshot": {
+        "snapshotType": "drs_app_shell_html",
+        "capturedAt": "2026-06-21",
+        "sourceUrl": "https://drs.faa.gov/browse/ADFRAWD/doctypeDetails?Status=all&Make=Piper%20Aircraft%20Inc.&Model=PA-28-180",
+        "comparison": "app shell reachable, but no parseable result rows in static HTTP snapshot"
+      },
+      "historicalSources": [
+        {
+          "sourceId": "faa-current-ad-page",
+          "url": "https://www.faa.gov/regulations_policies/airworthiness_directives",
+          "status": "does_not_provide_static_pre1994_target_index"
+        }
+      ],
+      "notes": "High-value GA airframe target sample; DRS Web UI capture remains necessary."
+    },
+    {
+      "sampleId": "pre1994-target-c172",
+      "adNumber": "1993-01-01",
+      "status": "matched",
+      "targetQuery": {
+        "componentType": "airframe",
+        "make": "Cessna",
+        "model": "172R"
+      },
+      "drsWebUiSnapshot": {
+        "snapshotType": "normalized_manual_result_snapshot",
+        "capturedAt": "2026-06-21",
+        "resultAdNumbers": ["1993-01-01"],
+        "comparison": "bulk identifier present in retained DRS target snapshot"
+      },
+      "historicalSources": [
+        {
+          "sourceId": "faa-current-ad-page",
+          "url": "https://www.faa.gov/regulations_policies/airworthiness_directives",
+          "status": "supports_drs_as_current_ad_access_path"
+        }
+      ],
+      "notes": "Positive control sample; proves sample presence only."
+    },
+    {
+      "sampleId": "pre1994-propeller-mccauley",
+      "adNumber": "1989-02-08",
+      "status": "historical_source_unavailable",
+      "targetQuery": {
+        "componentType": "propeller",
+        "make": "McCauley",
+        "model": null
+      },
+      "drsWebUiSnapshot": {
+        "snapshotType": "not_captured",
+        "comparison": "no committed DRS Web UI result snapshot for this propeller sample"
+      },
+      "historicalSources": [
+        {
+          "sourceId": "faa-current-ad-page",
+          "url": "https://www.faa.gov/regulations_policies/airworthiness_directives",
+          "status": "does_not_provide_static_pre1994_propeller_index"
+        }
+      ],
+      "notes": "High-value propeller sample; unresolved until target-specific snapshot is captured."
+    }
+  ],
+  "confidenceLevel": "conditional",
+  "coverageClaim": "Pre-1994 ADs are present in the DRS bulk corpus; complete historical coverage is not proven."
+}
+

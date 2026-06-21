@@ -49,7 +49,7 @@ FAA DRS requirements:
 - DRS bulk fixtures should include the ZIP/database hash, table/column inventory, parser version, and sampled normalized rows.
 - Live DRS Web UI scraping is not the default ingestion path. It may be used only for validation/diagnostics unless a later decision accepts it as a fallback.
 - Any Web UI automation must be resumable, idempotent, rate-limited, manually gated, and disabled in CI.
-- Pre-1994 ADs present in the DRS bulk data should be ingested. Complete pre-1994 historical coverage must remain unclaimed until validated against DRS Web UI samples and historical FAA/index sources.
+- Pre-1994 ADs present in the DRS bulk data should be ingested. Complete pre-1994 historical coverage must remain unclaimed; the 2026-06-21 T071 validation result is conditional because rendered DRS Web UI snapshots and independent historical/index sources remain incomplete.
 
 ## MVP Architecture
 

@@ -62,3 +62,18 @@ The script prints and writes one of these verdicts based on full ZIP source cove
 If DRS blocks Playwright, the ZIP URL cannot be found, Federal Register returns no AD documents, or ZIP extraction yields an implausibly small AD set, the script fails loudly and writes a failure `findings.md`.
 
 This is validation code only. Do not import it into the production backend pipeline.
+
+## Pre-1994 Historical Validation
+
+T071 adds a second, deliberately conservative validation pass for pre-1994 AD coverage:
+
+```bash
+python validate_pre1994.py
+```
+
+This reads `pre1994_validation_sources.json`, optionally cross-checks sampled AD identifiers against `data/zip_set.json` when that local cache exists, and writes:
+
+- `pre1994_findings.md`
+- `pre1994_validation_report.json`
+
+This pass does not scrape DRS. It records whether each sampled pre-1994 identifier or high-value target query has enough DRS Web UI snapshot evidence and independent FAA/historical-index evidence to support a completeness claim. The current report is conditional: pre-1994 presence in DRS bulk is supported, but complete historical coverage is not proven.

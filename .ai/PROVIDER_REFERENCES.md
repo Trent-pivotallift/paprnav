@@ -1,6 +1,6 @@
 # paprnav Provider References
 
-Last updated: 2026-06-20
+Last updated: 2026-06-21
 
 Use this file whenever implementation depends on an external provider, API, SDK, CLI, file format, or output shape. Check current official documentation first, then record the mapping here before coding or marking the task complete.
 
@@ -173,6 +173,35 @@ paprnav mapping notes:
 - The first production-oriented implementation should parse the DRS bulk ZIP/Access database from saved fixtures and must not require live DRS network access in tests.
 - Pre-1994 completeness validation should be treated as a separate confidence track: compare DRS bulk against sampled DRS Web UI results and available historical FAA/index sources before claiming complete historical coverage.
 
+### T071 Pre-1994 Historical Validation Result
+
+- Status: completed as a conditional/low-risk-gating validation pass on 2026-06-21.
+- References:
+  - https://www.faa.gov/regulations_policies/airworthiness_directives
+  - https://drs.faa.gov/browse/ADFRAWD/doctypeDetails?Status=all&Make=Piper%20Aircraft%20Inc.&Model=PA-28-180
+  - `tools/drs_zip_validation/validate_pre1994.py`
+  - `tools/drs_zip_validation/pre1994_validation_sources.json`
+  - `tools/drs_zip_validation/pre1994_findings.md`
+  - `tools/drs_zip_validation/pre1994_validation_report.json`
+  - `backend/tests/fixtures/drs/pre1994_historical_validation.sample.json`
+
+Result:
+
+- The current DRS bulk extraction still supports pre-1994 presence: 6,792 normalized pre-1994 identifiers from `ADFinalRulesEmergencyADs_05312026.accdb`, with sampled identifiers spanning 1941, 1965, 1977, 1989, 1992, and 1993.
+- The T071 sample set includes high-value GA targets/components: Piper PA-28-180, Cessna 172R, Lycoming O-320, and McCauley propeller.
+- The local ZIP identifier cross-check passed for all sampled AD identifiers in `pre1994_validation_sources.json`.
+- The current FAA Airworthiness Directives page confirms ADs are FAA regulations under 14 CFR part 39 and links AD Rules and AD Biweekly access to DRS; it does not provide a static pre-1994 historical index for the sampled targets/components.
+- Static HTTP capture of the PA-28-180 DRS target URL reached the DRS app shell but did not expose parseable result rows. Rendered Web UI result-list snapshots are still required for unresolved target samples.
+- Confidence level is `conditional`, not complete. The validation supports the claim that pre-1994 ADs are included when present in the current DRS bulk data; it does not support a claim of complete pre-1994 historical coverage.
+
+Operational mapping:
+
+- `backend/app/services/ad_historical_validation.py` records unresolved T071 samples as `ADReconciliationIssue` rows.
+- Missing samples should use `pre1994_validation_missing` with high severity.
+- App-shell-only or unparseable DRS target snapshots should use `pre1994_validation_snapshot_unparseable`.
+- Samples lacking independent historical/index evidence should use `pre1994_validation_historical_source_unavailable`.
+- User-facing copy must remain conservative: "Pre-1994 ADs are included when present in the current DRS bulk data; complete historical coverage has not been proven."
+
 ## AD Extraction Providers
 
 - Status: implemented local deterministic extraction provider for T049; future LLM provider remains behind the same metadata/review contract
@@ -211,9 +240,14 @@ paprnav mapping notes:
 
 ## GitHub Actions
 
-- Status: CI workflow added for frontend lint/build and backend tests
-- Date checked: not yet recorded for current workflow
+- Status: no workflow committed
+- Date checked: 2026-06-21
 - References: TBD if workflow syntax or permissions become nontrivial
+
+Notes:
+
+- A CI workflow draft was intentionally not retained because the available GitHub OAuth token lacked `workflow` scope to push `.github/workflows/ci.yml`.
+- Reintroduce CI only after checking current GitHub Actions docs and using credentials with workflow scope.
 
 Required before adding deployment or privileged workflow steps:
 
