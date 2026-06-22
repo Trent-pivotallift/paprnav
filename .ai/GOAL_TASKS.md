@@ -1845,7 +1845,7 @@ Evidence:
 
 ### T070: Add AD reconciliation worker
 
-Status: ready after T063 and T066
+Status: completed 2026-06-21
 
 Goal: Add a worker that finds missing FR matches, stale targets, extraction gaps, supersession/correction conflicts, and incomplete applicability rows.
 
@@ -1863,3 +1863,11 @@ Suggested checks:
 cd backend
 python -m pytest tests/test_ad_ingestion.py
 ```
+
+Evidence:
+
+- Added `backend/app/services/ad_reconciliation.py`.
+- Added `backend/tests/test_ad_reconciliation.py`.
+- Worker detects missing Federal Register matches, degraded DRS source snapshots, missing/incomplete extraction, missing/incomplete/stale applicability, and correction/supersession publication signals.
+- Worker upserts scoped `ADReconciliationIssue` rows idempotently, resolves managed issues when conditions clear, and emits sanitized product/workflow observability events.
+- Verified with full backend test suite.
