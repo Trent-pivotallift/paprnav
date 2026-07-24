@@ -19,6 +19,14 @@ from app.services.installed_components import sync_installed_components_from_air
 TEST_PASSWORD = "test-password"
 
 
+@pytest.fixture(autouse=True)
+def disable_local_dotenv(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+    monkeypatch.setenv("PAPRNAV_DISABLE_DOTENV", "1")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 @pytest.fixture()
 def db_session() -> Generator[Session, None, None]:
     engine = create_engine(

@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.core import ADDiscoveryRecord, ADExtractionReview, AirworthinessDirective
+from app.models.core import ADDiscoveryRecord, ADExtraction, ADExtractionReview, ADTargetApplicability, AirworthinessDirective
 from app.services.ad_discovery import FederalRegisterSearchResult, discover_federal_register_ads
 from app.services.ad_extraction import process_pending_ad_extractions
 from tests.conftest import login
@@ -28,6 +30,31 @@ class FakeFederalRegisterClient:
             results=[candidate_document(), non_ad_rule_document()],
             raw_response={"results": [candidate_document(), non_ad_rule_document()]},
         )
+
+
+class FakeProviderBackedExtractor:
+    provider_name = "openai_responses_ad_extractor"
+    provider_version = "gpt-test:ad_extraction_prompt_v1:testhash"
+
+    def __init__(self, output: dict[str, Any] | None = None, error: Exception | None = None) -> None:
+        self.output = output or provider_output()
+        self.error = error
+        self.calls = 0
+
+    def extract(self, directive: AirworthinessDirective) -> dict[str, Any]:
+        self.calls += 1
+        if self.error:
+            raise self.error
+        return {
+            "output": self.output,
+            "raw_response": {
+                "providerResponseId": "resp_test",
+                "providerModel": "gpt-test",
+                "promptHash": "testhash",
+                "promptVersion": "ad_extraction_prompt_v1",
+                "usage": {"input_tokens": 10, "output_tokens": 20},
+            },
+        }
 
 
 def test_federal_register_discovery_classifies_and_persists_ad_candidates(db_session: Session) -> None:
@@ -92,6 +119,66 @@ def test_ad_extraction_routes_low_confidence_output_to_review(
     assert review.extraction.directive.extraction_status == "complete"
 
 
+def test_provider_backed_extraction_uses_cache_and_routes_disagreement_to_review(db_session: Session) -> None:
+    discover_federal_register_ads(db_session, client=FakeFederalRegisterClient())
+    provider = FakeProviderBackedExtractor(
+        output=provider_output(
+            affected_products=["Cessna 172R"],
+            confidence=0.91,
+            uncertainty_reasons=["Applicability text differs from deterministic baseline."],
+        ),
+    )
+
+    first_stats = process_pending_ad_extractions(db_session, llm_provider=provider)
+    second_stats = process_pending_ad_extractions(db_session, llm_provider=provider)
+
+    assert first_stats["seen"] == 1
+    assert first_stats["review_queued"] == 1
+    assert second_stats["seen"] == 1
+    assert provider.calls == 1
+
+    extraction = db_session.scalar(select(ADExtraction).where(ADExtraction.provider_name == provider.provider_name))
+    assert extraction is not None
+    assert extraction.provider_version == provider.provider_version
+    assert extraction.status == "needs_review"
+    assert "applicability_disagreement" in extraction.raw_response["reviewReasons"]
+    assert "provider_uncertainty" in extraction.raw_response["reviewReasons"]
+    assert db_session.scalar(select(ADExtractionReview)) is not None
+    assert db_session.scalars(select(ADTargetApplicability)).all() == []
+
+
+def test_provider_backed_extraction_can_approve_valid_consistent_output(db_session: Session) -> None:
+    discover_federal_register_ads(db_session, client=FakeFederalRegisterClient())
+    provider = FakeProviderBackedExtractor(output=provider_output())
+
+    stats = process_pending_ad_extractions(db_session, llm_provider=provider)
+
+    assert stats["seen"] == 1
+    assert stats["approved"] == 1
+    extraction = db_session.scalar(select(ADExtraction).where(ADExtraction.provider_name == provider.provider_name))
+    assert extraction is not None
+    assert extraction.status == "approved"
+    assert extraction.raw_response["reviewReasons"] == []
+    assert db_session.scalar(select(ADExtractionReview)) is None
+    applicabilities = db_session.scalars(select(ADTargetApplicability)).all()
+    assert len(applicabilities) == 1
+
+
+def test_provider_backed_extraction_falls_back_to_deterministic_on_provider_error(db_session: Session) -> None:
+    discover_federal_register_ads(db_session, client=FakeFederalRegisterClient())
+    provider = FakeProviderBackedExtractor(error=RuntimeError("provider unavailable"))
+
+    stats = process_pending_ad_extractions(db_session, llm_provider=provider)
+
+    assert stats["seen"] == 1
+    assert stats["review_queued"] == 1
+    assert provider.calls == 1
+    extraction = db_session.scalar(select(ADExtraction))
+    assert extraction is not None
+    assert extraction.provider_name == "deterministic_ad_extractor"
+    assert extraction.raw_response["fallbackReason"] == "RuntimeError: provider unavailable"
+
+
 def candidate_document() -> dict[str, Any]:
     return {
         "title": "Airworthiness Directives; Airbus Helicopters",
@@ -118,4 +205,30 @@ def non_ad_rule_document() -> dict[str, Any]:
         "publication_date": "2026-06-16",
         "agencies": [{"name": "Federal Aviation Administration", "slug": "federal-aviation-administration"}],
         "excerpts": "Amends controlled airspace for an airport.",
+    }
+
+
+def provider_output(
+    *,
+    affected_products: list[str] | None = None,
+    confidence: float = 0.92,
+    uncertainty_reasons: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "adNumber": "2026-12-01",
+        "title": "Airworthiness Directives; Airbus Helicopters",
+        "effectiveDate": None,
+        "publicationDate": "2026-06-16",
+        "affectedProducts": affected_products if affected_products is not None else ["Airbus Helicopters"],
+        "complianceActions": ["Review source document for required corrective actions."],
+        "complianceIntervals": [],
+        "supersedesAdNumbers": [],
+        "sourceUrls": {
+            "html": "https://www.federalregister.gov/documents/2026/06/16/2026-12052/example",
+            "pdf": "https://www.govinfo.gov/content/pkg/FR-2026-06-16/pdf/2026-12052.pdf",
+            "publicInspectionPdf": None,
+        },
+        "confidence": confidence,
+        "citations": [{"field": "title", "source": "federal_register", "text": "Airworthiness Directives; Airbus Helicopters"}],
+        "uncertaintyReasons": uncertainty_reasons or [],
     }

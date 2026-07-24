@@ -20,6 +20,7 @@ from app.schemas.aircraft import (
     InstalledComponentResponse,
 )
 from app.services.installed_components import sync_installed_components_from_aircraft
+from app.services.cost_tags import ensure_aircraft_cost_tag, ensure_organization_account_tag
 from app.services.observability import record_product_event
 
 router = APIRouter(prefix="/api/v1/aircraft", tags=["aircraft"])
@@ -82,6 +83,7 @@ def ensure_owner_access(aircraft: Aircraft, user: User) -> None:
 
 
 def serialize_aircraft(db: Session, aircraft: Aircraft) -> AircraftResponse:
+    owner_account_tag = aircraft.owner_organization.customer_account_tag
     last_log_entry_date = db.scalar(
         select(func.max(LogbookEntry.entry_date)).where(LogbookEntry.aircraft_id == aircraft.id)
     )
@@ -100,6 +102,8 @@ def serialize_aircraft(db: Session, aircraft: Aircraft) -> AircraftResponse:
         propellerMake=aircraft.propeller_make,
         propellerModel=aircraft.propeller_model,
         propellerSerialNumber=aircraft.propeller_serial_number,
+        customerAccountTag=owner_account_tag,
+        aircraftCostTag=aircraft.cost_allocation_tag,
         installedComponents=[
             InstalledComponentResponse(
                 id=component.id,
@@ -219,6 +223,8 @@ def create_aircraft(
     )
     db.add(aircraft)
     db.flush()
+    ensure_organization_account_tag(owner_membership.organization)
+    ensure_aircraft_cost_tag(aircraft)
     sync_installed_components_from_aircraft(db, aircraft)
     record_product_event(
         db,
@@ -228,7 +234,13 @@ def create_aircraft(
         actor=current_user,
         aircraft_id=aircraft.id,
         organization_id=aircraft.owner_organization_id,
-        properties={"nNumber": aircraft.n_number_normalized, "make": aircraft.make, "model": aircraft.model},
+        properties={
+            "nNumber": aircraft.n_number_normalized,
+            "make": aircraft.make,
+            "model": aircraft.model,
+            "customerAccountTag": aircraft.owner_organization.customer_account_tag,
+            "aircraftCostTag": aircraft.cost_allocation_tag,
+        },
     )
     db.commit()
     db.refresh(aircraft)

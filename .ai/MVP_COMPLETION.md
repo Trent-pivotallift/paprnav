@@ -15,19 +15,20 @@ The product is decision support, not an official compliance attestation.
 1. A customer signs in and creates or selects an aircraft.
 2. The customer uploads scanned logbook images or PDFs.
 3. The app creates an ingestion job and stores the original upload.
-4. The OCR pipeline extracts page images, text, bounding boxes, confidence scores, and page-level metadata.
-5. The user verifies page order and confirms whether the upload is complete.
-6. Low-confidence OCR regions are shown back to the user as highlighted snippets with focused translation/correction fields.
-7. User corrections are saved as structured HITL annotations tied to the source page, bounding region, OCR output, corrected text, user, timestamp, and confidence reason.
-8. The ingestion pipeline converts verified OCR plus corrections into normalized logbook entries.
-9. Logbook entries persist in the database with links back to original source artifacts and OCR evidence.
-10. The AD ingestion process imports the FAA DRS bulk ZIP/Access database as the primary AD corpus and applicability source, then compares/enriches those ADs with Federal Register publication records when available.
-11. AD ingestion stores source metadata, source documents or source references, structured applicability, compliance requirements, supersession relationships, and extraction confidence.
-12. The app matches applicable ADs against structured logbook entries.
-13. Matching accounts for one-time, recurring/cyclical, conditional, component-specific, and superseded ADs.
-14. If an AD is not found, cannot be confidently matched, or requires judgment, the app creates a HITL adjudication task.
-15. HITL adjudications are documented for review by a software/admin user and future model/rule development.
-16. The user sees an aircraft compliance worklist with candidate matches, unresolved items, cited evidence, and confidence status.
+4. Pilot uploads and OCR runs record non-sensitive customer account and aircraft billing metadata so initial OCR work can be measured back to the customer account from paprnav records.
+5. The OCR pipeline extracts page images, text, bounding boxes, confidence scores, and page-level metadata.
+6. The user verifies page order and confirms whether the upload is complete.
+7. Low-confidence OCR regions are shown back to the user as highlighted snippets with focused translation/correction fields.
+8. User corrections are saved as structured HITL annotations tied to the source page, bounding region, OCR output, corrected text, user, timestamp, and confidence reason.
+9. The ingestion pipeline converts verified OCR plus corrections into normalized logbook entries, ordered by date accomplished with source page order as the secondary sort.
+10. Logbook entries persist in the database with links back to original source artifacts and OCR evidence.
+11. The AD ingestion process imports the FAA DRS bulk ZIP/Access database as the primary AD corpus and applicability source, then compares/enriches those ADs with Federal Register publication records when available.
+12. AD ingestion stores source metadata, source documents or source references, structured applicability, compliance requirements, supersession relationships, and extraction confidence.
+13. The app matches applicable ADs against structured logbook entries.
+14. Matching accounts for one-time, recurring/cyclical, conditional, component-specific, and superseded ADs.
+15. If an AD is not found, cannot be confidently matched, or requires judgment, the app creates a HITL adjudication task.
+16. HITL adjudications are documented for review by a software/admin user and future model/rule development.
+17. The user sees an aircraft compliance worklist with candidate matches, unresolved items, cited evidence, and confidence status.
 
 ## Required MVP Capabilities
 

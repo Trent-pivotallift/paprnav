@@ -121,10 +121,56 @@ Optional local upload storage configuration:
 
 ```bash
 PAPRNAV_LOCAL_STORAGE_PATH=.data
+PAPRNAV_STORAGE_BACKEND=local
 PAPRNAV_MAX_UPLOAD_SIZE_BYTES=104857600
 ```
 
-Local uploaded files are stored under `.data/`, which is ignored by git. Production storage should use the selected S3-compatible storage target from `.ai/DECISIONS.md`.
+Local uploaded files are stored under `.data/`, which is ignored by git.
+
+Optional S3 upload storage configuration:
+
+```bash
+PAPRNAV_STORAGE_BACKEND=s3
+PAPRNAV_S3_UPLOAD_BUCKET=paprnav-pilot-artifacts-527257972989
+PAPRNAV_S3_UPLOAD_PREFIX=uploads
+AWS_REGION=us-east-1
+```
+
+S3-backed uploads are written with `AES256` server-side encryption and non-sensitive paprnav object metadata tags, including customer account, aircraft, upload, and billing stage tags. These object tags are for paprnav metadata/reconciliation; customer OCR chargeback is calculated from database OCR run records, not AWS Cost Explorer object-tag attribution. Local remains the default for development and CI.
+
+Optional OCR provider configuration:
+
+```bash
+PAPRNAV_OCR_PROVIDER=deterministic
+PAPRNAV_OCR_MAX_PDF_PAGES=3
+```
+
+AWS Textract remains the AWS baseline provider:
+
+```bash
+PAPRNAV_OCR_PROVIDER=textract
+PAPRNAV_TEXTRACT_API_MODE=async
+PAPRNAV_TEXTRACT_ASYNC_POLL_SECONDS=2
+PAPRNAV_TEXTRACT_ASYNC_TIMEOUT_SECONDS=300
+```
+
+Mistral OCR is reserved for A/B testing unless explicitly promoted:
+
+```bash
+PAPRNAV_OCR_PROVIDER=mistral
+PAPRNAV_MISTRAL_API_KEY=
+PAPRNAV_MISTRAL_BASE_URL=https://api.mistral.ai/v1
+PAPRNAV_MISTRAL_OCR_MODEL=mistral-ocr-4-0
+PAPRNAV_MISTRAL_OCR_CHANNEL=direct_api
+PAPRNAV_MISTRAL_SAGEMAKER_ENDPOINT_NAME=
+PAPRNAV_MISTRAL_SAGEMAKER_REGION=
+PAPRNAV_MISTRAL_OCR_MODE=ab_test
+PAPRNAV_MISTRAL_OCR_MAX_PDF_PAGES=3
+```
+
+Local development and feasibility scripts load `backend/.env` automatically when present. Explicit process environment variables still take precedence. Tests set `PAPRNAV_DISABLE_DOTENV=1` so real local secrets are not read during automated test runs.
+
+When a third-party OCR provider such as Mistral is used, the upload/review flow should show a conditional third-party processing note. Customer OCR chargeback must be calculated from paprnav `OCRRun` records by provider/model, API mode, billable page count, billable account tag, billable aircraft tag, and configured unit price.
 
 ## Database Migrations
 

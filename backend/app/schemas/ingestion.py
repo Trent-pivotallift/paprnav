@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 class IngestionJobSummary(BaseModel):
     id: str
     uploadId: str
+    uploadDownloadUrl: str
     aircraftId: str
     status: str
     pageExtractionStatus: str
@@ -21,6 +22,7 @@ class IngestionJobSummary(BaseModel):
 class OCRCorrectionResponse(BaseModel):
     id: str
     ocrTextSpanId: str
+    correctionOrder: int
     originalText: str
     correctedText: str
     originalConfidence: Optional[float]
@@ -52,11 +54,45 @@ class IngestionPageResponse(BaseModel):
     pageLabel: Optional[str]
     imageStorageBackend: Optional[str]
     imageStorageKey: Optional[str]
+    imageDownloadUrl: Optional[str]
     widthPx: Optional[int]
     heightPx: Optional[int]
     rotationDegrees: Optional[float]
     extractionConfidence: Optional[float]
     spans: list[OCRTextSpanResponse] = []
+
+
+class LogbookEntryEvidenceResponse(BaseModel):
+    id: str
+    fieldName: Optional[str]
+    evidenceType: str
+    confidence: Optional[float]
+    span: Optional[OCRTextSpanResponse]
+    reviewMetadata: Optional[dict] = None
+
+
+class CandidateRegionResponse(BaseModel):
+    pageId: str
+    bboxLeft: float
+    bboxTop: float
+    bboxWidth: float
+    bboxHeight: float
+    bboxUnits: str = "ratio"
+
+
+class ExtractedLogbookEntryCandidateResponse(BaseModel):
+    id: str
+    entryDate: Optional[date]
+    section: str
+    description: str
+    performerName: Optional[str]
+    performerCredential: Optional[str]
+    tachTime: Optional[float]
+    hobbsTime: Optional[float]
+    totalTime: Optional[float]
+    reviewStatus: str
+    region: Optional[CandidateRegionResponse] = None
+    evidence: list[LogbookEntryEvidenceResponse] = []
 
 
 class PageVerificationResponse(BaseModel):
@@ -70,6 +106,7 @@ class IngestionJobDetailResponse(BaseModel):
     job: IngestionJobSummary
     pages: list[IngestionPageResponse]
     latestVerification: Optional[PageVerificationResponse]
+    extractedEntries: list[ExtractedLogbookEntryCandidateResponse] = []
 
 
 class PageOrderUpdate(BaseModel):
@@ -93,11 +130,14 @@ class OCRCorrectionRequest(BaseModel):
 
 class ExtractedLogbookEntryResponse(BaseModel):
     id: str
-    entryDate: date
+    entryDate: Optional[date]
     section: str
     description: str
     performerName: Optional[str]
     performerCredential: Optional[str]
+    tachTime: Optional[float]
+    hobbsTime: Optional[float]
+    totalTime: Optional[float]
     reviewStatus: str
 
 

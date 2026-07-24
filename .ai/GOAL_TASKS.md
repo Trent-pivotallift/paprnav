@@ -1,6 +1,6 @@
 # paprnav Agent-Digestible Tasks
 
-Last updated: 2026-06-16
+Last updated: 2026-06-27
 
 Use these as candidates for `/goal`. Each task should be small enough for one agent run to complete, verify, and summarize without needing broad product decisions.
 
@@ -78,9 +78,13 @@ find .ai -maxdepth 1 -type f -name '*.md' -print
 
 ### T004: Add typed frontend mock data module
 
-Status: ready
+Status: superseded by T022, T024, and the API-backed frontend
 
 Goal: Move hardcoded aircraft and logbook mock arrays from pages into a typed module under `frontend/paprnav-frontend/src/lib` or `src/data`.
+
+Audit note:
+
+- This task is no longer the right implementation path. The dashboard and logbook pages now use typed API-backed data from `frontend/paprnav-frontend/src/lib/api.ts`; moving old mock arrays into a typed module would add obsolete scaffolding.
 
 Acceptance:
 
@@ -99,9 +103,13 @@ npm run build
 
 ### T005: Wire upload page to a local API abstraction
 
-Status: ready
+Status: completed 2026-06-17 via T028
 
 Goal: Add a frontend API helper for logbook uploads and update the upload page to call it, while the helper can still simulate success until the backend endpoint exists.
+
+Audit note:
+
+- The upload page now calls `uploadLogbookFile` from `frontend/paprnav-frontend/src/lib/api.ts`, which posts multipart files to the backend upload endpoint through the same-origin proxy. The simulated-upload path has been replaced by real backend integration.
 
 Acceptance:
 
@@ -160,9 +168,13 @@ python -m py_compile main.py
 
 ### T008: Create initial API contract document
 
-Status: ready
+Status: completed 2026-06-20 via T014 and T072
 
 Goal: Add `.ai/API_CONTRACT.md` describing first-pass endpoints for aircraft list, logbook entries, upload initiation/completion, and auth assumptions.
+
+Audit note:
+
+- `.ai/API_CONTRACT.md` exists and has since been extended beyond the initial aircraft/logbook/upload contract to include OCR ingestion, AD review/matching, observability, installed components, DRS source status, and component-aware AD worklist fields.
 
 Acceptance:
 
@@ -178,9 +190,13 @@ find .ai -maxdepth 1 -type f -name '*.md' -print
 
 ### T009: Add frontend empty/loading/error states for dashboard data
 
-Status: ready after T004
+Status: completed 2026-06-17 via T022 and T024
 
 Goal: Prepare dashboard pages for API-backed data by adding explicit loading, empty, and error rendering states around aircraft lists.
+
+Audit note:
+
+- The dashboard and logbook pages already use API-backed data and explicit loading/error/empty states. T004 is obsolete, so this no longer depends on a mock-data module.
 
 Acceptance:
 
@@ -222,7 +238,7 @@ Acceptance:
 
 ### T012: Add infrastructure planning document
 
-Status: ready
+Status: completed 2026-06-27
 
 Goal: Add `.ai/INFRASTRUCTURE.md` to define desired environments, AWS target account/region assumptions, deployment tool options, and secrets/state handling questions.
 
@@ -231,6 +247,14 @@ Acceptance:
 - Explicitly states no AWS IaC currently exists.
 - Lists recommended next decision points before deployment.
 - Does not run AWS commands or modify cloud resources.
+
+Evidence:
+
+- Added `.ai/INFRASTRUCTURE.md`.
+- The document states no AWS IaC or GitHub Actions workflow is currently committed.
+- It records local Docker/Next/FastAPI/Postgres assumptions, selected near-term AWS planning assumptions, remote state/secrets assumptions, and the no-cloud-change boundary.
+- It lists the next decision points before deployment: AWS account/region, IaC tool, runtime target, frontend hosting, RDS/Aurora choice, S3 retention/lifecycle, and deployment workflow split.
+- No AWS commands were run and no cloud resources were modified.
 
 ## MVP Completion Definition
 
@@ -912,7 +936,7 @@ find . -name '.env*' -maxdepth 4 -print
 
 ### T034: Create production infrastructure as code
 
-Status: blocked pending T012, T026, and environment decisions
+Status: blocked pending final IaC/runtime decisions, official AWS/tooling docs, and explicit approval to add IaC
 
 Goal: Add reviewable IaC for the selected AWS production architecture.
 
@@ -923,6 +947,14 @@ Acceptance:
 - State handling and target AWS account/region are documented.
 - Plan/diff command is documented.
 - Does not apply cloud changes without explicit approval.
+
+Current audit note:
+
+- T012 is complete; `.ai/INFRASTRUCTURE.md` now records planning assumptions and open decisions.
+- `.ai/AWS_PILOT_TERRAFORM_PLAN.md` now records the 3-pass planning loop for a controlled 10-aircraft AWS volunteer pilot and derives the paprnav-specific bootstrap/deploy/runtime role boundary.
+- AWS pilot foundation IaC now exists under `infra/terraform` and has been applied for the first slice; T034 remains incomplete for full production-shaped runtime infrastructure.
+- Official GitHub Actions/OIDC, Terraform S3 backend, IAM best-practice, and ECS task execution role references are recorded for planning, but selected AWS runtime/database/storage service docs still need to be checked and recorded before T034 implementation.
+- Do not apply cloud changes while completing T034; the first deliverable should be reviewable Terraform and a non-destructive plan command.
 
 ### T035: Add CI workflow
 
@@ -938,7 +970,10 @@ Architecture decision:
 
 Blocked note:
 
-- A local `.github/workflows/ci.yml` draft exists, but GitHub rejected the push because the current OAuth credential cannot create or update workflow files without `workflow` scope.
+- No `.github/workflows/ci.yml` is present in this checkout as of 2026-06-27.
+- Prior push attempts were blocked because the available GitHub credential could not create or update workflow files without `workflow` scope.
+- `.ai/INFRASTRUCTURE.md` now contains the CI unblock plan and a draft verification-only workflow for backend pytest plus frontend lint/build.
+- `.ai/PROVIDER_REFERENCES.md` records current official GitHub workflow syntax, `GITHUB_TOKEN` permission, and AWS OIDC references.
 - Do not mark this task complete until the workflow file is committed and pushed with a credential that has the required scope.
 
 Acceptance:
@@ -950,7 +985,7 @@ Acceptance:
 
 ### T036: Production deployment dry run
 
-Status: blocked pending T034 and T035
+Status: blocked pending T034 IaC and T035 CI workflow
 
 Goal: Execute a non-destructive deployment plan/diff and document the exact deployment steps.
 
@@ -961,11 +996,24 @@ Acceptance:
 - Rollback steps are documented.
 - No infrastructure is applied unless explicitly approved.
 
+Current audit note:
+
+- No production dry run has been executed.
+- `.ai/INFRASTRUCTURE.md` documents the planned dry-run sequence and required rollback/secrets/IAM topics, but this is not a substitute for actual IaC plan output.
+- Keep T036 blocked until T034 adds reviewable IaC and T035 lands a verification workflow.
+
 ### T037: MVP release audit
 
-Status: blocked pending OCR, AD ingestion, matching, HITL, tests, and deployment tasks
+Status: blocked pending CI/deployment decisions and release-gate evidence
 
 Goal: Audit the app against the MVP Completion Definition and close remaining gaps.
+
+Current audit note:
+
+- The core local MVP slices for auth, aircraft/logbooks, upload/OCR, AD ingestion/review/matching, HITL adjudication, component-aware worklist, reconciliation, and observability are implemented locally.
+- A local end-to-end runtime demo pass was completed on 2026-06-27 and documented in `.ai/LOCAL_MVP_DEMO.md`.
+- Current verification is green: backend pytest via `backend/.venv/bin/python -m pytest`, frontend `npm run lint`, frontend `npm run build`, and frontend `npm run smoke`.
+- A release audit still needs explicit release-gate evidence plus refreshed CI/infrastructure/deployment decisions.
 
 Acceptance:
 
@@ -1619,6 +1667,8 @@ Evidence:
 
 - Added fixture-first DRS row/ZIP importer in `backend/app/services/drs_bulk_import.py`.
 - Added `backend/tests/test_drs_bulk_import.py`, including pre-1994 AD import coverage.
+- 2026-06-27 hardening: ZIP import now attempts Access table export through `mdb-tables`/`mdb-export` when available, stores table inventory and parser metadata on the retained DRS snapshot, and falls back to binary AD-number scanning only as an explicit degraded `partial`/`failed` import with source-snapshot reconciliation issues.
+- 2026-06-27 hardening tests cover both the mdbtools-export path and the degraded fallback path without requiring native mdbtools in CI.
 - Verified with full backend test suite.
 
 ### T071: Validate pre-1994 DRS historical completeness
@@ -1765,7 +1815,7 @@ Evidence:
 
 ### T067: Add provider-backed AD extraction behind cache and review
 
-Status: ready after T066
+Status: completed 2026-06-27
 
 Goal: Add LLM-assisted extraction behind the existing provider metadata, cache, schema validation, and review thresholds.
 
@@ -1783,6 +1833,16 @@ Suggested checks:
 cd backend
 python -m pytest tests/test_ad_ingestion.py
 ```
+
+Evidence:
+
+- Recorded current OpenAI Responses API Structured Outputs references and paprnav mapping in `.ai/PROVIDER_REFERENCES.md`.
+- Added env-gated OpenAI Responses AD extraction provider using strict JSON Schema output and provider metadata.
+- Existing extraction idempotency now covers LLM model and prompt/ruleset hash through provider version plus input content hash and schema version.
+- Provider failures or invalid output fall back to deterministic extraction.
+- Low confidence, provider uncertainty, missing applicability/compliance details, or disagreement on safety-critical fields routes to `ADExtractionReview` without creating authoritative applicability rows.
+- Verified with `../backend/.venv/bin/python -m pytest tests/test_ad_ingestion.py`.
+- Verified with full backend suite: `../backend/.venv/bin/python -m pytest`.
 
 ### T068: Refactor AD matching around installed components and target applicability
 
@@ -1871,3 +1931,39 @@ Evidence:
 - Worker detects missing Federal Register matches, degraded DRS source snapshots, missing/incomplete extraction, missing/incomplete/stale applicability, and correction/supersession publication signals.
 - Worker upserts scoped `ADReconciliationIssue` rows idempotently, resolves managed issues when conditions clear, and emits sanitized product/workflow observability events.
 - Verified with full backend test suite.
+
+### T073: Add OCR billing summary for pilot onboarding
+
+Status: planned
+
+Goal: Make onboarding OCR work measurable per customer account and aircraft before real volunteer Textract usage.
+
+Decision:
+
+- Customer OCR chargeback is app-side product metering, not AWS Cost Explorer per-customer attribution.
+- S3 object tags remain useful for paprnav metadata/reconciliation, but Textract requests are not tagged per customer.
+- `OCRRun` is the source of truth for chargeable OCR work: `billing_status`, `billable_account_tag`, `billable_aircraft_tag`, `billable_page_count`, provider metadata, and timestamps.
+
+Acceptance:
+
+- Backend exposes a billing summary endpoint or service that groups OCR runs by customer account tag and aircraft tag.
+- Summary includes upload count, OCR run count, chargeable page count, not-billable page count, provider/API mode, date range, and estimated OCR cost.
+- Estimated OCR cost uses a configured provider/API unit price and does not hardcode pricing into domain logic.
+- The report can filter by date range, account tag, aircraft tag, and billing status.
+- Tests cover multiple customer accounts, multiple aircraft, chargeable and not-billable runs, and empty-result behavior.
+- Docs state that AWS Budget is the aggregate project guardrail while paprnav billing summaries are the customer/account attribution source.
+- Claude reviewer should be used after Codex self-review because this touches cost/billing decisions.
+
+Suggested checks:
+
+```bash
+cd backend
+PYTHONPATH=. .venv/bin/pytest
+cd ../frontend/paprnav-frontend
+npm run lint
+```
+
+Notes:
+
+- Add AWS Budget notification email before real volunteer/Textract usage.
+- Async S3-backed Textract should persist enough provider/API mode metadata to keep future pricing estimates correct if the product moves beyond plain text detection.

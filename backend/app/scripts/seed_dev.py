@@ -14,6 +14,7 @@ from app.models.core import (
     OrganizationMembership,
     User,
 )
+from app.services.installed_components import sync_installed_components_from_aircraft
 
 DEV_PASSWORD = "demo-password"
 
@@ -228,6 +229,7 @@ def seed(db: Session) -> None:
         model="172R",
         serial_number="17280001",
     )
+    sync_installed_components_from_aircraft(db, aircraft)
     get_or_create_assignment(db, aircraft, shop_org, owner_user, "maintainer")
 
     get_or_create_entry(

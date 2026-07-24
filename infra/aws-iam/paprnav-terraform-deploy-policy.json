@@ -1,0 +1,262 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AccountAndPlanReadAccess",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetCallerIdentity",
+        "iam:Get*",
+        "iam:List*",
+        "ec2:Describe*",
+        "elasticloadbalancing:Describe*",
+        "ecs:Describe*",
+        "ecs:List*",
+        "ecr:Describe*",
+        "ecr:List*",
+        "ecr:GetAuthorizationToken",
+        "rds:Describe*",
+        "rds:ListTagsForResource",
+        "s3:GetAccountPublicAccessBlock",
+        "s3:GetBucket*",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetObject",
+        "s3:GetObjectTagging",
+        "s3:ListAllMyBuckets",
+        "s3:ListBucket",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetResourcePolicy",
+        "secretsmanager:List*",
+        "ssm:Describe*",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "logs:Describe*",
+        "logs:List*",
+        "cloudwatch:Describe*",
+        "cloudwatch:Get*",
+        "cloudwatch:List*",
+        "budgets:Describe*",
+        "kms:Describe*",
+        "kms:Get*",
+        "kms:List*",
+        "application-autoscaling:Describe*",
+        "servicediscovery:Get*",
+        "servicediscovery:List*",
+        "textract:Get*",
+        "textract:List*",
+        "access-analyzer:ValidatePolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RegionalDeploymentAccess",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*",
+        "elasticloadbalancing:*",
+        "ecs:*",
+        "ecr:*",
+        "rds:*",
+        "logs:*",
+        "cloudwatch:*",
+        "application-autoscaling:*",
+        "servicediscovery:*",
+        "textract:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "BudgetsForPilotCostGuardrails",
+      "Effect": "Allow",
+      "Action": [
+        "budgets:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "TerraformStateAndPaprnNavBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:DeleteBucket",
+        "s3:DeleteBucketPolicy",
+        "s3:DeleteObject",
+        "s3:DeleteObjectVersion",
+        "s3:GetAccelerateConfiguration",
+        "s3:GetBucketLocation",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketTagging",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetObject",
+        "s3:GetObjectTagging",
+        "s3:GetReplicationConfiguration",
+        "s3:ListBucket",
+        "s3:PutEncryptionConfiguration",
+        "s3:PutLifecycleConfiguration",
+        "s3:PutBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketTagging",
+        "s3:PutBucketVersioning",
+        "s3:PutObject",
+        "s3:PutObjectTagging"
+      ],
+      "Resource": [
+        "arn:aws:s3:::paprnav-*",
+        "arn:aws:s3:::paprnav-*/*"
+      ]
+    },
+    {
+      "Sid": "SecretsAndParametersForPaprnNav",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:*",
+        "ssm:AddTagsToResource",
+        "ssm:DeleteParameter",
+        "ssm:DeleteParameters",
+        "ssm:GetParameter",
+        "ssm:GetParameterHistory",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath",
+        "ssm:LabelParameterVersion",
+        "ssm:ListTagsForResource",
+        "ssm:PutParameter",
+        "ssm:RemoveTagsFromResource"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:us-east-1:527257972989:secret:paprnav-*",
+        "arn:aws:ssm:us-east-1:527257972989:parameter/paprnav/*"
+      ]
+    },
+    {
+      "Sid": "KmsCreatePaprnNavTaggedKeys",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateKey",
+        "kms:TagResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:RequestTag/Project": "paprnav"
+        }
+      }
+    },
+    {
+      "Sid": "KmsListAliasesForPlanning",
+      "Effect": "Allow",
+      "Action": [
+        "kms:ListAliases"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "KmsManagePaprnNavTaggedKeys",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey",
+        "kms:Encrypt",
+        "kms:GenerateDataKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1",
+          "aws:ResourceTag/Project": "paprnav"
+        }
+      }
+    },
+    {
+      "Sid": "KmsManagePaprnNavAliases",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateAlias",
+        "kms:DeleteAlias",
+        "kms:UpdateAlias"
+      ],
+      "Resource": "arn:aws:kms:us-east-1:527257972989:alias/paprnav-*"
+    },
+    {
+      "Sid": "ManagePaprnNavIamRolesAndPolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:AddRoleToInstanceProfile",
+        "iam:AttachRolePolicy",
+        "iam:CreateInstanceProfile",
+        "iam:CreateOpenIDConnectProvider",
+        "iam:CreatePolicy",
+        "iam:CreatePolicyVersion",
+        "iam:CreateRole",
+        "iam:DeleteInstanceProfile",
+        "iam:DeleteOpenIDConnectProvider",
+        "iam:DeletePolicy",
+        "iam:DeletePolicyVersion",
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:GetInstanceProfile",
+        "iam:GetOpenIDConnectProvider",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole",
+        "iam:ListPolicyVersions",
+        "iam:ListRolePolicies",
+        "iam:PutRolePolicy",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:TagInstanceProfile",
+        "iam:TagOpenIDConnectProvider",
+        "iam:TagPolicy",
+        "iam:TagRole",
+        "iam:UntagInstanceProfile",
+        "iam:UntagOpenIDConnectProvider",
+        "iam:UntagPolicy",
+        "iam:UntagRole",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:UpdateOpenIDConnectProviderThumbprint",
+        "iam:UpdateRole",
+        "iam:UpdateRoleDescription"
+      ],
+      "Resource": [
+        "arn:aws:iam::527257972989:role/paprnav-*",
+        "arn:aws:iam::527257972989:policy/paprnav-*",
+        "arn:aws:iam::527257972989:instance-profile/paprnav-*",
+        "arn:aws:iam::527257972989:oidc-provider/token.actions.githubusercontent.com"
+      ]
+    },
+    {
+      "Sid": "PassPaprnNavRuntimeRolesToExpectedServices",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::527257972989:role/paprnav-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": [
+            "ecs-tasks.amazonaws.com",
+            "ecs.amazonaws.com",
+            "application-autoscaling.amazonaws.com",
+            "rds.amazonaws.com"
+          ]
+        }
+      }
+    }
+  ]
+}

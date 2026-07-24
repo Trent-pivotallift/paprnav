@@ -1,6 +1,6 @@
 # paprnav AD Ingestion MVP Spec
 
-Last updated: 2026-06-20
+Last updated: 2026-06-27
 
 > Supersession note: D017 in `.ai/DECISIONS.md` changes the source ordering for the revised AD ingestion build. This file remains useful for the local Federal Register prototype and retention/review guidance, but its Federal Register-primary sections are superseded. The revised build should ingest the FAA DRS bulk ZIP/Access database first, then compare/enrich those ADs with Federal Register publications.
 
@@ -50,6 +50,15 @@ FAA DRS requirements:
 - Live DRS Web UI scraping is not the default ingestion path. It may be used only for validation/diagnostics unless a later decision accepts it as a fallback.
 - Any Web UI automation must be resumable, idempotent, rate-limited, manually gated, and disabled in CI.
 - Pre-1994 ADs present in the DRS bulk data should be ingested. Complete pre-1994 historical coverage must remain unclaimed; the 2026-06-21 T071 validation result is conditional because rendered DRS Web UI snapshots and independent historical/index sources remain incomplete.
+
+Current DRS bulk importer state as of 2026-06-27:
+
+- `backend/app/services/drs_bulk_import.py` can import normalized row fixtures directly into DRS source snapshots, directives, publications, targets, and target applicability rows.
+- ZIP import now attempts real Access table export through local `mdbtools` commands (`mdb-tables` and `mdb-export`) when those tools are installed.
+- When Access export succeeds, the importer stores table names, row counts, columns, parser metadata, content hash, and row count on a single retained DRS source snapshot before importing parseable AD rows.
+- When Access export is unavailable or yields no parseable rows, the importer explicitly marks the source snapshot as degraded (`partial`, or `failed` if no AD numbers can be recovered), records source-snapshot reconciliation issues, and only then falls back to the older binary AD-number scan.
+- The binary scan fallback preserves AD-number provenance and source hash continuity, but it does not provide applicability rows. It opens per-directive `drs_zip_applicability_unparsed` issues so maintainers can repair parser/tooling coverage instead of mistaking the corpus for complete applicability evidence.
+- Local CI/tests do not require `mdbtools`; the Access-export path is covered with monkeypatched command output and the degraded fallback is covered without native dependencies.
 
 ## MVP Architecture
 

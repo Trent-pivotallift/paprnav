@@ -3,7 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
+import subprocess
+import tempfile
 import zipfile
+from csv import DictReader
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,12 +15,14 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.core import ADPublication, ADSourceSnapshot, AirworthinessDirective
+from app.models.core import ADPublication, ADReconciliationIssue, ADSourceSnapshot, AirworthinessDirective
 from app.services.ad_applicability import ensure_issue, get_or_create_target, upsert_target_applicability
 from app.services.ad_identity import AD_NUMBER_PATTERN, normalize_ad_number
 
 PARSER_NAME = "drs_bulk_importer"
-PARSER_VERSION = "0.1.0"
+PARSER_VERSION = "0.2.0"
+MDB_TABLES = "mdb-tables"
+MDB_EXPORT = "mdb-export"
 
 
 def import_drs_bulk_rows(
@@ -39,6 +45,10 @@ def import_drs_bulk_rows(
         table_inventory={"rows": len(rows)},
         metadata={"fixtureFirst": True},
     )
+    return import_drs_rows_into_snapshot(db, rows, snapshot)
+
+
+def import_drs_rows_into_snapshot(db: Session, rows: list[dict[str, Any]], snapshot: ADSourceSnapshot) -> dict[str, int]:
     stats = {"rows_seen": 0, "directives_upserted": 0, "publications_upserted": 0, "applicabilities_upserted": 0, "issues": 0}
     for row in rows:
         stats["rows_seen"] += 1
@@ -101,12 +111,71 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
             captured_at=datetime.now(timezone.utc),
             row_count=None,
             table_inventory={"zipMembers": members, "accessDatabases": accdb_members},
-            metadata={"accessParsing": "not_available_without_external_driver"},
+            metadata={"accessParsing": "pending"},
+            status="in_progress",
         )
         if not accdb_members:
-            ensure_issue(db, directive=None, issue_type="drs_zip_missing_access_database", severity="high", payload={"filename": path.name, "members": members})
+            snapshot.status = "failed"
+            snapshot.metadata_json = {"accessParsing": "failed", "error": "zip_missing_access_database"}
+            ensure_snapshot_issue(
+                db,
+                snapshot=snapshot,
+                issue_type="drs_zip_missing_access_database",
+                severity="high",
+                payload={"filename": path.name, "members": members},
+            )
             stats["issues"] += 1
             return stats
+
+        table_parse = parse_access_members_with_mdbtools(archive, accdb_members)
+        snapshot.table_inventory = {
+            "zipMembers": members,
+            "accessDatabases": accdb_members,
+            "accessTables": table_parse["tables"],
+        }
+        if table_parse["rows"]:
+            snapshot.source_type = "bulk_access"
+            snapshot.status = "complete"
+            snapshot.row_count = len(table_parse["rows"])
+            snapshot.metadata_json = {
+                "accessParsing": "mdbtools",
+                "parserCommands": [MDB_TABLES, MDB_EXPORT],
+                "parseErrors": table_parse["errors"],
+            }
+            parsed_stats = import_drs_rows_into_snapshot(db, table_parse["rows"], snapshot)
+            for key, value in parsed_stats.items():
+                stats[key] += value
+            if table_parse["errors"]:
+                ensure_snapshot_issue(
+                    db,
+                    snapshot=snapshot,
+                    issue_type="drs_access_table_parse_partial",
+                    severity="medium",
+                    payload={"filename": path.name, "errors": table_parse["errors"][:10]},
+                )
+                stats["issues"] += 1
+            return stats
+
+        fallback_reason = table_parse["fallback_reason"]
+        snapshot.status = "partial"
+        snapshot.metadata_json = {
+            "accessParsing": fallback_reason,
+            "parserCommands": [MDB_TABLES, MDB_EXPORT],
+            "parseErrors": table_parse["errors"],
+            "fallback": "binary_ad_number_scan",
+        }
+        ensure_snapshot_issue(
+            db,
+            snapshot=snapshot,
+            issue_type="drs_access_table_parse_unavailable",
+            severity="high",
+            payload={
+                "filename": path.name,
+                "reason": fallback_reason,
+                "errors": table_parse["errors"][:10],
+            },
+        )
+        stats["issues"] += 1
         for member in accdb_members:
             data = archive.read(member)
             text = decode_possible_utf16(data)
@@ -126,8 +195,77 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
                 stats["directives_upserted"] += 1
                 stats["publications_upserted"] += 1
                 stats["issues"] += 1
+        snapshot.row_count = stats["rows_seen"]
+        if stats["rows_seen"] == 0:
+            snapshot.status = "failed"
+            ensure_snapshot_issue(
+                db,
+                snapshot=snapshot,
+                issue_type="drs_zip_no_parseable_ad_numbers",
+                severity="high",
+                payload={"filename": path.name, "accessDatabases": accdb_members},
+            )
+            stats["issues"] += 1
     db.flush()
     return stats
+
+
+def parse_access_members_with_mdbtools(archive: zipfile.ZipFile, accdb_members: list[str]) -> dict[str, Any]:
+    if not shutil.which(MDB_TABLES) or not shutil.which(MDB_EXPORT):
+        return {"rows": [], "tables": {}, "errors": [], "fallback_reason": "mdbtools_unavailable"}
+
+    rows: list[dict[str, Any]] = []
+    tables: dict[str, Any] = {}
+    errors: list[dict[str, str]] = []
+    with tempfile.TemporaryDirectory(prefix="paprnav-drs-") as tmpdir:
+        tmp_path = Path(tmpdir)
+        for member in accdb_members:
+            accdb_path = tmp_path / Path(member).name
+            accdb_path.write_bytes(archive.read(member))
+            table_names = list_access_tables(accdb_path, member, errors)
+            tables[member] = {"names": table_names, "rowCounts": {}, "columns": {}}
+            for table_name in table_names:
+                exported_rows = export_access_table(accdb_path, member, table_name, errors)
+                tables[member]["rowCounts"][table_name] = len(exported_rows)
+                tables[member]["columns"][table_name] = sorted(exported_rows[0].keys()) if exported_rows else []
+                for row in exported_rows:
+                    if normalize_ad_number(first_value(row, "adNumber", "ADNumber", "ad_number", "AD No.", "AD")):
+                        normalized = dict(row)
+                        normalized.setdefault("sourceAccessDatabase", member)
+                        normalized.setdefault("sourceAccessTable", table_name)
+                        rows.append(normalized)
+    reason = "no_parseable_access_rows" if not rows else "not_needed"
+    return {"rows": rows, "tables": tables, "errors": errors, "fallback_reason": reason}
+
+
+def list_access_tables(accdb_path: Path, member: str, errors: list[dict[str, str]]) -> list[str]:
+    try:
+        result = subprocess.run(
+            [MDB_TABLES, "-1", str(accdb_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        errors.append({"accessDatabase": member, "stage": "tables", "error": str(exc)})
+        return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def export_access_table(accdb_path: Path, member: str, table_name: str, errors: list[dict[str, str]]) -> list[dict[str, str]]:
+    try:
+        result = subprocess.run(
+            [MDB_EXPORT, str(accdb_path), "--", table_name],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        errors.append({"accessDatabase": member, "table": table_name, "stage": "export", "error": str(exc)})
+        return []
+    return [dict(row) for row in DictReader(result.stdout.splitlines())]
 
 
 def upsert_snapshot(
@@ -141,6 +279,7 @@ def upsert_snapshot(
     row_count: int | None,
     table_inventory: dict[str, Any],
     metadata: dict[str, Any],
+    status: str = "complete",
 ) -> ADSourceSnapshot:
     snapshot = db.scalar(select(ADSourceSnapshot).where(ADSourceSnapshot.content_hash == content_hash, ADSourceSnapshot.source_system == "drs"))
     if snapshot is None:
@@ -151,7 +290,7 @@ def upsert_snapshot(
             filename=filename,
             content_hash=content_hash,
             captured_at=captured_at or datetime.now(timezone.utc),
-            status="complete",
+            status=status,
             parser_name=PARSER_NAME,
             parser_version=PARSER_VERSION,
             row_count=row_count,
@@ -163,8 +302,41 @@ def upsert_snapshot(
         snapshot.row_count = row_count
         snapshot.table_inventory = table_inventory
         snapshot.metadata_json = metadata
+        snapshot.status = status
+        snapshot.parser_name = PARSER_NAME
+        snapshot.parser_version = PARSER_VERSION
     db.flush()
     return snapshot
+
+
+def ensure_snapshot_issue(
+    db: Session,
+    *,
+    snapshot: ADSourceSnapshot,
+    issue_type: str,
+    severity: str,
+    payload: dict[str, Any],
+) -> ADReconciliationIssue:
+    issue = db.scalar(
+        select(ADReconciliationIssue).where(
+            ADReconciliationIssue.source_snapshot_id == snapshot.id,
+            ADReconciliationIssue.issue_type == issue_type,
+            ADReconciliationIssue.status == "open",
+        )
+    )
+    if issue is None:
+        issue = ADReconciliationIssue(
+            source_snapshot_id=snapshot.id,
+            issue_type=issue_type,
+            severity=severity,
+            payload=payload,
+        )
+        db.add(issue)
+    else:
+        issue.severity = severity
+        issue.payload = payload
+    db.flush()
+    return issue
 
 
 def upsert_directive(db: Session, row: dict[str, Any], ad_number: str, source_hash: str) -> AirworthinessDirective:
@@ -297,7 +469,7 @@ def hash_rows(rows: list[dict[str, Any]]) -> str:
 
 
 def decode_possible_utf16(data: bytes) -> str:
-    for encoding in ("utf-16le", "utf-16", "utf-8", "latin-1"):
+    for encoding in ("utf-8", "utf-16le", "utf-16", "latin-1"):
         try:
             return data.decode(encoding, errors="ignore")
         except UnicodeError:

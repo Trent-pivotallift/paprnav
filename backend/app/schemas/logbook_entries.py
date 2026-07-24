@@ -33,7 +33,7 @@ class LogbookEntryResponse(BaseModel):
     id: str
     aircraftId: str
     section: str
-    entryDate: date
+    entryDate: Optional[date]
     description: str
     performerName: Optional[str]
     performerCredential: Optional[str]

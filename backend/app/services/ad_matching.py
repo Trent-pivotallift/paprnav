@@ -44,7 +44,7 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
 
     entries = db.scalars(
         select(LogbookEntry)
-        .where(LogbookEntry.aircraft_id == aircraft_id)
+        .where(LogbookEntry.aircraft_id == aircraft_id, LogbookEntry.entry_date.is_not(None))
         .options(selectinload(LogbookEntry.logbook_section))
         .order_by(LogbookEntry.entry_date.desc(), LogbookEntry.created_at.desc())
     ).all()

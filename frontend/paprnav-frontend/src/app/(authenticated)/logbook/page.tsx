@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Plus, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -152,12 +153,14 @@ export default function LogbookDashboardPage() {
                 </Card>
               ) : null}
 
-              <Card className="flex min-h-[200px] cursor-pointer items-center justify-center border-2 border-dashed transition-colors hover:border-primary/50 hover:bg-muted/50 group">
-                <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground transition-colors group-hover:text-primary">
-                  <Plus className="mb-2 h-12 w-12" />
-                  <span className="font-medium">Add New Aircraft</span>
-                </CardContent>
-              </Card>
+              <Link href="/logbook/onboarding" className="block">
+                <Card className="flex min-h-[200px] cursor-pointer items-center justify-center border-2 border-dashed transition-colors hover:border-primary/50 hover:bg-muted/50 group">
+                  <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground transition-colors group-hover:text-primary">
+                    <Plus className="mb-2 h-12 w-12" />
+                    <span className="font-medium">Add New Aircraft</span>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           )}
         </div>

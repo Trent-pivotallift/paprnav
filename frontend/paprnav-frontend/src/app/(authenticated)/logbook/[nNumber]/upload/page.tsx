@@ -47,6 +47,7 @@ export default function LogbookUploadPage() {
   const [storedUpload, setStoredUpload] = useState<StoredUpload | null>(null);
   const [ingestionJob, setIngestionJob] = useState<IngestionJobSummary | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [pilotConsentAccepted, setPilotConsentAccepted] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -100,7 +101,7 @@ export default function LogbookUploadPage() {
         throw new Error("Aircraft not found.");
       }
 
-      const response = await uploadLogbookFile(aircraft.id, selectedFile, section);
+      const response = await uploadLogbookFile(aircraft.id, selectedFile, section, { pilotConsentAccepted });
       setStoredUpload(response.upload);
       setIngestionJob(response.ingestionJob);
       setUploadMessage(`Stored ${response.upload.originalFilename} and queued OCR ingestion.`);
@@ -242,10 +243,23 @@ export default function LogbookUploadPage() {
           )}
 
           {/* Upload Button */}
+          <label className="mt-5 flex gap-3 rounded-md border p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4"
+              checked={pilotConsentAccepted}
+              onChange={(event) => setPilotConsentAccepted(event.target.checked)}
+            />
+            <span>
+              I have permission to upload this aircraft maintenance log and understand the initial OCR processing
+              is associated with this account for pilot billing analysis.
+            </span>
+          </label>
+
           <div className="mt-6 flex justify-center">
             <Button
               onClick={handleUpload}
-              disabled={!selectedFile || isUploading}
+              disabled={!selectedFile || isUploading || !pilotConsentAccepted}
               size="lg"
               className="min-w-[200px]"
             >

@@ -1,4 +1,6 @@
 import uuid
+from datetime import date as PythonDate
+from typing import Optional
 
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -53,6 +55,7 @@ class Organization(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("org"))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(64), nullable=False)
+    customer_account_tag: Mapped[str] = mapped_column(String(128), nullable=True, unique=True, index=True)
 
     memberships = relationship("OrganizationMembership", back_populates="organization")
     owned_aircraft = relationship("Aircraft", back_populates="owner_organization")
@@ -93,6 +96,7 @@ class Aircraft(TimestampMixin, Base):
     propeller_make: Mapped[str] = mapped_column(String(128), nullable=True)
     propeller_model: Mapped[str] = mapped_column(String(128), nullable=True)
     propeller_serial_number: Mapped[str] = mapped_column(String(128), nullable=True)
+    cost_allocation_tag: Mapped[str] = mapped_column(String(128), nullable=True, unique=True, index=True)
 
     owner_organization = relationship("Organization", back_populates="owned_aircraft")
     created_by_user = relationship("User")
@@ -166,7 +170,7 @@ class LogbookEntry(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("lbe"))
     aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
     logbook_section_id: Mapped[str] = mapped_column(ForeignKey("logbook_sections.id"), nullable=False, index=True)
-    entry_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    entry_date: Mapped[Optional[PythonDate]] = mapped_column(Date, nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     performer_name: Mapped[str] = mapped_column(String(255), nullable=True)
     performer_credential: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -197,6 +201,9 @@ class Upload(TimestampMixin, Base):
     storage_key: Mapped[str] = mapped_column(String(1024), nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="received")
+    pilot_consent_accepted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    initial_ocr_billable_to_tag: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    cost_allocation_tags: Mapped[dict] = mapped_column(JSON, nullable=True)
 
     aircraft = relationship("Aircraft", back_populates="uploads")
     uploaded_by_user = relationship("User")
@@ -283,6 +290,11 @@ class OCRRun(Base):
     started_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    billing_status: Mapped[str] = mapped_column(String(64), nullable=False, default="not_billable")
+    billable_account_tag: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    billable_aircraft_tag: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    billable_page_count: Mapped[int] = mapped_column(Integer, nullable=True)
+    cost_allocation_tags: Mapped[dict] = mapped_column(JSON, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     ingestion_job = relationship("IngestionJob", back_populates="ocr_runs")
@@ -312,12 +324,15 @@ class OCRTextSpan(TimestampMixin, Base):
 
     ocr_run = relationship("OCRRun", back_populates="spans")
     ingestion_page = relationship("IngestionPage", back_populates="ocr_spans")
-    corrections = relationship("OCRCorrection", back_populates="ocr_text_span")
+    corrections = relationship("OCRCorrection", back_populates="ocr_text_span", order_by="OCRCorrection.correction_order")
     evidence_links = relationship("LogbookEntryEvidence", back_populates="ocr_text_span")
 
 
 class OCRCorrection(TimestampMixin, Base):
     __tablename__ = "ocr_corrections"
+    __table_args__ = (
+        UniqueConstraint("ocr_text_span_id", "correction_order", name="uq_ocr_corrections_span_order"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("cor"))
     ingestion_job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), nullable=False, index=True)
@@ -327,6 +342,7 @@ class OCRCorrection(TimestampMixin, Base):
     original_text: Mapped[str] = mapped_column(Text, nullable=False)
     corrected_text: Mapped[str] = mapped_column(Text, nullable=False)
     original_confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    correction_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     correction_reason: Mapped[str] = mapped_column(String(64), nullable=False, default="low_confidence")
     notes: Mapped[str] = mapped_column(Text, nullable=True)
 
@@ -353,6 +369,7 @@ class LogbookEntryEvidence(Base):
     extraction_provider_name: Mapped[str] = mapped_column(String(128), nullable=True)
     extraction_provider_version: Mapped[str] = mapped_column(String(128), nullable=True)
     extraction_schema_version: Mapped[str] = mapped_column(String(64), nullable=True)
+    review_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     logbook_entry = relationship("LogbookEntry", back_populates="evidence_links")

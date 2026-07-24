@@ -18,3 +18,9 @@ uploads/
 storage/
 .data/
 backend/.data/
+
+# Terraform local state and provider cache
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.*

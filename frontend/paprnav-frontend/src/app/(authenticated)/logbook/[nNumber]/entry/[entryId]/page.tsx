@@ -16,7 +16,7 @@ function normalizeNNumber(nNumber: string) {
 
 function toFormState(entry: LogbookEntry) {
   return {
-    entryDate: entry.entryDate,
+    entryDate: entry.entryDate ?? "",
     description: entry.description,
     performerName: entry.performerName ?? "",
     performerCredential: entry.performerCredential ?? "",
@@ -93,7 +93,7 @@ export default function LogbookEntryDetailPage() {
     setSaveMessage(null);
     try {
       const updatedEntry = await updateLogbookEntry(aircraft.id, entry.id, {
-        entryDate: formState.entryDate,
+        entryDate: formState.entryDate || null,
         description: formState.description,
         performerName: formState.performerName || null,
         performerCredential: formState.performerCredential || null,
@@ -118,7 +118,7 @@ export default function LogbookEntryDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <PageHeader
-        title={entry ? `Log Entry: ${entry.entryDate}` : "Log Entry"}
+        title={entry ? `Log Entry: ${entry.entryDate ?? "Unknown date"}` : "Log Entry"}
         description={
           aircraft ? `Editing ${aircraft.nNumber} ${logbookType} logbook entry` : `Editing entry #${entryId}`
         }
