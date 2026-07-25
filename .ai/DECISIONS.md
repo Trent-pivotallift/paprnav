@@ -305,6 +305,14 @@ unsupported fields, plus a calibrated compute rate and an ECS-compatible
 dedicated OCR worker image. Do not add the local model stack to the ordinary API
 image.
 
+Future orchestration note: if measured scaling or operational requirements later
+justify replacing ECS/Fargate with EKS, evaluate a WebAssembly (WASM) runtime or
+WASM-based component split before carrying large OCR containers into Kubernetes,
+especially for the local OCR engine. Treat this as an investigation rather than
+a presumed migration: benchmark model/runtime compatibility, GPU and accelerator
+access, cold start, memory use, artifact/model delivery, sandbox boundaries,
+observability, and per-customer compute cost against a dedicated OCI container.
+
 All providers write usage to `OCRRun` with customer and aircraft attribution,
 billable pages, elapsed processing time, pricing unit, configured pricing rate,
 and estimated run cost. Textract uses a configured per-page rate. Local OCR uses

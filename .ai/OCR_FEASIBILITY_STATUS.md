@@ -264,6 +264,14 @@ but the unsupported-looking Jones date blocks promotion. Widen the benchmark to
 representative approved pages before building the dedicated ECS OCR worker
 image.
 
+Future platform consideration: if evidence later supports replacing ECS/Fargate
+with EKS, evaluate packaging the local OCR engine or suitable pipeline components
+as WebAssembly before adopting large Kubernetes OCR containers. Compare WASM
+against a dedicated OCI worker using actual model compatibility, accelerator
+access, startup latency, memory, model distribution, isolation, observability,
+and customer-attributed compute cost. This does not change the current
+ECS/Fargate pilot decision.
+
 Provider-neutral usage metering is now first-class on `OCRRun`:
 
 - customer account and aircraft tags
