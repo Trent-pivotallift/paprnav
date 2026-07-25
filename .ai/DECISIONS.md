@@ -210,6 +210,130 @@ Implementation expectations:
 - Pre-1994 completeness is not proven by the current validation. Treat it as supported where present in DRS bulk data, and add separate validation against DRS Web UI samples and historical FAA/index sources before claiming complete historical coverage.
 - The user-facing output remains decision support, not compliance attestation.
 
+### D018: Keep PostgreSQL as the durable OCR workflow queue and system of record
+
+Status: accepted 2026-07-23
+
+Paprnav will not replace its ingestion-job, OCR-run, page, span, correction, and evidence records with a Redis task/result store. PostgreSQL remains the authoritative workflow state and durable queue for the pilot. Workers claim jobs with a lease using transactional row locking (`FOR UPDATE SKIP LOCKED` or an equivalent compare-and-set), renew the lease while working, and finish attempts idempotently.
+
+Required execution semantics:
+
+- A job claim records attempt number, lease owner, lease expiry, started time, and heartbeat time.
+- A worker crash makes the job reclaimable after lease expiry; claiming work must not remove the only durable copy of the job.
+- Retries are bounded and use exponential backoff with jitter.
+- Exhausted or non-retryable work enters a terminal dead-letter/manual-repair state with sanitized error details.
+- A new attempt either resumes from an explicitly valid checkpoint or removes/replaces that attempt's partial page/span output transactionally before retrying.
+- Provider calls and long-running provider polling must not hold an open database transaction.
+- Provider request identifiers and attempt metadata are persisted for reconciliation and cost review.
+- Redis may be introduced later for cache, notifications, rate limiting, or disposable acceleration, but not as the sole owner of documents, workflow state, or OCR results.
+
+Scaling decision:
+
+- Run the API and ordinary background workers on ECS/Fargate for the pilot.
+- Trigger workers continuously or on a short schedule; do not rely on a manually invoked run-once database drain.
+- Scale worker task count from leased/pending-job age and queue depth, while protecting each provider with explicit concurrency and rate limits.
+- Revisit SQS only when PostgreSQL polling or operational contention is measured as a bottleneck. If adopted, SQS is a wake-up/delivery mechanism and PostgreSQL remains authoritative.
+
+Apply this decision incrementally through the OCR feasibility `Next Loop` in `.ai/OCR_FEASIBILITY_STATUS.md`.
+
+### D019: Improve paprnav OCR with a layout-first vision pipeline
+
+Status: accepted 2026-07-23
+
+Paprnav will use the layout-first OCR approach demonstrated by Neural Maze to improve OCR quality: render a page, detect semantic regions, crop those regions, recognize each crop with a vision model, and reassemble the results in deterministic reading order. Neural Maze is research input for this OCR improvement, not a service or architecture to integrate. No other Neural Maze component or architecture is adopted.
+
+The implementation remains behind paprnav's existing `OCRProvider` interface as `PAPRNAV_OCR_PROVIDER=layout_first_vlm`. Paprnav continues to own uploads, job state, retries, OCR runs, evidence, review, and billing records.
+
+The pipeline stages are:
+
+1. Render only the selected PDF pages into bounded-resolution page images.
+2. Detect semantic regions and preserve each detector label, bounding box or polygon, and detector score.
+3. Crop each accepted region using the detected geometry.
+4. Recognize each crop with the configured vision model.
+5. Reassemble recognized regions by page and deterministic reading order.
+6. Map the result into `OCRProviderResult`, `OCRPageResult`, and `OCRSpanResult`.
+
+The integration contract must preserve:
+
+- page number and page dimensions
+- semantic region/span type
+- recognized text
+- normalized bounding boxes or polygons with declared units
+- deterministic reading order
+- region/provider IDs and parent/child relationships
+- provider/model/layout-model versions and configuration hash
+- layout confidence separately from recognition confidence
+- per-page or per-region recognition confidence only when the recognizer provides a calibrated value
+- raw result content hash and byte count for audit; retain a raw artifact
+  reference only after bounded object storage, encryption, access, and lifecycle
+  retention are configured
+- billable page count, latency, hardware/channel metadata, and estimated internal cost
+
+If the recognizer cannot provide calibrated confidence, paprnav records recognition confidence as unavailable. A layout detector score describes region detection only and must not be presented as confidence in the recognized text. Generative output never becomes authoritative merely because it is fluent.
+
+Provider policy:
+
+- Textract Analysis remains the production baseline until benchmark results justify a change.
+- The layout-first pipeline is an OCR-quality improvement candidate for difficult handwriting, multiple entries on one page, side-by-side entries, and page-layout recovery.
+- The first acceptance case is the existing N3671L page: detect its two maintenance entries separately, associate recognized text and evidence geometry with the correct entry, preserve truly absent tach/total values as null, and reduce manual correction without adding unsupported text.
+- The Mistral adapter remains implemented but direct processing of customer documents stays disabled until an approved US-based/private processing channel and data terms are available.
+- Provider selection is configuration- and policy-driven, not embedded in domain extraction logic.
+
+Apply this decision incrementally through the OCR feasibility `Next Loop` in `.ai/OCR_FEASIBILITY_STATUS.md`.
+
+### D020: Keep Textract Analysis primary and the local layout-first path as a challenger
+
+Status: accepted 2026-07-24
+
+The one-page N3671L A/B comparison used two uploads with the identical SHA-256
+`a751b7f7ecb656eb6c8b513d3362b614185e2c10d808f4f4353323e4b84d9304`.
+Textract Analysis and the local PP-DocLayout-V3 plus GLM-OCR path both produced
+two candidate maintenance entries after the current entry parser was applied.
+
+Textract Analysis remains the production baseline because it provides granular
+line evidence and calibrated recognition confidence, preserves the uncertain
+Jones date as unresolved, and runs through the intended AWS worker path. The
+local path recovered a more coherent left-entry narrative and separated the two
+page regions directly, but it also produced a plausible-looking uncertain Jones
+date and concatenated several right-entry fields. Its recognition confidence is
+unavailable and must remain `null`.
+
+The local provider stays in the repository as a benchmark challenger. It is not
+yet promoted to an ECS runtime. Promotion requires a representative-page
+benchmark showing lower accepted-field error or reviewer effort without
+unsupported fields, plus a calibrated compute rate and an ECS-compatible
+dedicated OCR worker image. Do not add the local model stack to the ordinary API
+image.
+
+All providers write usage to `OCRRun` with customer and aircraft attribution,
+billable pages, elapsed processing time, pricing unit, configured pricing rate,
+and estimated run cost. Textract uses a configured per-page rate. Local OCR uses
+an hourly compute rate, even when that rate is intentionally zero during
+feasibility work. Pricing rates and estimated costs use fixed-precision database
+columns so account and aircraft rollups do not accumulate binary floating-point
+error.
+
+Deterministic AD matching version `0.3.0` normalizes explicit two- and four-digit
+AD references. Candidate satisfaction requires an explicit normalized AD
+reference, compliance or inspection language, and a verified logbook entry.
+Negated claims such as `not complied` or `inspection not completed`, mere
+mentions, keyword overlap, and unverified OCR candidates require adjudication.
+Disposition parsing is scoped to the OCR-line context owned by each explicit AD
+citation and bounded by neighboring AD citations and sentence separators.
+Internal comma-set-off phrases remain in the claim, while decimal regulation
+references such as `43.13` are not treated as sentence boundaries. Negative
+evidence is evaluated conservatively across that citation context; positive
+compliance or inspection evidence must occur in the citation's immediate clause
+so an unrelated later action cannot promote the AD to satisfied.
+Recurring directives also require adjudication until the matcher can calculate
+current due status from verified intervals and aircraft/component time state.
+Structured maintenance text is parsed once per entry for each aircraft matching
+run, and the normal match-list API exposes only the current matcher version;
+older replay records remain stored for audit. The list response reports
+`pending_recomputation` when only stale results exist so an empty current result
+set cannot be mistaken for a completed no-match result. Recalculation remains a
+worker operation rather than a side effect of a read request.
+
 ## Proposed Decisions To Resolve Soon
 
 ### P001: Authentication provider

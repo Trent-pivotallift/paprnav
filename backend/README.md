@@ -145,6 +145,44 @@ PAPRNAV_OCR_PROVIDER=deterministic
 PAPRNAV_OCR_MAX_PDF_PAGES=3
 ```
 
+The local layout-first feasibility provider detects document regions with
+PP-DocLayout-V3 and recognizes each crop with GLM-OCR through local Ollama:
+
+```bash
+PAPRNAV_OCR_PROVIDER=layout_first_vlm
+PAPRNAV_LAYOUT_FIRST_LAYOUT_MODEL=PaddlePaddle/PP-DocLayoutV3_safetensors
+PAPRNAV_LAYOUT_FIRST_LAYOUT_DEVICE=cpu
+PAPRNAV_LAYOUT_FIRST_LAYOUT_THRESHOLD=0.3
+PAPRNAV_LAYOUT_FIRST_RECOGNITION_MODEL=glm-ocr:latest
+PAPRNAV_LAYOUT_FIRST_OLLAMA_BASE_URL=http://127.0.0.1:11434
+PAPRNAV_LAYOUT_FIRST_TIMEOUT_SECONDS=120
+PAPRNAV_LAYOUT_FIRST_PDF_DPI=200
+PAPRNAV_LAYOUT_FIRST_COMPUTE_RATE_USD_PER_HOUR=0
+```
+
+Install the optional model dependencies separately from the ordinary API image:
+
+```bash
+python -m venv .venv-glmocr
+.venv-glmocr/bin/pip install -r requirements-layout-ocr.txt
+ollama pull glm-ocr:latest
+```
+
+Run the guarded local one-page acceptance slice:
+
+```bash
+.venv-glmocr/bin/python -m app.scripts.run_layout_first_feasibility
+```
+
+This path keeps the test document local, records one billable work unit per
+processed page, preserves detector confidence separately from recognition
+confidence, and reports recognition confidence as unavailable when GLM-OCR
+does not provide a calibrated score. Local internal cost uses measured
+processing seconds and `PAPRNAV_LAYOUT_FIRST_COMPUTE_RATE_USD_PER_HOUR`; the
+default zero rate means cost is not yet calibrated while page units remain
+attributed to the customer account and aircraft. The local Ollama path is a
+feasibility runtime, not yet the ECS production topology.
+
 AWS Textract remains the AWS baseline provider:
 
 ```bash
@@ -152,6 +190,7 @@ PAPRNAV_OCR_PROVIDER=textract
 PAPRNAV_TEXTRACT_API_MODE=async
 PAPRNAV_TEXTRACT_ASYNC_POLL_SECONDS=2
 PAPRNAV_TEXTRACT_ASYNC_TIMEOUT_SECONDS=300
+PAPRNAV_TEXTRACT_ESTIMATED_UNIT_COST_USD_PER_PAGE=0
 ```
 
 Mistral OCR is reserved for A/B testing unless explicitly promoted:

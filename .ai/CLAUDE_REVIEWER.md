@@ -20,6 +20,12 @@ Operational decision:
 - Review output is written to `.ai/reviews/` so findings can be brought back into the main Codex thread for triage.
 - The script uses Claude `--permission-mode plan` and asks Claude not to edit files.
 - The script defaults `CLAUDE_REVIEW_MODEL=sonnet`. Use Sonnet for normal high-stakes review; choose a higher model only when the work is unusually critical, ambiguous, or architecture-heavy.
+- The wrapper uses Claude's `stream-json` output so model/session/status events and
+  final-text deltas remain visible during long reviews.
+- Each run preserves final Markdown, raw JSONL events, a Claude debug log, and
+  partial text. An interrupted run is not reported as successful and retains
+  enough diagnostics to distinguish interruption from authentication or API
+  failure.
 
 When to use Claude:
 
@@ -39,6 +45,14 @@ Optional model override:
 
 ```bash
 CLAUDE_REVIEW_MODEL=opus scripts/claude-review.sh
+```
+
+Target a critical slice, including untracked files:
+
+```bash
+CLAUDE_REVIEW_FOCUS="OCR metering and AD matching correctness" \
+CLAUDE_REVIEW_PATHS="backend/app/services/ocr_provider.py backend/app/services/ad_matching.py" \
+scripts/claude-review.sh HEAD
 ```
 
 Optional base ref:

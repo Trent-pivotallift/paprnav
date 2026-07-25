@@ -29,7 +29,10 @@ from app.schemas.ingestion import (
     PageVerificationRequest,
     PageVerificationResponse,
 )
-from app.services.ingestion import extract_entries_from_job
+from app.services.ingestion import (
+    extract_entries_from_job,
+    span_requires_raw_ocr_correction,
+)
 from app.services.observability import record_product_event, record_workflow_status
 from app.core.config import get_settings
 from app.api.routes.uploads import get_s3_client, local_upload_path, s3_body_iterator
@@ -342,7 +345,11 @@ def verify_pages(
     job.verification_status = "verified" if payload.isOrderConfirmed and payload.isComplete else "needs_review"
     previous_status = job.status
     if job.verification_status == "verified":
-        has_low_confidence = any((span.confidence or 0) < 80 for page in job.pages for span in page.ocr_spans)
+        has_low_confidence = any(
+            span_requires_raw_ocr_correction(span)
+            for page in job.pages
+            for span in page.ocr_spans
+        )
         job.status = "awaiting_ocr_corrections" if has_low_confidence else "ready_for_entry_extraction"
         job.entry_extraction_status = "ready"
 

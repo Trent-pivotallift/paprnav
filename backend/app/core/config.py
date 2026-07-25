@@ -56,6 +56,7 @@ class Settings:
     textract_analysis_feature_types: list[str]
     textract_async_poll_seconds: float
     textract_async_timeout_seconds: float
+    textract_estimated_unit_cost_usd_per_page: float
     mistral_api_key: Optional[str]
     mistral_base_url: str
     mistral_ocr_model: str
@@ -65,6 +66,14 @@ class Settings:
     mistral_ocr_mode: str
     mistral_ocr_timeout_seconds: float
     mistral_ocr_max_pdf_pages: Optional[int]
+    layout_first_layout_model: str
+    layout_first_layout_device: str
+    layout_first_layout_threshold: float
+    layout_first_recognition_model: str
+    layout_first_ollama_base_url: str
+    layout_first_timeout_seconds: float
+    layout_first_pdf_dpi: int
+    layout_first_compute_rate_usd_per_hour: float
     ad_extraction_provider: str
     openai_api_key: Optional[str]
     openai_base_url: str
@@ -101,6 +110,9 @@ def get_settings() -> Settings:
         ),
         textract_async_poll_seconds=float(os.getenv("PAPRNAV_TEXTRACT_ASYNC_POLL_SECONDS", "2")),
         textract_async_timeout_seconds=float(os.getenv("PAPRNAV_TEXTRACT_ASYNC_TIMEOUT_SECONDS", "300")),
+        textract_estimated_unit_cost_usd_per_page=float(
+            os.getenv("PAPRNAV_TEXTRACT_ESTIMATED_UNIT_COST_USD_PER_PAGE", "0")
+        ),
         mistral_api_key=os.getenv("PAPRNAV_MISTRAL_API_KEY") or None,
         mistral_base_url=os.getenv("PAPRNAV_MISTRAL_BASE_URL", "https://api.mistral.ai/v1").rstrip("/"),
         mistral_ocr_model=os.getenv("PAPRNAV_MISTRAL_OCR_MODEL", "mistral-ocr-4-0"),
@@ -113,6 +125,37 @@ def get_settings() -> Settings:
             int(os.getenv("PAPRNAV_MISTRAL_OCR_MAX_PDF_PAGES", "3"))
             if os.getenv("PAPRNAV_MISTRAL_OCR_MAX_PDF_PAGES", "3")
             else None
+        ),
+        layout_first_layout_model=os.getenv(
+            "PAPRNAV_LAYOUT_FIRST_LAYOUT_MODEL",
+            "PaddlePaddle/PP-DocLayoutV3_safetensors",
+        ),
+        layout_first_layout_device=os.getenv(
+            "PAPRNAV_LAYOUT_FIRST_LAYOUT_DEVICE",
+            "cpu",
+        ).strip(),
+        layout_first_layout_threshold=float(
+            os.getenv("PAPRNAV_LAYOUT_FIRST_LAYOUT_THRESHOLD", "0.3")
+        ),
+        layout_first_recognition_model=os.getenv(
+            "PAPRNAV_LAYOUT_FIRST_RECOGNITION_MODEL",
+            "glm-ocr:latest",
+        ),
+        layout_first_ollama_base_url=os.getenv(
+            "PAPRNAV_LAYOUT_FIRST_OLLAMA_BASE_URL",
+            "http://127.0.0.1:11434",
+        ).rstrip("/"),
+        layout_first_timeout_seconds=float(
+            os.getenv("PAPRNAV_LAYOUT_FIRST_TIMEOUT_SECONDS", "120")
+        ),
+        layout_first_pdf_dpi=int(
+            os.getenv("PAPRNAV_LAYOUT_FIRST_PDF_DPI", "200")
+        ),
+        layout_first_compute_rate_usd_per_hour=float(
+            os.getenv(
+                "PAPRNAV_LAYOUT_FIRST_COMPUTE_RATE_USD_PER_HOUR",
+                "0",
+            )
         ),
         ad_extraction_provider=os.getenv("PAPRNAV_AD_EXTRACTION_PROVIDER", "deterministic").strip().lower(),
         openai_api_key=os.getenv("PAPRNAV_OPENAI_API_KEY") or None,

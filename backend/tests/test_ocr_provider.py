@@ -368,6 +368,10 @@ def test_textract_analysis_async_provider_processes_s3_pdf(monkeypatch) -> None:
     monkeypatch.setenv("PAPRNAV_TEXTRACT_API_MODE", "analysis_async")
     monkeypatch.setenv("PAPRNAV_TEXTRACT_ANALYSIS_FEATURE_TYPES", "LAYOUT,TABLES,SIGNATURES")
     monkeypatch.setenv("PAPRNAV_TEXTRACT_ASYNC_POLL_SECONDS", "0")
+    monkeypatch.setenv(
+        "PAPRNAV_TEXTRACT_ESTIMATED_UNIT_COST_USD_PER_PAGE",
+        "0.015",
+    )
     get_settings.cache_clear()
     client = FakeAsyncTextractClient(
         [
@@ -402,6 +406,11 @@ def test_textract_analysis_async_provider_processes_s3_pdf(monkeypatch) -> None:
     assert result.provider_version == "1.0"
     assert result.billable_page_count == 1
     assert result.metadata["provider_mode"] == "analysis_async"
+    assert result.metadata["provider_channel"] == "aws"
+    assert result.metadata["processing_seconds"] >= 0
+    assert result.metadata["pricing_unit"] == "page"
+    assert result.metadata["pricing_rate_usd"] == 0.015
+    assert result.metadata["estimated_cost_usd"] == 0.015
     assert result.metadata["textract_block_counts"] == {
         "CELL": 1,
         "LAYOUT_HEADER": 1,
@@ -468,6 +477,9 @@ def test_mistral_provider_posts_base64_pdf_with_page_guardrail(monkeypatch, tmp_
     assert result.provider_version == "mistral-ocr-4-0"
     assert result.billable_page_count == 1
     assert result.metadata["third_party_processing"] is True
+    assert result.metadata["processing_seconds"] >= 0
+    assert result.metadata["pricing_unit"] == "page"
+    assert result.metadata["pricing_rate_usd"] == 0.004
     assert result.metadata["estimated_cost_usd"] == 0.004
     assert len(result.pages) == 1
     assert result.pages[0].source_page_number == 1

@@ -48,7 +48,7 @@ class ExtractedEntryDraft:
     tach_time: float | None
     hobbs_time: float | None
     total_time: float | None
-    min_confidence: float
+    min_confidence: float | None
     requires_review: bool = False
 
 
@@ -117,6 +117,23 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
                 "OCRProviderVersion": result.provider_version,
                 **result.metadata,
             }
+            run.processing_seconds = metadata_float(
+                result.metadata,
+                "processing_seconds",
+            )
+            run.pricing_unit = metadata_string(
+                result.metadata,
+                "pricing_unit",
+            )
+            run.pricing_rate_usd = metadata_float(
+                result.metadata,
+                "pricing_rate_usd",
+                fallback_key="estimated_unit_cost_usd_per_page",
+            )
+            run.estimated_cost_usd = metadata_float(
+                result.metadata,
+                "estimated_cost_usd",
+            )
         for page_result in result.pages:
             page = IngestionPage(
                 ingestion_job_id=job.id,
@@ -149,7 +166,7 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
                         bbox_width=span_result.bbox_width,
                         bbox_height=span_result.bbox_height,
                         bbox_units=span_result.bbox_units,
-                        polygon=[],
+                        polygon=span_result.polygon,
                         rotation_degrees=page_result.rotation_degrees,
                         reading_order=span_result.reading_order,
                         relationships=span_result.relationships,
@@ -169,6 +186,10 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
     except Exception as exc:
         run.status = "failed"
         run.error_message = str(exc)
+        run.processing_seconds = max(
+            (datetime.now(timezone.utc) - now).total_seconds(),
+            0,
+        )
         job.status = "failed"
         job.page_extraction_status = "failed"
         job.ocr_status = "failed"
@@ -176,6 +197,32 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
         job.error_message = str(exc)
         db.commit()
         return job
+
+
+def metadata_float(
+    metadata: dict,
+    key: str,
+    *,
+    fallback_key: str | None = None,
+) -> float | None:
+    value = metadata.get(key)
+    if value is None and fallback_key is not None:
+        value = metadata.get(fallback_key)
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def metadata_string(metadata: dict, key: str) -> str | None:
+    value = metadata.get(key)
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized[:64] or None
 
 
 def latest_correction_by_span(page: IngestionPage) -> dict[str, OCRCorrection]:
@@ -231,6 +278,7 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
                 "verified"
                 if not draft.requires_review
                 and draft.date_was_extracted
+                and draft.min_confidence is not None
                 and draft.min_confidence >= LOW_CONFIDENCE_THRESHOLD
                 else "needs_review"
             ),
@@ -257,27 +305,36 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
     return entries
 
 
-ISO_DATE_PATTERN = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
-SHORT_DATE_PATTERN = re.compile(r"\b(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{2,4})\b")
+ISO_DATE_PATTERN = re.compile(r"(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)")
+SHORT_DATE_PATTERN = re.compile(
+    r"(?<!\d)(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{2,4})(?!\d)"
+)
 
 
 def entry_drafts_from_page(page: IngestionPage) -> list[ExtractedEntryDraft]:
     line_spans = [
         span
         for span in page.ocr_spans
-        if span.span_type.upper() == "LINE" and not is_ignorable_logbook_line(effective_span_text(span))
+        if is_text_bearing_ocr_span(span)
+        and not is_ignorable_logbook_line(effective_span_text(span))
     ]
     if not line_spans:
         return []
     line_spans = sorted(line_spans, key=lambda item: (span_center_y(item), item.bbox_left or 0, item.reading_order))
-    clusters = split_logbook_entry_line_clusters(page, line_spans)
+    clusters = [
+        cluster
+        for cluster in split_logbook_entry_line_clusters(page, line_spans)
+        if cluster_has_logbook_entry_signal(cluster)
+    ]
     requires_review = len(clusters) > 1
     return [draft_from_line_cluster(page, cluster, requires_review=requires_review) for cluster in clusters if cluster]
 
 
 def split_logbook_entry_line_clusters(page: IngestionPage, line_spans: list[OCRTextSpan]) -> list[list[OCRTextSpan]]:
     has_analysis_structure = any(
-        span.span_type.upper() in {"TABLE", "CELL", "MERGED_CELL", "LAYOUT_TABLE", "SIGNATURE"}
+        span.span_type.upper()
+        in {"TABLE", "CELL", "MERGED_CELL", "LAYOUT_TABLE", "SIGNATURE"}
+        or span.span_type.upper().startswith("REGION_")
         for span in page.ocr_spans
     )
     if has_analysis_structure:
@@ -335,19 +392,56 @@ def split_side_by_side_logbook_columns(line_spans: list[OCRTextSpan]) -> list[li
 
 
 def cluster_has_logbook_entry_signal(line_spans: list[OCRTextSpan]) -> bool:
-    if len(line_spans) < 2:
+    if not line_spans:
         return False
     text = "\n".join(effective_span_text(span).lower() for span in line_spans)
-    signals = ("aircraft service", "avionics", "annual inspection", "transponder", "altimeter", "tach", "total time")
-    return any(signal in text for signal in signals) or any(is_entry_anchor_line(span) for span in line_spans)
+    if any(is_entry_anchor_line(span) for span in line_spans):
+        return True
+    if re.search(
+        r"\b(?:annual inspection|maintenance (?:accomplished|completed|performed))\b",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return True
+    if re.search(
+        r"\b(?:tach|hobbs|total(?:\s+time)?)\s*[:=]?\s*\d",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return True
+    if re.search(
+        r"\b(?:n\d{1,5}[a-z]{0,2}|a&p|ia\b|faa\s+crs|part\s+no|p/n|"
+        r"serial\s+no|ser\.?\s*no|far\s+\d|cfr\s*\d|ad\s+\d{1,4}[-/]\d)",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return True
+    has_action = re.search(
+        r"\b(?:checked|complied|inspected|installed|lubricated|overhauled|"
+        r"removed|repaired|replaced|serviced|tested)\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    has_maintenance_subject = re.search(
+        r"\b(?:aircraft|altimeter|battery|brake|elt|engine|filter|fuel|"
+        r"magneto|oil|propeller|seat|transponder|tire)\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return bool(has_action and has_maintenance_subject)
 
 
 def draft_from_line_cluster(page: IngestionPage, line_spans: list[OCRTextSpan], *, requires_review: bool = False) -> ExtractedEntryDraft:
-    lines = [effective_span_text(span) for span in line_spans]
+    lines = [
+        line.strip()
+        for span in line_spans
+        for line in effective_span_text(span).splitlines()
+        if line.strip()
+    ]
     anchor_span = next((span for span in line_spans if is_entry_anchor_line(span)), line_spans[0])
     anchor_text = effective_span_text(anchor_span)
     entry_date, date_was_extracted = parse_date(anchor_text)
-    description = build_entry_description(lines)
+    description = build_entry_description(lines, entry_date=entry_date)
     performer_name, performer_credential = parse_performer(lines)
     tach_time = parse_float_field(lines, "Tach")
     hobbs_time = parse_float_field(lines, "Hobbs")
@@ -358,7 +452,16 @@ def draft_from_line_cluster(page: IngestionPage, line_spans: list[OCRTextSpan], 
         field_evidence_types.pop("entry_date", None)
     else:
         field_evidence_types["entry_date"] = "fallback"
-    min_confidence = min((span.confidence or 0 for span in line_spans), default=0)
+    available_confidences = [
+        span.confidence
+        for span in line_spans
+        if span.confidence is not None
+    ]
+    min_confidence = (
+        min(available_confidences)
+        if available_confidences
+        else None
+    )
     return ExtractedEntryDraft(
         page=page,
         line_spans=line_spans,
@@ -387,6 +490,19 @@ def is_entry_anchor_line(span: OCRTextSpan) -> bool:
     return has_logbook_signal or date_appears_near_line_start(text)
 
 
+def is_text_bearing_ocr_span(span: OCRTextSpan) -> bool:
+    span_type = span.span_type.upper()
+    return span_type == "LINE" or span_type.startswith("REGION_")
+
+
+def span_requires_raw_ocr_correction(span: OCRTextSpan) -> bool:
+    return (
+        span.span_type.upper() == "LINE"
+        and span.confidence is not None
+        and span.confidence < LOW_CONFIDENCE_THRESHOLD
+    )
+
+
 def entry_cluster_line_is_relevant(span: OCRTextSpan, anchor: OCRTextSpan) -> bool:
     text = effective_span_text(span)
     if is_ignorable_logbook_line(text):
@@ -405,6 +521,12 @@ def is_ignorable_logbook_line(text: str) -> bool:
     lowered = normalized.lower()
     if not normalized or normalized == "-":
         return True
+    if "\n" in normalized:
+        return all(
+            is_ignorable_logbook_line(line)
+            for line in normalized.splitlines()
+            if line.strip()
+        )
     header_fragments = (
         "description of inspections",
         "entries must be endorsed",
@@ -413,11 +535,11 @@ def is_ignorable_logbook_line(text: str) -> bool:
         "total time in service",
         "year:",
     )
-    if lowered in {"total", "tach", "flight", "date"}:
+    if lowered in {"total", "tach", "flight", "date", "year"}:
         return True
     if lowered in {"time", "time in", "service"}:
         return True
-    if lowered.startswith("facility.") or "see back pages" in lowered:
+    if lowered.startswith("facility.") or lowered.startswith("see back pages"):
         return True
     return any(fragment == lowered or lowered.startswith(fragment) for fragment in header_fragments)
 
@@ -427,12 +549,19 @@ def is_table_column_heading(text: str) -> bool:
     return lowered in {"total", "today's", "today", "recording", "year:", "tach", "date", "flight"}
 
 
-def build_entry_description(lines: list[str]) -> str:
+def build_entry_description(
+    lines: list[str],
+    *,
+    entry_date: date | None = None,
+) -> str:
     useful_lines = []
+    entry_date_removed = False
     for line in lines:
         if line.strip().lower().startswith("date") and not parse_date(line)[1]:
             continue
-        text = strip_entry_metrics(strip_date(line)).strip()
+        if entry_date is not None and not entry_date_removed:
+            line, entry_date_removed = strip_matching_date(line, entry_date)
+        text = strip_entry_metrics(line).strip()
         if text and not is_ignorable_logbook_line(text):
             useful_lines.append(text)
     return "\n".join(dict.fromkeys(useful_lines)).strip()
@@ -555,10 +684,48 @@ def date_appears_near_line_start(text: str) -> bool:
     return bool(positions and min(positions) <= 16)
 
 
+def strip_matching_date(text: str, entry_date: date) -> tuple[str, bool]:
+    matches = sorted(
+        (
+            match
+            for pattern in (ISO_DATE_PATTERN, SHORT_DATE_PATTERN)
+            for match in pattern.finditer(text)
+        ),
+        key=lambda item: item.start(),
+    )
+    for match in matches:
+        parsed_date, extracted = parse_date(match.group(0))
+        if extracted and parsed_date == entry_date:
+            updated = f"{text[:match.start()]}{text[match.end():]}"
+            updated = re.sub(
+                r"(Date|DATE)\s*[:=]?\s*$",
+                "",
+                updated[: match.start()],
+            ) + updated[match.start():]
+            return re.sub(r"\s{2,}", " ", updated).strip(), True
+    return text, False
+
+
 def strip_date(text: str) -> str:
-    text = ISO_DATE_PATTERN.sub("", text, count=1).strip()
-    text = SHORT_DATE_PATTERN.sub("", text, count=1).strip()
-    return re.sub(r"^\s*(Date|DATE)\s*[:=]?\s*", "", text).strip()
+    matches = sorted(
+        (
+            match
+            for pattern in (ISO_DATE_PATTERN, SHORT_DATE_PATTERN)
+            for match in pattern.finditer(text)
+        ),
+        key=lambda item: item.start(),
+    )
+    if not matches:
+        return text
+    match = matches[0]
+    prefix = text[: match.start()].strip()
+    if prefix and not re.fullmatch(r"Date\s*[:=]?", prefix, flags=re.IGNORECASE):
+        return text
+    parsed_date, extracted = parse_date(match.group(0))
+    if not extracted or parsed_date is None:
+        return text
+    updated, _ = strip_matching_date(text, parsed_date)
+    return re.sub(r"^\s*(Date|DATE)\s*[:=]?\s*", "", updated).strip()
 
 
 def strip_entry_metrics(text: str) -> str:

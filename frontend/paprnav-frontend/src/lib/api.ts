@@ -425,6 +425,10 @@ export interface ObservabilityListResponse {
 
 export interface ADMatchResultListResponse {
   matches: ADMatchResult[];
+  matcherStatus: "current" | "pending_recomputation" | "not_run";
+  algorithmName: string;
+  algorithmVersion: string;
+  reprocessingRequired: boolean;
 }
 
 interface ApiErrorPayload {

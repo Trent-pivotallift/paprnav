@@ -26,12 +26,21 @@ mkdir -p .ai/reviews
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 output_path="${CLAUDE_REVIEW_OUTPUT:-.ai/reviews/claude-review-${timestamp}.md}"
 review_model="${CLAUDE_REVIEW_MODEL:-sonnet}"
+review_focus="${CLAUDE_REVIEW_FOCUS:-High-stakes changes in the current working tree.}"
+review_paths="${CLAUDE_REVIEW_PATHS:-All changed and untracked files relevant to the review focus.}"
+artifact_stem="${output_path%.md}"
+events_path="${CLAUDE_REVIEW_EVENTS:-${artifact_stem}.events.jsonl}"
+debug_path="${CLAUDE_REVIEW_DEBUG:-${artifact_stem}.debug.log}"
+partial_path="${CLAUDE_REVIEW_PARTIAL:-${artifact_stem}.partial.md}"
 
 claude_args=(
   --print
   --permission-mode plan
   --model "$review_model"
-  --output-format text
+  --verbose
+  --output-format stream-json
+  --include-partial-messages
+  --debug-file "$debug_path"
   --name "paprnav-review-${timestamp}"
 )
 
@@ -46,6 +55,9 @@ Review scope:
 - Current working tree in: ${repo_root}
 - Compare against base ref: ${base_ref}
 - Include staged and unstaged changes.
+- Review focus: ${review_focus}
+- Focus paths: ${review_paths}
+- Read listed untracked files directly; they do not appear in ordinary git diff output.
 - Do not edit files.
 - Do not run destructive commands.
 
@@ -79,8 +91,15 @@ PROMPT
 
 echo "Running Claude review against ${base_ref}..."
 echo "Writing review to ${output_path}"
+echo "Streaming events to ${events_path}"
+echo "Writing diagnostics to ${debug_path}"
+echo "Preserving partial text at ${partial_path}"
 
-if ! claude "${claude_args[@]}" "$prompt" | tee "$output_path"; then
+if ! claude "${claude_args[@]}" "$prompt" |
+  python3 scripts/claude-review-stream.py \
+    --output "$output_path" \
+    --events "$events_path" \
+    --partial "$partial_path"; then
   cat >&2 <<'ERR'
 
 Claude review failed.
@@ -103,3 +122,5 @@ fi
 
 echo
 echo "Claude review saved to ${output_path}"
+echo "Claude event stream saved to ${events_path}"
+echo "Claude diagnostics saved to ${debug_path}"

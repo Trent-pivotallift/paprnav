@@ -1,17 +1,21 @@
 # OCR Feasibility Status
 
-Last updated: 2026-07-20
+Last updated: 2026-07-24
 
 ## Current Slice
 
-Goal: prove whether paprnav can receive a scanned maintenance-log page, run AWS Textract close to the application infrastructure shape, persist OCR results into the app schema, attribute billable OCR work to an account/aircraft, and expose the result for review.
+Goal: prove whether paprnav can receive a scanned maintenance-log page, improve OCR through layout-first region recognition, persist evidence-aligned OCR results into the app schema, attribute billable OCR work to an account/aircraft, and expose the result for review. AWS Textract remains the baseline comparison.
 
 Runtime choice:
 
 - Continue with ECS/Fargate for the pilot.
 - Keep OCR orchestration in the backend/worker container path.
 - Do not make Lambda the primary OCR logic path.
-- Mistral OCR may be used for A/B testing only until paprnav explicitly promotes it as a Textract replacement or augmentation.
+- Keep PostgreSQL as the authoritative OCR queue/workflow store and add leased, bounded-retry execution before increasing volume.
+- Use the layout-first OCR approach demonstrated by Neural Maze to improve paprnav's OCR engine: detect page regions, crop them, and recognize each crop with a vision model.
+- Do not adopt Neural Maze's Rust gateway, Redis state, batching worker, Kubernetes/KEDA deployment, or scaling architecture.
+- The local experiment is implemented behind the provider-neutral interface as `PAPRNAV_OCR_PROVIDER=layout_first_vlm`; Textract Analysis remains the production baseline until benchmark results justify a change.
+- Retain the Mistral adapter, but do not send customer documents through direct Mistral until an approved US-based/private channel and data terms are available.
 
 Third-party OCR note:
 
@@ -53,6 +57,14 @@ Document notes:
 - Mapped Mistral markdown lines and paragraph blocks into provider-neutral OCR spans.
 - Persisted Mistral provider channel, third-party flag, usage info, estimated unit page cost, and estimated run cost into the OCR run `cost_allocation_tags` JSON.
 - Test suite disables local `.env` loading so real local secrets are not read during tests.
+- Added the layout-first provider using PP-DocLayout-V3 region detection and local GLM-OCR crop recognition.
+- Preserved full region boxes, polygons, reading order, layout confidence, recognition model, content hash, latency, and billable page count.
+- Persisted the raw response hash and byte count with runtime/device channel
+  metadata. The raw response is not duplicated into database JSON; governed,
+  bounded S3 artifact retention remains a production-hardening item.
+- Kept recognition confidence `null` because the local GLM-OCR response does not provide a calibrated text-confidence score.
+- Added structured table-HTML conversion and extraction support for `REGION_*` spans.
+- Added a repeatable local runner at `backend/app/scripts/run_layout_first_feasibility.py`.
 
 ## AWS Run Result
 
@@ -165,9 +177,126 @@ Earlier structured maintenance-entry extraction findings are now partially resol
 - It no longer uses fallback current dates; unknown dates persist as `null`.
 - Generated candidates remain `needs_review` unless the evidence is strong enough to verify.
 
+## Local Layout-First Run Result
+
+Command:
+
+```bash
+cd backend
+PAPRNAV_DISABLE_DOTENV=1 \
+.venv-glmocr/bin/python -m app.scripts.run_layout_first_feasibility
+```
+
+Result:
+
+- Processing stayed local through PP-DocLayout-V3 and Ollama `glm-ocr:latest`.
+- Input pages: `1`
+- Detected regions: `2`, matching the two visible logbook entries.
+- Billable page count: `1`
+- Integrated provider latency: approximately `17.5-21.8` seconds on a 16 GB Apple Silicon Mac after model installation.
+- Output: `backend/.data/ocr-feasibility/output/N3671L_page2_layout_first_summary.json`
+- Left candidate:
+  - date: `2012-12-17`
+  - tach: `1276.8`
+  - total time: `5405.5`
+  - full-entry evidence region: `glm-region-0`
+- Right candidate:
+  - OCR date candidate: `2013-12-05`, still requiring visual confirmation
+  - tach: `null`
+  - total time: `null`
+  - full-entry evidence region: `glm-region-1`
+- Both candidates remain `needs_review` because recognition confidence is unavailable and handwritten details are not authoritative.
+- The layout-first result recovered substantially more maintenance text and separated the two entries more directly than the current Textract result.
+- The result still contains recognition defects and concatenated fields, including uncertain handwritten values and imperfect credential/part-number transcription. It is an improvement candidate, not verified maintenance data.
+
+## AWS-Coupled Layout-First Acceptance Result
+
+Date: 2026-07-24
+
+Result:
+
+- The approved one-page PDF was read from the paprnav S3 artifact path while
+  PP-DocLayout-V3 and GLM-OCR inference ran locally through the provider-neutral
+  backend path.
+- Final ingestion job: `job_0554117882644078b0aaa943366b364a`
+- Upload: `upl_bc1f9df21e1748849b7ea246a838c1a0`
+- Billable account tag: `paprnav-internal-test`
+- Billable aircraft tag: `aircraft-N3671L`
+- Billable page count: `1`
+- Estimated internal cost: `$0.00` because the local feasibility rate remains
+  intentionally unconfigured; page units are still attributed for later pricing.
+- Candidate 1: date `2012-12-17`, tach `1276.8`, total `5405.5`.
+- Candidate 2: OCR date candidate `2013-12-05`, tach `null`, total `null`.
+- Both candidates remain `needs_review`.
+- Review URL:
+  `http://localhost:3000/logbook/N3671L/ingestion/job_0554117882644078b0aaa943366b364a`
+- Browser acceptance confirmed two editable candidates and a loaded
+  `2708 x 733` evidence underlay.
+- Backend verification: `59` tests pass in both the existing Python 3.9
+  development environment and the isolated Python 3.12 OCR environment.
+- Claude Sonnet review was run after two self-review passes. Its packaging,
+  cost metadata, header-only region, date-removal, polygon, and confidence-scale
+  findings were addressed and covered by tests.
+
+## Same-Page Provider Decision
+
+Date: 2026-07-24
+
+The stored Textract Analysis job `job_d4a5faf7869b40a287aa763d1518822a`
+and local layout-first job `job_0554117882644078b0aaa943366b364a`
+processed uploads with the identical SHA-256
+`a751b7f7ecb656eb6c8b513d3362b614185e2c10d808f4f4353323e4b84d9304`.
+
+| Criterion | Textract Analysis | Local layout-first |
+| --- | --- | --- |
+| Entry separation | Two candidates with current parser | Two directly detected regions |
+| Left date/tach/total | `2012-12-17`, `1276.8`, `5405.5` | Same |
+| Explicit AD text | Preserves `C/W AD 11-10-09` after date-cleanup fix | Preserves the same claim coherently |
+| Jones date | Unresolved/null from malformed low-confidence text | Emits uncertain `2013-12-05` |
+| Evidence | Granular line boxes | Coarse whole-entry regions |
+| Recognition confidence | Calibrated per line | Unavailable/null |
+| Current measured local runtime | Not re-invoked in this loop | `22.302147` seconds on one page |
+| Pricing | Configured per-page rate | Configured compute-hour rate |
+
+Decision: Textract Analysis remains primary. The local path remains a retained
+challenger because its coherent region recognition may reduce correction effort,
+but the unsupported-looking Jones date blocks promotion. Widen the benchmark to
+representative approved pages before building the dedicated ECS OCR worker
+image.
+
+Provider-neutral usage metering is now first-class on `OCRRun`:
+
+- customer account and aircraft tags
+- provider and model/version
+- billable page count
+- processing seconds
+- pricing unit and configured rate
+- estimated run cost
+
+Elapsed processing time is populated for fixture, Textract, local layout-first,
+and Mistral adapter results. Pricing rates and estimated costs use
+fixed-precision database values for customer and aircraft rollups.
+
+Recognition confidence remains field/span evidence metadata and is nullable. It
+is not used as a billing dimension.
+
+The deterministic maintenance parser now extracts explicit normalized AD
+references and claim context without treating ordinary entry dates as ADs. AD
+matcher `0.3.0` requires a verified entry with an explicit positive compliance or
+inspection claim before producing `candidate_satisfied`; ambiguous, mentioned,
+negated, or unverified claims route to adjudication. Structured maintenance
+text is parsed once per entry for an aircraft matching run, and the ordinary
+match-list API excludes stale results produced by earlier matcher versions and
+reports `pending_recomputation` until the AD matcher worker produces current
+results.
+Recurring ADs remain unresolved until current due status can be calculated
+rather than inferred from the mere existence of a prior compliance entry.
+
 ## Next Loop
 
-Focus on scanned logbook structure rather than more deployment plumbing:
+Continue in small, verified OCR loops. Do not split this work into a parallel provider/scaling chore list.
+
+### Loop 1: Close the current human-review slice
 
 1. Re-open `http://localhost:3000/logbook/N3671L/ingestion/job_d4a5faf7869b40a287aa763d1518822a` and review the two candidates against the scan underlay.
 2. Manually set the Jones date only if the reviewer is comfortable asserting the source value from the scan; leave it blank/null otherwise.
@@ -175,6 +304,47 @@ Focus on scanned logbook structure rather than more deployment plumbing:
 4. Improve bbox alignment and entry-region selection using server-side page image dimensions and OCR span union rules.
 5. Keep billing summary output grouped by account tag, aircraft tag, provider, API mode, billable pages, and estimated provider cost.
 6. Re-run the same N3671L single-page slice and compare candidate quality before widening to 2-3 pages.
+
+Exit condition: both candidates can be reviewed, corrected, finalized, and traced to visible source evidence without inventing an unsupported field value.
+
+### Loop 2: Implement the layout-first OCR improvement
+
+Status: provider path, AWS-coupled N3671L acceptance run, audit metadata, and
+critical review fixes are implemented; failure-fixture closure remains.
+
+1. Record the selected region detector, vision recognizer, SDK documentation, versions, and licenses in `.ai/PROVIDER_REFERENCES.md`.
+2. Add `PAPRNAV_OCR_PROVIDER=layout_first_vlm` behind the existing provider-neutral result objects.
+3. Render only approved pages, detect semantic regions, and preserve detector labels, geometry, and detector scores.
+4. Crop accepted regions, recognize each crop with the configured vision model, and reassemble them in deterministic page reading order.
+5. Preserve geometry, polygons, reading order, model/configuration versions, raw
+   response hash/size, latency, page count, and internal cost metadata. Add a raw
+   artifact reference only with bounded, encrypted object storage and lifecycle
+   retention.
+6. Keep layout confidence separate from recognition confidence. Record recognition confidence as unavailable when the model cannot provide a calibrated value.
+7. Use fixtures to cover malformed regions, missing geometry, overlapping regions, empty recognition, timeout, partial failure, and model/configuration changes.
+
+Exit condition: the same paprnav ingestion/review flow can consume a layout-first OCR result with correctly aligned evidence, separate the two known N3671L entries, and avoid inventing recognition confidence or absent field values.
+
+### Loop 3: Compare providers on the same evidence
+
+1. Start with the existing one-page N3671L slice, then widen only to approved or de-identified pages covering handwriting, typed text, tables, side-by-side entries, skew, signatures, stamps, and blank/dash semantics.
+2. Run Textract Analysis and the layout-first OCR pipeline with versioned configurations against identical pages. Include Mistral only after an approved US-based/private channel is available.
+3. Measure entry separation; date, tach, total-time, and credential accuracy; blank/dash preservation; evidence-region overlap; unsupported/hallucinated fields; latency; cost; reviewer corrections; and reviewer time.
+4. Include failures, page-limit results, retries, and timeouts instead of scoring successful pages only.
+5. Define promotion thresholds before widening the corpus toward approximately 50-100 representative pages.
+
+Exit condition: evidence shows whether the layout-first improvement materially reduces field error or reviewer effort while meeting privacy, audit, latency, and cost constraints. Textract remains the default until that condition is met.
+
+### Loop 4: Make each OCR run recoverable before adding volume
+
+1. Add a transactional PostgreSQL job lease with attempt number, lease owner/expiry, heartbeat, and next-attempt time.
+2. Run provider calls outside the claim transaction and make expired leases reclaimable.
+3. Classify retryable failures, add bounded exponential backoff, and add a terminal manual-repair/dead-letter state.
+4. Make partial page/span persistence safe to retry without duplicates or unique-constraint failure.
+5. Run the worker continuously or on a deployed short schedule with graceful shutdown.
+6. Exercise concurrent claim, crash/lease-expiry, timeout, partial-write, retry-success, exhausted-attempt, and duplicate-delivery cases.
+
+Exit condition: a killed or duplicated worker cannot lose a job, create duplicate evidence, or leave the job permanently unclaimable.
 
 ## Pending Approval
 

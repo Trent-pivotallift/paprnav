@@ -1,6 +1,6 @@
 # paprnav Provider References
 
-Last updated: 2026-06-27
+Last updated: 2026-07-24
 
 Use this file whenever implementation depends on an external provider, API, SDK, CLI, file format, or output shape. Check current official documentation first, then record the mapping here before coding or marking the task complete.
 
@@ -41,6 +41,44 @@ paprnav mapping notes:
 - Textract OCR requests are not tagged per customer. paprnav must calculate chargeable OCR by persisted OCR run page counts and billable account/aircraft tags.
 
 ## OCR Providers
+
+### GLM-OCR Layout-First Pipeline
+
+- Status: implemented local feasibility provider; not yet the production default
+- Date checked: 2026-07-24
+- References:
+  - https://github.com/zai-org/GLM-OCR
+  - https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md
+  - https://huggingface.co/PaddlePaddle/PP-DocLayoutV3_safetensors
+  - https://huggingface.co/zai-org/GLM-OCR
+- Versions used for the first slice:
+  - `glmocr==0.1.5`
+  - `PaddlePaddle/PP-DocLayoutV3_safetensors`
+  - PP-DocLayout-V3 snapshot `97d101e6db2642e162a1d05392d1b0231c91033e`
+  - Ollama model `glm-ocr:latest`
+  - Ollama model layer `sha256:65493e1f85b9ea4ba3ed793515fde13cbdbea7d74ad2c662b566b146eab0081e`
+
+Verified fields and behaviors:
+
+- The official GLM-OCR project combines PP-DocLayout-V3 region detection with parallel crop recognition by GLM-OCR.
+- Layout detector output includes semantic labels, detector score, normalized `bbox_2d` coordinates on a `0-1000` scale, polygon coordinates, task type, and reading index.
+- GLM-OCR supports a local Ollama `/api/generate` recognition channel.
+- The local Ollama response provides recognized content and runtime/token metadata but does not provide a calibrated recognition-confidence value.
+- The GLM-OCR SDK code is Apache-2.0, the GLM-OCR model is MIT, and the PP-DocLayout-V3 component is Apache-2.0 according to the official project.
+
+paprnav mapping notes:
+
+- Select this path with `PAPRNAV_OCR_PROVIDER=layout_first_vlm`.
+- Convert detector boxes and polygons from `0-1000` coordinates to paprnav ratio geometry.
+- Store detector confidence only in layout metadata. Store recognition confidence as `null`; never substitute the detector score as text confidence.
+- Store each recognized crop as a `REGION_*` OCR span so the complete entry region remains available for evidence highlighting.
+- Convert table HTML to plain text through `HTMLParser` before domain extraction.
+- Preserve the region label, layout confidence, recognition model, content hash, recognition latency, and model runtime metadata in span relationships.
+- Count every processed page as a billable page so local compute work can still be allocated to the customer account and aircraft through the existing `OCRRun` records.
+- Keep the layout model and GLM-OCR dependencies in `requirements-layout-ocr.txt`; do not add the model stack to the ordinary API image until benchmark evidence supports promotion.
+- The initial private N3671L run detected exactly two table regions, corresponding to the two visible logbook entries. The metered rerun completed in `22.302147` seconds on a 16 GB Apple Silicon Mac.
+- The local result recovered a more coherent left-entry narrative than the Textract slice, but at least one handwritten date remains uncertain and must stay in human review. Textract Analysis remains primary until a wider benchmark justifies promotion.
+- Local internal cost uses processing seconds and a configured compute-hour rate. The zero feasibility rate means uncalibrated cost, not free compute.
 
 ### AWS Textract
 

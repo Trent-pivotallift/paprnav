@@ -332,6 +332,10 @@ def test_ocr_ingestion_verification_correction_and_entry_extraction(
     assert ocr_run.billable_aircraft_tag is not None
     assert ocr_run.billable_aircraft_tag.startswith("aircraft-ac_")
     assert ocr_run.billable_page_count == 2
+    assert ocr_run.processing_seconds == 0
+    assert ocr_run.pricing_unit == "page"
+    assert ocr_run.pricing_rate_usd == 0
+    assert ocr_run.estimated_cost_usd == 0
 
     detail_response = client.get(f"/api/v1/ingestion-jobs/{job_id}")
     assert detail_response.status_code == 200

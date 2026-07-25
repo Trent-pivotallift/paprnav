@@ -19,6 +19,7 @@ from app.models.core import (
     ADTargetApplicability,
     AirworthinessDirective,
     LogbookEntry,
+    ProductEvent,
     User,
 )
 from app.schemas.ads import (
@@ -42,6 +43,7 @@ from app.schemas.ads import (
 )
 from app.services.ad_extraction import validate_extraction_output
 from app.services.ad_applicability import populate_applicability_from_extraction
+from app.services.ad_matching import ALGORITHM_NAME, ALGORITHM_VERSION
 from app.services.installed_components import component_display_name
 from app.services.observability import record_product_event, record_workflow_status
 
@@ -99,7 +101,11 @@ def list_aircraft_matches(
     get_visible_aircraft_or_404(db, current_user, aircraft_id)
     matches = db.scalars(
         select(ADMatchResult)
-        .where(ADMatchResult.aircraft_id == aircraft_id)
+        .where(
+            ADMatchResult.aircraft_id == aircraft_id,
+            ADMatchResult.algorithm_name == ALGORITHM_NAME,
+            ADMatchResult.algorithm_version == ALGORITHM_VERSION,
+        )
         .options(
             selectinload(ADMatchResult.aircraft),
             selectinload(ADMatchResult.directive).selectinload(AirworthinessDirective.discovery_record),
@@ -112,7 +118,46 @@ def list_aircraft_matches(
         )
         .order_by(ADMatchResult.status.desc(), ADMatchResult.confidence.desc(), ADMatchResult.created_at.desc())
     ).all()
-    return ADMatchResultListResponse(matches=[serialize_match_result(match) for match in matches])
+    latest_completion = db.scalar(
+        select(ProductEvent)
+        .where(
+            ProductEvent.aircraft_id == aircraft_id,
+            ProductEvent.event_type == "ad_matching_completed",
+        )
+        .order_by(ProductEvent.event_time.desc(), ProductEvent.created_at.desc())
+        .limit(1)
+    )
+    completion_properties = (
+        latest_completion.properties_json
+        if latest_completion and latest_completion.properties_json
+        else {}
+    )
+    completed_with_current_version = (
+        completion_properties.get("algorithm_name") == ALGORITHM_NAME
+        and completion_properties.get("algorithm_version") == ALGORITHM_VERSION
+    )
+    has_stale_results = db.scalar(
+        select(ADMatchResult.id)
+        .where(
+            ADMatchResult.aircraft_id == aircraft_id,
+            ADMatchResult.algorithm_name == ALGORITHM_NAME,
+            ADMatchResult.algorithm_version != ALGORITHM_VERSION,
+        )
+        .limit(1)
+    ) is not None
+    if matches or completed_with_current_version:
+        matcher_status = "current"
+    elif has_stale_results:
+        matcher_status = "pending_recomputation"
+    else:
+        matcher_status = "not_run"
+    return ADMatchResultListResponse(
+        matches=[serialize_match_result(match) for match in matches],
+        matcherStatus=matcher_status,
+        algorithmName=ALGORITHM_NAME,
+        algorithmVersion=ALGORITHM_VERSION,
+        reprocessingRequired=matcher_status == "pending_recomputation",
+    )
 
 
 @router.post("/matches/{match_id}/adjudication", response_model=ADMatchAdjudicationDecisionResponse)

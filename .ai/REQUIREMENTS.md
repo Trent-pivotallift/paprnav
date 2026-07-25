@@ -60,6 +60,10 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - Shared mock data in frontend should be replaced with typed API-backed data.
 - Authentication should be implemented before persisting user-specific data in production paths.
 - OCR, AD ingestion, and matching may run as separate worker processes or microservices, but should first integrate through clear database/API boundaries.
+- PostgreSQL is the authoritative OCR workflow and evidence store. OCR workers must use leases, bounded retries, idempotent recovery, and a terminal repair/dead-letter state before pilot volume is increased.
+- OCR improvements may be added only behind the provider-neutral OCR interface. The layout-first improvement detects page regions, recognizes each crop, and returns evidence geometry without owning paprnav job state or creating authoritative logbook records directly.
+- Textract Analysis remains the production OCR baseline until a common aviation-logbook benchmark demonstrates that another provider improves accepted-page quality or reviewer effort while meeting evidence, safety, latency, privacy, and cost gates.
+- Direct Mistral processing of customer documents remains disabled until an approved US-based/private channel and data terms are available.
 - The app should remain usable on desktop and mobile.
 - Keep UI patterns consistent with the existing Shadcn/ui-style components.
 - Run `npm run lint` and preferably `npm run build` after frontend changes.

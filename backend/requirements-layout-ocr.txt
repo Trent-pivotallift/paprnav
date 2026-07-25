@@ -1,0 +1,3 @@
+-r requirements.txt
+Pillow>=12.1,<13
+glmocr[layout]==0.1.5

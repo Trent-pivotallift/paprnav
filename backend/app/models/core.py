@@ -1,8 +1,9 @@
 import uuid
 from datetime import date as PythonDate
+from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -294,6 +295,10 @@ class OCRRun(Base):
     billable_account_tag: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
     billable_aircraft_tag: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
     billable_page_count: Mapped[int] = mapped_column(Integer, nullable=True)
+    processing_seconds: Mapped[float] = mapped_column(Float, nullable=True)
+    pricing_unit: Mapped[str] = mapped_column(String(64), nullable=True)
+    pricing_rate_usd: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=True)
+    estimated_cost_usd: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=True)
     cost_allocation_tags: Mapped[dict] = mapped_column(JSON, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

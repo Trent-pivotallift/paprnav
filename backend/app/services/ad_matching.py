@@ -5,7 +5,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Mapping
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
@@ -22,10 +22,12 @@ from app.models.core import (
     LogbookEntry,
 )
 from app.services.ad_applicability import infer_component_role
+from app.services.ad_identity import normalize_ad_number
+from app.services.maintenance_extraction import extract_structured_maintenance_data
 from app.services.observability import record_product_event, record_workflow_status
 
 ALGORITHM_NAME = "deterministic_ad_logbook_matcher"
-ALGORITHM_VERSION = "0.1.0"
+ALGORITHM_VERSION = "0.3.0"
 ACTION_WORDS = {"comply", "complied", "compliance", "inspect", "inspection", "replace", "replaced", "modify", "modified"}
 
 
@@ -35,6 +37,8 @@ class CandidateEvidence:
     confidence: float
     rationale: str
     matched_text: str
+    explicit_ad_reference: bool
+    disposition_candidate: str | None
 
 
 def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
@@ -49,6 +53,10 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
         .order_by(LogbookEntry.entry_date.desc(), LogbookEntry.created_at.desc())
     ).all()
     extractions = approved_current_extractions(db)
+    structured_entries = {
+        entry.id: extract_entry_structure(entry)
+        for entry in entries
+    }
     stats = {"directives_seen": 0, "matched": 0, "unresolved": 0, "review_tasks": 0, "skipped_not_applicable": 0}
     for extraction in extractions:
         stats["directives_seen"] += 1
@@ -68,6 +76,7 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
             extraction,
             installed_component=applicability[0] if applicability else None,
             target_applicability=applicability[1] if applicability else None,
+            structured_entries=structured_entries,
         )
         if result.status == "candidate_satisfied":
             stats["matched"] += 1
@@ -82,7 +91,11 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
         subject_id=aircraft.id,
         aircraft_id=aircraft.id,
         event_source="worker",
-        properties=stats,
+        properties={
+            **stats,
+            "algorithm_name": ALGORITHM_NAME,
+            "algorithm_version": ALGORITHM_VERSION,
+        },
     )
     record_workflow_status(
         db,
@@ -121,11 +134,28 @@ def upsert_match_result(
     extraction: ADExtraction,
     installed_component: InstalledComponent | None = None,
     target_applicability: ADTargetApplicability | None = None,
+    structured_entries: Mapping[str, dict[str, Any]] | None = None,
 ) -> ADMatchResult:
     output = extraction.output
-    evidence = rank_candidate_entries(entries, output)
+    evidence = rank_candidate_entries(
+        entries,
+        output,
+        structured_entries=structured_entries,
+    )
     match_type, unresolved_reasons = classify_match_type(output)
     confidence = evidence[0].confidence if evidence else 0.42
+    if evidence:
+        strongest_evidence = evidence[0]
+        if not strongest_evidence.explicit_ad_reference:
+            unresolved_reasons.append("explicit_ad_reference_missing")
+        if strongest_evidence.disposition_candidate not in {
+            "complied",
+            "inspected",
+        }:
+            unresolved_reasons.append("explicit_compliance_claim_missing")
+        if strongest_evidence.entry.review_status != "verified":
+            unresolved_reasons.append("logbook_entry_unverified")
+        unresolved_reasons = sorted(set(unresolved_reasons))
     if unresolved_reasons:
         confidence = min(confidence, 0.68)
     applicability_snapshot = build_applicability_snapshot(installed_component, target_applicability)
@@ -326,20 +356,45 @@ def build_applicability_snapshot(
     }
 
 
-def rank_candidate_entries(entries: list[LogbookEntry], output: dict[str, Any]) -> list[CandidateEvidence]:
+def rank_candidate_entries(
+    entries: list[LogbookEntry],
+    output: dict[str, Any],
+    *,
+    structured_entries: Mapping[str, dict[str, Any]] | None = None,
+) -> list[CandidateEvidence]:
     ranked: list[CandidateEvidence] = []
-    ad_number = str(output.get("adNumber") or "").lower()
+    ad_number = normalize_ad_number(str(output.get("adNumber") or ""))
     product_terms = keywords(" ".join(str(item) for item in output.get("affectedProducts") or []))
     action_terms = keywords(" ".join(str(item) for item in output.get("complianceActions") or [])) | ACTION_WORDS
     title_terms = keywords(str(output.get("title") or ""))
 
     for entry in entries:
         text = " ".join(filter(None, [entry.description, entry.raw_text])).lower()
+        structured = (
+            structured_entries.get(entry.id)
+            if structured_entries is not None
+            else None
+        )
+        if structured is None:
+            structured = extract_entry_structure(entry)
+        matching_references = [
+            reference
+            for reference in structured["adReferences"]
+            if reference["adNumber"] == ad_number
+        ]
+        strongest_reference = matching_references[0] if matching_references else None
         score = 0.0
         reasons: list[str] = []
-        if ad_number and ad_number in text:
-            score += 0.7
-            reasons.append("logbook text cites the AD number")
+        if strongest_reference:
+            disposition = strongest_reference["dispositionCandidate"]
+            score += 0.82 if disposition in {"complied", "inspected"} else 0.45
+            reasons.append(
+                "logbook text explicitly cites the normalized AD number "
+                f"with disposition candidate '{disposition}'"
+            )
+        elif ad_number and ad_number.lower() in text:
+            score += 0.45
+            reasons.append("logbook text cites the AD number without a parsed compliance claim")
         product_overlap = product_terms.intersection(keywords(text))
         if product_overlap:
             score += min(0.16, 0.04 * len(product_overlap))
@@ -359,10 +414,27 @@ def rank_candidate_entries(entries: list[LogbookEntry], output: dict[str, Any]) 
                     confidence=min(0.95, score),
                     rationale="; ".join(reasons),
                     matched_text=entry.raw_text or entry.description,
+                    explicit_ad_reference=strongest_reference is not None,
+                    disposition_candidate=(
+                        strongest_reference["dispositionCandidate"]
+                        if strongest_reference
+                        else None
+                    ),
                 )
             )
 
     return sorted(ranked, key=lambda item: item.confidence, reverse=True)
+
+
+def extract_entry_structure(entry: LogbookEntry) -> dict[str, Any]:
+    return extract_structured_maintenance_data(
+        "\n".join(
+            filter(
+                None,
+                [entry.raw_text, entry.description],
+            )
+        ).splitlines()
+    )
 
 
 def classify_match_type(output: dict[str, Any]) -> tuple[str, list[str]]:
@@ -373,6 +445,7 @@ def classify_match_type(output: dict[str, Any]) -> tuple[str, list[str]]:
         reasons.append("applicability_unknown")
     if intervals:
         match_type = "simple_recurring"
+        reasons.append("recurring_due_status_unknown")
         normalized_intervals = [item for item in intervals if isinstance(item, dict)]
         if not normalized_intervals:
             reasons.append("recurring_interval_unstructured")

@@ -244,7 +244,12 @@ def summarize_job(db: Session, *, job_id: str, entries: list[LogbookEntry]) -> d
                 "currentPageOrder": page.current_page_order,
                 "spanCount": len(page.ocr_spans),
                 "spanCountsByType": span_counts_by_type(page.ocr_spans),
-                "linePreview": [span.text for span in page.ocr_spans if span.span_type.upper() == "LINE"][:8],
+                "linePreview": [
+                    span.text
+                    for span in page.ocr_spans
+                    if span.span_type.upper() == "LINE"
+                    or span.span_type.upper().startswith("REGION_")
+                ][:8],
                 "structurePreview": [
                     {
                         "type": span.span_type,
@@ -257,7 +262,8 @@ def summarize_job(db: Session, *, job_id: str, entries: list[LogbookEntry]) -> d
                         },
                     }
                     for span in sorted(page.ocr_spans, key=lambda item: item.reading_order)
-                    if span.span_type.upper()
+                    if span.span_type.upper().startswith("REGION_")
+                    or span.span_type.upper()
                     in {
                         "TABLE",
                         "CELL",

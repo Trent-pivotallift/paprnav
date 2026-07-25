@@ -6,6 +6,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+.venv-*/
 venv/
 
 # Environment and local secrets
@@ -18,6 +19,12 @@ uploads/
 storage/
 .data/
 backend/.data/
+
+# Local Claude reviewer diagnostics
+.ai/reviews/*.debug.log
+.ai/reviews/*.events.jsonl
+.ai/reviews/*.partial.md
+.ai/reviews/latest
 
 # Terraform local state and provider cache
 .terraform/

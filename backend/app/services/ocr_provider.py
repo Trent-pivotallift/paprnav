@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 from io import BytesIO
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 import time
 from typing import Any, Optional
@@ -37,13 +37,14 @@ class OCRSpanResult:
     provider_block_id: str
     span_type: str
     text: str
-    confidence: float
+    confidence: Optional[float]
     bbox_left: float
     bbox_top: float
     bbox_width: float
     bbox_height: float
     bbox_units: str
     reading_order: int
+    polygon: list[list[float]] = field(default_factory=list)
     relationships: list[dict] = field(default_factory=list)
 
 
@@ -54,7 +55,7 @@ class OCRPageResult:
     width_px: int
     height_px: int
     rotation_degrees: float
-    extraction_confidence: float
+    extraction_confidence: Optional[float]
     spans: list[OCRSpanResult]
 
 
@@ -106,6 +107,16 @@ class DeterministicFixtureOCRProvider(OCRProvider):
             provider_version=self.provider_version,
             configuration_hash=self.configuration_hash,
             pages=pages,
+            billable_page_count=page_count,
+            metadata={
+                "provider_mode": "fixture",
+                "provider_channel": "local_test",
+                "third_party_processing": False,
+                "processing_seconds": 0.0,
+                "pricing_unit": "page",
+                "pricing_rate_usd": 0.0,
+                "estimated_cost_usd": 0.0,
+            },
         )
 
     def _annual_page(self, page_number: int) -> OCRPageResult:
@@ -232,6 +243,9 @@ class TextractOCRProvider(OCRProvider):
         self.analysis_feature_types = settings.textract_analysis_feature_types
         self.async_poll_seconds = settings.textract_async_poll_seconds
         self.async_timeout_seconds = settings.textract_async_timeout_seconds
+        self.estimated_unit_cost_usd_per_page = (
+            settings.textract_estimated_unit_cost_usd_per_page
+        )
         self.ocr_max_pdf_pages = settings.ocr_max_pdf_pages
         if self.api_mode == "async":
             self.provider_version = "start_document_text_detection_v1"
@@ -251,26 +265,69 @@ class TextractOCRProvider(OCRProvider):
     ) -> OCRProviderResult:
         if not storage_key:
             raise ValueError("Textract OCR requires an upload storage key")
+        started = time.monotonic()
         if self.api_mode == "analysis_async":
-            return self._process_upload_analysis_async(
+            result = self._process_upload_analysis_async(
                 original_filename=original_filename,
                 content_type=content_type,
                 storage_backend=storage_backend,
                 storage_key=storage_key,
             )
-        if self.api_mode == "async":
-            return self._process_upload_async(
+        elif self.api_mode == "async":
+            result = self._process_upload_async(
                 original_filename=original_filename,
                 content_type=content_type,
                 storage_backend=storage_backend,
                 storage_key=storage_key,
             )
-        self._validate_sync_document(original_filename=original_filename, content_type=content_type, storage_backend=storage_backend, storage_key=storage_key)
+        else:
+            self._validate_sync_document(
+                original_filename=original_filename,
+                content_type=content_type,
+                storage_backend=storage_backend,
+                storage_key=storage_key,
+            )
 
-        client = self.client or self._create_client()
-        document = self._document_reference(storage_backend=storage_backend, storage_key=storage_key)
-        response = client.detect_document_text(Document=document)
-        return self.result_from_response(response)
+            client = self.client or self._create_client()
+            document = self._document_reference(
+                storage_backend=storage_backend,
+                storage_key=storage_key,
+            )
+            response = client.detect_document_text(Document=document)
+            result = self.result_from_response(response)
+        return self._with_usage_metadata(
+            result,
+            processing_seconds=time.monotonic() - started,
+        )
+
+    def _with_usage_metadata(
+        self,
+        result: OCRProviderResult,
+        *,
+        processing_seconds: float,
+    ) -> OCRProviderResult:
+        page_count = result.billable_page_count or len(result.pages)
+        estimated_cost = round(
+            page_count * self.estimated_unit_cost_usd_per_page,
+            6,
+        )
+        return replace(
+            result,
+            billable_page_count=page_count,
+            metadata={
+                **result.metadata,
+                "provider_channel": "aws",
+                "provider_mode": self.api_mode,
+                "third_party_processing": False,
+                "processing_seconds": round(processing_seconds, 6),
+                "pricing_unit": "page",
+                "pricing_rate_usd": self.estimated_unit_cost_usd_per_page,
+                "estimated_unit_cost_usd_per_page": (
+                    self.estimated_unit_cost_usd_per_page
+                ),
+                "estimated_cost_usd": estimated_cost,
+            },
+        )
 
     def _process_upload_async(
         self,
@@ -630,6 +687,7 @@ class MistralOCRProvider(OCRProvider):
         if not storage_key:
             raise ValueError("Mistral OCR requires an upload storage key")
 
+        started = time.monotonic()
         document_bytes = self._read_upload_bytes(storage_backend=storage_backend, storage_key=storage_key)
         pdf_pages = self._validate_pdf_guardrail(
             original_filename=original_filename,
@@ -642,7 +700,14 @@ class MistralOCRProvider(OCRProvider):
             original_filename=original_filename,
             pdf_pages=pdf_pages,
         )
-        return self.result_from_response(response)
+        result = self.result_from_response(response)
+        return replace(
+            result,
+            metadata={
+                **result.metadata,
+                "processing_seconds": round(time.monotonic() - started, 6),
+            },
+        )
 
     def _read_upload_bytes(self, *, storage_backend: Optional[str], storage_key: str) -> bytes:
         if storage_backend == "s3":
@@ -750,6 +815,8 @@ class MistralOCRProvider(OCRProvider):
                 "provider_mode": self.mode,
                 "third_party_processing": True,
                 "usage_info": usage_info,
+                "pricing_unit": "page",
+                "pricing_rate_usd": self.direct_api_page_price_usd,
                 "estimated_unit_cost_usd_per_page": self.direct_api_page_price_usd,
                 "estimated_cost_usd": round(billable_page_count * self.direct_api_page_price_usd, 6),
             },
@@ -978,4 +1045,8 @@ def get_ocr_provider() -> OCRProvider:
         return TextractOCRProvider()
     if settings.ocr_provider == "mistral":
         return MistralOCRProvider()
+    if settings.ocr_provider == "layout_first_vlm":
+        from app.services.layout_first_ocr import LayoutFirstVLMOCRProvider
+
+        return LayoutFirstVLMOCRProvider()
     return DeterministicFixtureOCRProvider()
