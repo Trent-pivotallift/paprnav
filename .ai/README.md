@@ -16,7 +16,10 @@ The current codebase is an early local MVP build:
 - Persisted SQLAlchemy/Alembic models exist for users, organizations, memberships, aircraft, assignments, logbook sections, logbook entries, auth sessions, and uploads.
 - Backend endpoint tests now cover auth, aircraft visibility, logbook entry, upload/download, and unauthorized access boundaries.
 - AWS pilot infrastructure now exists under `infra/terraform` and has been applied for the foundation slice: S3 artifacts/state buckets, ECR repos, ECS cluster, CloudWatch log groups, and AWS Budget. Terraform state is remote in S3. GitHub Actions workflow remains blocked by credential scope.
-- Deterministic local OCR ingestion, page verification, OCR correction, and structured logbook extraction are implemented for the local MVP slice.
+- The OCR path is closed for the approved refinement scope: immutable PDF/page
+  evidence, conservative native-text bypass, Textract fallback, deterministic
+  validation, structured extraction, and evidence-backed review are
+  implemented. See `.ai/OCR_PATH_CLOSURE_2026-07-26.md`.
 - The AD pipeline is now DRS-first for the primary corpus/applicability path, with Federal Register used for comparison, enrichment, publication metadata, and delta monitoring.
 - DRS bulk fixture import, Federal Register enrichment/matching, AD persistence, deterministic structured extraction, AD extraction review, component-aware AD-to-logbook matching, HITL match adjudication, compliance worklist, reconciliation, and human product observability are implemented locally.
 

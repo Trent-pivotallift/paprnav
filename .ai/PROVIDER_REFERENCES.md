@@ -44,7 +44,8 @@ paprnav mapping notes:
 
 ### GLM-OCR Layout-First Pipeline
 
-- Status: implemented local feasibility provider; not yet the production default
+- Status: paused historical feasibility provider; no active runtime,
+  hardening, packaging, deployment, or benchmark work
 - Date checked: 2026-07-24
 - References:
   - https://github.com/zai-org/GLM-OCR
@@ -68,16 +69,21 @@ Verified fields and behaviors:
 
 paprnav mapping notes:
 
-- Select this path with `PAPRNAV_OCR_PROVIDER=layout_first_vlm`.
+- Historical selection path: `PAPRNAV_OCR_PROVIDER=layout_first_vlm`. Do not
+  select it without a new explicit decision reopening the provider evaluation.
 - Convert detector boxes and polygons from `0-1000` coordinates to paprnav ratio geometry.
 - Store detector confidence only in layout metadata. Store recognition confidence as `null`; never substitute the detector score as text confidence.
 - Store each recognized crop as a `REGION_*` OCR span so the complete entry region remains available for evidence highlighting.
 - Convert table HTML to plain text through `HTMLParser` before domain extraction.
 - Preserve the region label, layout confidence, recognition model, content hash, recognition latency, and model runtime metadata in span relationships.
 - Count every processed page as a billable page so local compute work can still be allocated to the customer account and aircraft through the existing `OCRRun` records.
-- Keep the layout model and GLM-OCR dependencies in `requirements-layout-ocr.txt`; do not add the model stack to the ordinary API image until benchmark evidence supports promotion.
+- Keep the layout model and GLM-OCR dependencies isolated in
+  `requirements-layout-ocr.txt`; do not add them to any active API or worker
+  image.
 - The initial private N3671L run detected exactly two table regions, corresponding to the two visible logbook entries. The metered rerun completed in `22.302147` seconds on a 16 GB Apple Silicon Mac.
-- The local result recovered a more coherent left-entry narrative than the Textract slice, but at least one handwritten date remains uncertain and must stay in human review. Textract Analysis remains primary until a wider benchmark justifies promotion.
+- The post-refinement result fixed one unsafe numeric candidate but regressed
+  airframe completeness and latency. Textract Analysis remains primary and the
+  local provider is paused.
 - Local internal cost uses processing seconds and a configured compute-hour rate. The zero feasibility rate means uncalibrated cost, not free compute.
 
 ### AWS Textract
@@ -108,6 +114,13 @@ Verified fields and behaviors:
 
 paprnav mapping notes:
 
+- The provider-neutral router may select `pdf_native_text` only when every
+  criterion in `.ai/NATIVE_TEXT_ROUTING_ACTIVATION_2026-07-26.md` passes.
+  Native-routed pages bypass Textract; scanned, handwritten, mixed, degraded,
+  image-dominant, spread, or uncertain pages remain Textract-routed.
+- Controlled fixtures establish engineering activation only. Initially, every
+  native-routed early-adopter page requires comparison with its canonical
+  render under `.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`.
 - Store confidence on a `0-100` scale to avoid lossy Textract conversion.
 - Store bounding boxes with explicit units; Textract boxes should map to ratio units.
 - Preserve optional polygon and rotation data when present.
@@ -117,6 +130,37 @@ paprnav mapping notes:
 - Local MVP and CI still default to deterministic OCR. `PAPRNAV_OCR_PROVIDER=textract` is required to call Textract.
 - S3-backed upload storage is env-gated with `PAPRNAV_STORAGE_BACKEND=s3`; when enabled, upload objects are written with server-side encryption and the persisted upload cost tag set. Textract S3 references use `PAPRNAV_TEXTRACT_S3_BUCKET` when set, otherwise `PAPRNAV_S3_UPLOAD_BUCKET`.
 - Production PDF-heavy ingestion should move to S3-backed asynchronous `StartDocumentTextDetection` before broad volunteer ingestion, because multipage PDFs and larger uploads need the async path.
+
+Future Textract adapter evaluation:
+
+- Textract adapters currently customize the Queries feature; they should not be
+  treated as a general OCR or handwriting model upgrade.
+- Defer training until approved early-adopter data reveals recurring logbook
+  formats and repeated labeled failures for stable questions such as tach,
+  total time, AD reference, performer, or approval fields.
+- Maintain disjoint training and test documents, freeze adapter/query versions,
+  and compare adapted versus unadapted Textract on prior regression pages.
+- Do not consume the frozen full-ingestion or ingestion/AD holdout partitions
+  for adapter training.
+- Promotion requires measurable accepted-field or reviewer-effort improvement
+  with no loss of null preservation, evidence coverage, or route safety.
+
+### Google Enterprise Document OCR
+
+- Status: evaluated through the US Google Cloud API; not active routing
+- Date checked: 2026-07-26
+- Evaluation: `.ai/GOOGLE_DOCUMENT_AI_EVALUATION_2026-07-26.md`
+- Paprnav sends individual canonical 300-DPI PNG pages, not entire PDFs.
+- The adapter maps lines, words, confidence, polygons, image-quality
+  diagnostics, processor metadata, request labels, latency, pages, and
+  estimated cost into provider-neutral results.
+- Technical result: 11 passed out of 11.
+- Frozen three-page quality result: 0 passed out of 3; do not promote.
+- The adapter is intentionally absent from `get_ocr_provider()` and active
+  selective routing.
+- Local evaluation used Application Default Credentials. A future AWS
+  deployment would require workload identity federation, cross-cloud privacy
+  approval, and billing reconciliation rather than a committed JSON key.
 
 ### Mistral OCR
 

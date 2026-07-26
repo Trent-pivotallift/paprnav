@@ -57,6 +57,8 @@ class OCRPageResult:
     rotation_degrees: float
     extraction_confidence: Optional[float]
     spans: list[OCRSpanResult]
+    source_provider_name: Optional[str] = None
+    source_provider_version: Optional[str] = None
 
 
 @dataclass(frozen=True)

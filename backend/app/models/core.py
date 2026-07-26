@@ -182,6 +182,8 @@ class LogbookEntry(TimestampMixin, Base):
     total_time: Mapped[float] = mapped_column(Float, nullable=True)
     raw_text: Mapped[str] = mapped_column(Text, nullable=True)
     review_status: Mapped[str] = mapped_column(String(64), nullable=False, default="draft")
+    validation_status: Mapped[str] = mapped_column(String(64), nullable=True)
+    validation_results: Mapped[dict] = mapped_column(JSON, nullable=True)
 
     aircraft = relationship("Aircraft", back_populates="logbook_entries")
     logbook_section = relationship("LogbookSection", back_populates="entries")
@@ -226,6 +228,7 @@ class IngestionJob(TimestampMixin, Base):
     logbook_section_key: Mapped[str] = mapped_column(String(64), nullable=True)
     error_code: Mapped[str] = mapped_column(String(128), nullable=True)
     error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    document_inspection: Mapped[dict] = mapped_column(JSON, nullable=True)
     completed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     upload = relationship("Upload", back_populates="ingestion_jobs")
@@ -254,12 +257,47 @@ class IngestionPage(TimestampMixin, Base):
     height_px: Mapped[int] = mapped_column(Integer, nullable=True)
     rotation_degrees: Mapped[float] = mapped_column(Float, nullable=True)
     extraction_confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    inspection_status: Mapped[str] = mapped_column(String(64), nullable=True)
+    source_page_fingerprint: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    canonical_image_sha256: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    render_profile: Mapped[str] = mapped_column(String(64), nullable=True)
+    render_metadata: Mapped[dict] = mapped_column(JSON, nullable=True)
+    page_classification: Mapped[dict] = mapped_column(JSON, nullable=True)
+    native_text_evaluation: Mapped[dict] = mapped_column(JSON, nullable=True)
+    extraction_plan: Mapped[dict] = mapped_column(JSON, nullable=True)
+    stage_results: Mapped[dict] = mapped_column(JSON, nullable=True)
 
     ingestion_job = relationship("IngestionJob", back_populates="pages")
     upload = relationship("Upload")
     ocr_spans = relationship("OCRTextSpan", back_populates="ingestion_page", order_by="OCRTextSpan.reading_order")
     corrections = relationship("OCRCorrection", back_populates="ingestion_page")
     evidence_links = relationship("LogbookEntryEvidence", back_populates="ingestion_page")
+    logical_regions = relationship(
+        "LogicalPageRegion",
+        back_populates="ingestion_page",
+        order_by="LogicalPageRegion.reading_order",
+    )
+
+
+class LogicalPageRegion(TimestampMixin, Base):
+    __tablename__ = "logical_page_regions"
+    __table_args__ = (
+        UniqueConstraint("ingestion_page_id", "region_key", name="uq_logical_page_region_key"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("lpr"))
+    ingestion_page_id: Mapped[str] = mapped_column(ForeignKey("ingestion_pages.id"), nullable=False, index=True)
+    region_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    region_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    bbox_left: Mapped[float] = mapped_column(Float, nullable=False)
+    bbox_top: Mapped[float] = mapped_column(Float, nullable=False)
+    bbox_width: Mapped[float] = mapped_column(Float, nullable=False)
+    bbox_height: Mapped[float] = mapped_column(Float, nullable=False)
+    bbox_units: Mapped[str] = mapped_column(String(32), nullable=False, default="ratio")
+    reading_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    classification: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    ingestion_page = relationship("IngestionPage", back_populates="logical_regions")
 
 
 class PageVerification(Base):

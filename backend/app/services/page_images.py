@@ -3,7 +3,10 @@ from __future__ import annotations
 import shutil
 import subprocess
 import tempfile
+from hashlib import sha256
+from dataclasses import replace
 from pathlib import Path
+from io import BytesIO
 
 from app.core.config import Settings
 from app.models.core import IngestionPage, Upload
@@ -11,6 +14,8 @@ from app.services.storage import derived_storage_key, read_stored_file_bytes, st
 
 
 BUNDLED_PDF_BIN_DIR = Path("/Users/hostiletakeover/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/override")
+CANONICAL_RENDER_PROFILE = "canonical-pdf-page-v1"
+CANONICAL_RENDER_DPI = 300
 
 
 def find_pdftoppm() -> str | None:
@@ -22,6 +27,24 @@ def find_pdftoppm() -> str | None:
         if candidate and Path(candidate).is_file():
             return candidate
     return None
+
+
+def pdftoppm_version() -> str | None:
+    pdftoppm = find_pdftoppm()
+    if pdftoppm is None:
+        return None
+    try:
+        result = subprocess.run(
+            [pdftoppm, "-v"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except OSError:
+        return None
+    version_output = (result.stderr or result.stdout).strip().splitlines()
+    return version_output[0][:128] if version_output else None
 
 
 def render_pdf_page_png(document_bytes: bytes, source_page_number: int, *, dpi: int = 180) -> bytes | None:
@@ -63,6 +86,21 @@ def png_dimensions(data: bytes) -> tuple[int, int] | None:
     return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
 
+def rendered_visual_metrics(data: bytes) -> dict:
+    from PIL import Image, ImageStat
+
+    with Image.open(BytesIO(data)) as source:
+        rgb = source.convert("RGB")
+        grayscale = rgb.convert("L")
+        statistics = ImageStat.Stat(grayscale)
+        width, height = rgb.size
+        return {
+            "aspectRatio": round(width / max(height, 1), 6),
+            "meanLuminance": round(statistics.mean[0], 3),
+            "luminanceStdDev": round(statistics.stddev[0], 3),
+        }
+
+
 def attach_page_image(
     *,
     settings: Settings,
@@ -83,7 +121,11 @@ def attach_page_image(
             storage_backend=upload.storage_backend,
             storage_key=upload.storage_key,
         )
-        rendered_page = render_pdf_page_png(document_bytes, page.source_page_number)
+        rendered_page = render_pdf_page_png(
+            document_bytes,
+            page.source_page_number,
+            dpi=CANONICAL_RENDER_DPI,
+        )
     except Exception:
         return
     if rendered_page is None:
@@ -95,9 +137,13 @@ def attach_page_image(
         upload.id,
         f"page-images/page-{page.source_page_number:04d}.png",
     )
+    artifact_settings = replace(
+        settings,
+        storage_backend=upload.storage_backend,
+    )
     stored = store_bytes(
         rendered_page,
-        settings=settings,
+        settings=artifact_settings,
         storage_key=image_key,
         content_type="image/png",
         cost_allocation_tags={
@@ -108,6 +154,22 @@ def attach_page_image(
     )
     page.image_storage_backend = stored.storage_backend
     page.image_storage_key = stored.storage_key
+    page.canonical_image_sha256 = sha256(rendered_page).hexdigest()
+    page.render_profile = CANONICAL_RENDER_PROFILE
     dimensions = png_dimensions(rendered_page)
     if dimensions:
         page.width_px, page.height_px = dimensions
+    page.render_metadata = {
+        "profile": CANONICAL_RENDER_PROFILE,
+        "renderer": "poppler_pdftoppm",
+        "rendererVersion": pdftoppm_version(),
+        "dpi": CANONICAL_RENDER_DPI,
+        "colorMode": "rgb",
+        "format": "png",
+        "declaredRotationApplied": True,
+        "deskewApplied": False,
+        "enhancementApplied": False,
+        "widthPx": page.width_px,
+        "heightPx": page.height_px,
+        "visualMetrics": rendered_visual_metrics(rendered_page),
+    }

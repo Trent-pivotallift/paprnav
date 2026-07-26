@@ -52,6 +52,37 @@ def test_extracts_legacy_ad_claim_and_recurring_due_text() -> None:
     assert reference["dueText"] == "due each annual/100 hrs"
 
 
+def test_extracts_chained_legacy_ad_revision_from_shared_compliance_clause() -> None:
+    result = extract_structured_maintenance_data(
+        [
+            "C/W AD 11-10-09 on seat and rail inspection and "
+            "76-07-12R1 on ignition switch operational check - "
+            "each due every 100 hrs.",
+        ]
+    )
+
+    references = result["adReferences"]
+    assert [reference["adNumber"] for reference in references] == [
+        "2011-10-09",
+        "1976-07-12",
+    ]
+    assert references[1]["asPrinted"] == "76-07-12R1"
+    assert references[1]["dispositionCandidate"] == "complied"
+
+
+def test_does_not_treat_chained_signature_date_as_ad() -> None:
+    result = extract_structured_maintenance_data(
+        [
+            "C/W AD 11-10-09 by inspection and signed 12-10-14.",
+        ]
+    )
+
+    assert [
+        reference["adNumber"]
+        for reference in result["adReferences"]
+    ] == ["2011-10-09"]
+
+
 def test_negated_ad_actions_never_become_positive_compliance() -> None:
     cases = {
         "AD 2024-01-02 was not complied with.": "not_complied",

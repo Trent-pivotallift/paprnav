@@ -1,10 +1,21 @@
 # OCR Feasibility Status
 
-Last updated: 2026-07-24
+Last updated: 2026-07-26
+
+## Closure Status
+
+The approved OCR-refinement path is complete. The current architecture,
+verification totals, provider decisions, and post-closure boundaries are
+summarized in `.ai/OCR_PATH_CLOSURE_2026-07-26.md`.
+
+The remaining early-adopter review, ingestion-volume, worker-recoverability,
+and future adapter checkpoints do not reopen OCR engine selection.
 
 ## Current Slice
 
-Goal: prove whether paprnav can receive a scanned maintenance-log page, improve OCR through layout-first region recognition, persist evidence-aligned OCR results into the app schema, attribute billable OCR work to an account/aircraft, and expose the result for review. AWS Textract remains the baseline comparison.
+Historical goal: prove whether Paprnav can receive maintenance-log PDFs,
+preserve evidence, select safe native text or scanned-page OCR, persist
+provider-neutral results, attribute cost, and support review. This goal is met.
 
 Runtime choice:
 
@@ -12,9 +23,13 @@ Runtime choice:
 - Keep OCR orchestration in the backend/worker container path.
 - Do not make Lambda the primary OCR logic path.
 - Keep PostgreSQL as the authoritative OCR queue/workflow store and add leased, bounded-retry execution before increasing volume.
-- Use the layout-first OCR approach demonstrated by Neural Maze to improve paprnav's OCR engine: detect page regions, crop them, and recognize each crop with a vision model.
+- Keep all layout-first GLM-OCR and Ollama work paused after the post-refinement
+  benchmark failed completeness, quality, and latency gates.
 - Do not adopt Neural Maze's Rust gateway, Redis state, batching worker, Kubernetes/KEDA deployment, or scaling architecture.
-- The local experiment is implemented behind the provider-neutral interface as `PAPRNAV_OCR_PROVIDER=layout_first_vlm`; Textract Analysis remains the production baseline until benchmark results justify a change.
+- The local experiment remains in the repository only as historical benchmark
+  code behind `PAPRNAV_OCR_PROVIDER=layout_first_vlm`. Do not run it, harden it,
+  package it, deploy it, or schedule additional benchmark work without a new
+  explicit decision.
 - Retain the Mistral adapter, but do not send customer documents through direct Mistral until an approved US-based/private channel and data terms are available.
 
 Third-party OCR note:
@@ -242,6 +257,9 @@ Result:
 
 Date: 2026-07-24
 
+Historical result. Superseded by the 2026-07-25 post-refinement comparison and
+the decision to pause all layout-first GLM-OCR and Ollama work.
+
 The stored Textract Analysis job `job_d4a5faf7869b40a287aa763d1518822a`
 and local layout-first job `job_0554117882644078b0aaa943366b364a`
 processed uploads with the identical SHA-256
@@ -258,19 +276,12 @@ processed uploads with the identical SHA-256
 | Current measured local runtime | Not re-invoked in this loop | `22.302147` seconds on one page |
 | Pricing | Configured per-page rate | Configured compute-hour rate |
 
-Decision: Textract Analysis remains primary. The local path remains a retained
-challenger because its coherent region recognition may reduce correction effort,
-but the unsupported-looking Jones date blocks promotion. Widen the benchmark to
-representative approved pages before building the dedicated ECS OCR worker
-image.
+Decision at the time: Textract Analysis remained primary. The later
+post-refinement benchmark closed this provider comparison and paused the local
+path.
 
-Future platform consideration: if evidence later supports replacing ECS/Fargate
-with EKS, evaluate packaging the local OCR engine or suitable pipeline components
-as WebAssembly before adopting large Kubernetes OCR containers. Compare WASM
-against a dedicated OCI worker using actual model compatibility, accelerator
-access, startup latency, memory, model distribution, isolation, observability,
-and customer-attributed compute cost. This does not change the current
-ECS/Fargate pilot decision.
+The former WebAssembly/Kubernetes/local-container investigation is no longer an
+active consideration.
 
 Provider-neutral usage metering is now first-class on `OCRRun`:
 
@@ -300,48 +311,98 @@ results.
 Recurring ADs remain unresolved until current due status can be calculated
 rather than inferred from the mere existence of a prior compliance entry.
 
-## Next Loop
+## Closed Refinement Record And Operational Follow-Ups
 
-Continue in small, verified OCR loops. Do not split this work into a parallel provider/scaling chore list.
+The numbered loops below record completed refinement and future operational
+checkpoints. They are not an active request to continue OCR engine experiments.
 
-### Loop 1: Close the current human-review slice
+The three-page provider benchmark completed on 2026-07-25. See
+`.ai/OCR_BENCHMARK_2026-07-25.md` for source hashes, job IDs, cost projections,
+quality results, review UI changes, and the provider decision. Textract remains
+primary. The post-refinement comparison then showed that layout-first GLM-OCR
+fixed the specific unsafe engine numeric candidate but regressed airframe entry
+recall and latency. All layout-first GLM-OCR and Ollama work is now paused.
+
+### Loop 1: Measure and improve the Textract review path
 
 1. Re-open `http://localhost:3000/logbook/N3671L/ingestion/job_d4a5faf7869b40a287aa763d1518822a` and review the two candidates against the scan underlay.
 2. Manually set the Jones date only if the reviewer is comfortable asserting the source value from the scan; leave it blank/null otherwise.
 3. Add save/finalize semantics that distinguish `needs_review` from `verified` after required human fields are resolved.
 4. Improve bbox alignment and entry-region selection using server-side page image dimensions and OCR span union rules.
 5. Keep billing summary output grouped by account tag, aircraft tag, provider, API mode, billable pages, and estimated provider cost.
-6. Re-run the same N3671L single-page slice and compare candidate quality before widening to 2-3 pages.
+6. Aggregate `review_outcome` evidence by provider, reporting median elapsed
+   review time, mean edited fields, null decisions, and verification rate.
 
-Exit condition: both candidates can be reviewed, corrected, finalized, and traced to visible source evidence without inventing an unsupported field value.
+Exit condition: both Textract candidates can be reviewed, corrected, finalized,
+and traced to visible source evidence, and reviewer effort can be reported
+without inventing an unsupported field value.
 
-### Loop 2: Implement the layout-first OCR improvement
+### Loop 2: Strengthen provider-neutral deterministic extraction
 
-Status: provider path, AWS-coupled N3671L acceptance run, audit metadata, and
-critical review fixes are implemented; failure-fixture closure remains.
+1. Improve remaining typed Textract performer/facility and
+   credential/work-order misses without an LM.
+2. Generalize conflicting date and time rejection beyond the observed
+   one-digit time conflict.
+3. Preserve null for ambiguous handwritten fields and require a
+   source-supported date before verification.
+4. Add fixtures for malformed credentials, work orders, conflicting dates,
+   conflicting times, blank/dash semantics, and false signature-name matches.
+5. Keep every structured field linked to a drawable span or explicit
+   candidate-region fallback.
 
-1. Record the selected region detector, vision recognizer, SDK documentation, versions, and licenses in `.ai/PROVIDER_REFERENCES.md`.
-2. Add `PAPRNAV_OCR_PROVIDER=layout_first_vlm` behind the existing provider-neutral result objects.
-3. Render only approved pages, detect semantic regions, and preserve detector labels, geometry, and detector scores.
-4. Crop accepted regions, recognize each crop with the configured vision model, and reassemble them in deterministic page reading order.
-5. Preserve geometry, polygons, reading order, model/configuration versions, raw
-   response hash/size, latency, page count, and internal cost metadata. Add a raw
-   artifact reference only with bounded, encrypted object storage and lifecycle
-   retention.
-6. Keep layout confidence separate from recognition confidence. Record recognition confidence as unavailable when the model cannot provide a calibrated value.
-7. Use fixtures to cover malformed regions, missing geometry, overlapping regions, empty recognition, timeout, partial failure, and model/configuration changes.
+Exit condition: the Textract review flow rejects unsupported structured values,
+captures the remaining typed fields when the OCR text supports them, and
+preserves evidence and auditability.
 
-Exit condition: the same paprnav ingestion/review flow can consume a layout-first OCR result with correctly aligned evidence, separate the two known N3671L entries, and avoid inventing recognition confidence or absent field values.
+### Loop 3: Grow the benchmark through controlled early-adopter onboarding
 
-### Loop 3: Compare providers on the same evidence
+The current 44-page source inventory and frozen 11/22/11 split are recorded in
+`.ai/OCR_BENCHMARK_PARTITIONS.md` and
+`.ai/OCR_BENCHMARK_PARTITIONS.json`.
 
-1. Start with the existing one-page N3671L slice, then widen only to approved or de-identified pages covering handwriting, typed text, tables, side-by-side entries, skew, signatures, stamps, and blank/dash semantics.
-2. Run Textract Analysis and the layout-first OCR pipeline with versioned configurations against identical pages. Include Mistral only after an approved US-based/private channel is available.
-3. Measure entry separation; date, tach, total-time, and credential accuracy; blank/dash preservation; evidence-region overlap; unsupported/hallucinated fields; latency; cost; reviewer corrections; and reviewer time.
-4. Include failures, page-limit results, retries, and timeouts instead of scoring successful pages only.
-5. Define promotion thresholds before widening the corpus toward approximately 50-100 representative pages.
+1. Expand the active OCR-refinement set from the existing three pages to the 11
+   pages assigned to `ocr_refinement`. Do not OCR pages in `full_ingestion` or
+   `ingestion_ad_holdout` until their respective phase begins.
+2. Onboard early-adopter aircraft through the normal consent and review flow.
+3. Add only explicitly approved pages to the benchmark, incrementally and with
+   per-page hashes, field-level ground truth, and aircraft/account attribution.
+4. Measure Textract entry separation, accepted-field accuracy, null
+   preservation, evidence coverage, reviewer edits/time, latency, failures,
+   retries, and cost as the approved corpus grows.
+5. For every initially `pdf_native_text`-routed early-adopter page, perform the
+   mandatory comparison to the canonical render in
+   `.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`. Report `X passed out of Y`,
+   native bypass and Textract counts, information loss, evidence coverage,
+   edits, null preservation, and reviewer time. Continue 100% review until at
+   least 10 genuine native-routed pages pass the production-proof gate.
+6. Treat any critical native-text omission or unsafe route as a gate failure:
+   pause native bypass, retain Textract fallback, add the approved failure as a
+   regression fixture, and rerun all frozen routing tests before reactivation.
+7. Keep each refinement tied to an observed, reviewed failure and verify it
+   against prior frozen pages to prevent regressions.
+8. Do not include layout-first GLM-OCR, Ollama, Mistral, or another challenger
+   unless a separate explicit provider-evaluation decision reopens that work.
+9. Reconsider Textract Custom Queries/adapters only after the approved
+   early-adopter corpus contains recurring document families and repeated,
+   labeled field-extraction failures. Keep a separate training and test set,
+   version the adapter and queries, and compare it with unadapted Textract on
+   frozen pages before activation. Adapters are a future structured-field
+   experiment, not a replacement for general OCR or handwriting recognition.
 
-Exit condition: evidence shows whether the layout-first improvement materially reduces field error or reviewer effort while meeting privacy, audit, latency, and cost constraints. Textract remains the default until that condition is met.
+Exit condition: early-adopter evidence establishes reproducible Textract and
+native-route quality/reviewer-effort baselines, and the first 10 or more genuine
+native-routed pages satisfy the production-proof gate without processing
+unapproved pages or requiring a large up-front corpus.
+
+Future checkpoint: when the approved corpus is large and representative enough
+to split without consuming the frozen ingestion/AD holdout, decide whether
+repeated failures justify a Textract Custom Queries adapter experiment.
+
+Google Enterprise Document OCR completed a bounded evaluation on 2026-07-26.
+It passed provider transport/evidence mapping 11 out of 11, but passed the
+existing frozen three-page quality gate 0 out of 3. Do not add it to active
+routing. Reopen it only as an unresolved-region challenger when approved
+early-adopter failures justify a new comparison.
 
 ### Loop 4: Make each OCR run recoverable before adding volume
 
@@ -354,7 +415,11 @@ Exit condition: evidence shows whether the layout-first improvement materially r
 
 Exit condition: a killed or duplicated worker cannot lose a job, create duplicate evidence, or leave the job permanently unclaimable.
 
-## Pending Approval
+## Historical Mistral Approval Record
+
+Closed: the private aircraft-page direct Mistral run was not required for the
+selected OCR path and remains unexecuted. Reopening it requires a new provider
+decision and explicit approval.
 
 The direct Mistral A/B command was prepared but not executed because it exports an internal aircraft logbook page to a third-party API. The next run requires explicit approval from the user for:
 

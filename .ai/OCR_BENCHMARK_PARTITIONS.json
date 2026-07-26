@@ -1,0 +1,54 @@
+{
+  "version": "2026-07-25-v1",
+  "policy": {
+    "ocrRefinementPercent": 25,
+    "fullIngestionPercent": 50,
+    "ingestionAdHoldoutPercent": 25,
+    "holdoutMayInfluenceRefinement": false
+  },
+  "documents": {
+    "aircraft": {
+      "filename": "N3671L_Aircraft_Logbook_3.pdf",
+      "sha256": "cae51f9494cd95dbcd7a9d99b1a112bb3f1c7e491b48ef47103c47bbfecd9519",
+      "pageCount": 15
+    },
+    "engine": {
+      "filename": "N3671L_Engine_Log_2.pdf",
+      "sha256": "759e88326f917692761f3714d98861e3313168cff6463c271b147b07cf65a337",
+      "pageCount": 29
+    }
+  },
+  "partitions": {
+    "ocr_refinement": {
+      "pageCount": 11,
+      "pages": {
+        "aircraft": [2, 3, 4, 5],
+        "engine": [3, 4, 5, 6, 7, 8, 9]
+      }
+    },
+    "full_ingestion": {
+      "pageCount": 22,
+      "pages": {
+        "aircraft": [6, 7, 8, 9, 10, 11, 12],
+        "engine": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+      }
+    },
+    "ingestion_ad_holdout": {
+      "pageCount": 11,
+      "pages": {
+        "aircraft": [1, 13, 14, 15],
+        "engine": [1, 2, 25, 26, 27, 28, 29]
+      }
+    }
+  },
+  "derivedFiles": {
+    "N3671L_page2.pdf": {
+      "duplicateOf": {
+        "document": "aircraft",
+        "page": 2
+      },
+      "use": "convenience slice only",
+      "countAsUniquePage": false
+    }
+  }
+}

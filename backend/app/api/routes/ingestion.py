@@ -22,6 +22,8 @@ from app.schemas.ingestion import (
     IngestionJobDetailResponse,
     IngestionJobSummary,
     IngestionPageResponse,
+    IngestionReviewMetricsResponse,
+    LogicalPageRegionResponse,
     LogbookEntryEvidenceResponse,
     OCRCorrectionRequest,
     OCRCorrectionResponse,
@@ -33,6 +35,7 @@ from app.services.ingestion import (
     extract_entries_from_job,
     span_requires_raw_ocr_correction,
 )
+from app.services.review_metrics import calculate_ingestion_review_metrics
 from app.services.observability import record_product_event, record_workflow_status
 from app.core.config import get_settings
 from app.api.routes.uploads import get_s3_client, local_upload_path, s3_body_iterator
@@ -55,6 +58,7 @@ def serialize_job(job: IngestionJob) -> IngestionJobSummary:
         logbookSection=job.logbook_section_key,
         errorCode=job.error_code,
         errorMessage=job.error_message,
+        documentInspection=job.document_inspection,
     )
 
 
@@ -104,6 +108,30 @@ def serialize_page(page: IngestionPage) -> IngestionPageResponse:
         heightPx=page.height_px,
         rotationDegrees=page.rotation_degrees,
         extractionConfidence=page.extraction_confidence,
+        inspectionStatus=page.inspection_status,
+        sourcePageFingerprint=page.source_page_fingerprint,
+        canonicalImageSha256=page.canonical_image_sha256,
+        renderProfile=page.render_profile,
+        renderMetadata=page.render_metadata,
+        pageClassification=page.page_classification,
+        nativeTextEvaluation=page.native_text_evaluation,
+        extractionPlan=page.extraction_plan,
+        stageResults=page.stage_results,
+        logicalRegions=[
+            LogicalPageRegionResponse(
+                id=region.id,
+                regionKey=region.region_key,
+                regionType=region.region_type,
+                bboxLeft=region.bbox_left,
+                bboxTop=region.bbox_top,
+                bboxWidth=region.bbox_width,
+                bboxHeight=region.bbox_height,
+                bboxUnits=region.bbox_units,
+                readingOrder=region.reading_order,
+                classification=region.classification,
+            )
+            for region in page.logical_regions
+        ],
         spans=[serialize_span(span) for span in page.ocr_spans],
     )
 
@@ -124,6 +152,21 @@ def serialize_verification(job: IngestionJob) -> PageVerificationResponse | None
         isOrderConfirmed=verification.is_order_confirmed,
         isComplete=verification.is_complete,
         missingOrUncertainNotes=verification.missing_or_uncertain_notes,
+    )
+
+
+@router.get(
+    "/{job_id}/review-metrics",
+    response_model=IngestionReviewMetricsResponse,
+)
+def get_ingestion_review_metrics(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> IngestionReviewMetricsResponse:
+    job = get_visible_job_or_404(db, current_user, job_id)
+    return IngestionReviewMetricsResponse(
+        **calculate_ingestion_review_metrics(job)
     )
 
 
@@ -203,6 +246,8 @@ def serialize_extracted_entries(job: IngestionJob) -> list[ExtractedLogbookEntry
             hobbsTime=response_float(entry.hobbs_time),
             totalTime=response_float(entry.total_time),
             reviewStatus=entry.review_status,
+            validationStatus=entry.validation_status,
+            validationResults=entry.validation_results,
             region=candidate_region(evidence_by_entry.get(entry.id, [])),
             evidence=[
                 LogbookEntryEvidenceResponse(

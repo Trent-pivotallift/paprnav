@@ -119,6 +119,67 @@ def add_human_override_evidence(
     )
 
 
+def add_review_outcome_evidence(
+    db: Session,
+    *,
+    entry: LogbookEntry,
+    original_values: dict[str, Any],
+    updated_values: dict[str, Any],
+    review_status: str,
+    elapsed_seconds: Optional[float],
+    current_user: User,
+) -> None:
+    if entry.source_type != "ocr_ingestion" or elapsed_seconds is None:
+        return
+    source_evidence = db.scalar(
+        select(LogbookEntryEvidence)
+        .where(LogbookEntryEvidence.logbook_entry_id == entry.id)
+        .order_by(LogbookEntryEvidence.created_at.asc(), LogbookEntryEvidence.id.asc())
+    )
+    if source_evidence is None:
+        return
+    decisions = {
+        field_name: (
+            "null"
+            if updated_values[field_name] is None
+            else "accepted"
+            if updated_values[field_name] == original_values[field_name]
+            else "corrected"
+        )
+        for field_name in original_values
+    }
+    source_span = source_evidence.ocr_text_span
+    source_run = source_span.ocr_run if source_span is not None else None
+    db.add(
+        LogbookEntryEvidence(
+            logbook_entry_id=entry.id,
+            upload_id=source_evidence.upload_id,
+            ingestion_job_id=source_evidence.ingestion_job_id,
+            ingestion_page_id=source_evidence.ingestion_page_id,
+            ocr_text_span_id=None,
+            ocr_correction_id=None,
+            evidence_type="human_override",
+            field_name="review_outcome",
+            confidence=None,
+            extraction_provider_name="human_review",
+            extraction_provider_version="0.1.0",
+            extraction_schema_version="logbook_entry_review_v2",
+            review_metadata={
+                "actorUserId": current_user.id,
+                "reviewStatus": review_status,
+                "reviewElapsedSeconds": round(elapsed_seconds, 3),
+                "sourceOcrProvider": source_run.provider_name if source_run else None,
+                "sourceOcrProviderVersion": source_run.provider_version if source_run else None,
+                "fieldDecisions": decisions,
+                "editedFieldCount": sum(
+                    original_values[field_name] != updated_values[field_name]
+                    for field_name in original_values
+                ),
+            },
+        )
+    )
+
+
 @router.get("", response_model=LogbookEntryListResponse)
 def list_logbook_entries(
     aircraft_id: str,
@@ -268,7 +329,38 @@ def update_logbook_entry(
             new_value=updated_values[field_name],
             current_user=current_user,
         )
+    add_review_outcome_evidence(
+        db,
+        entry=entry,
+        original_values=original_values,
+        updated_values=updated_values,
+        review_status=entry.review_status,
+        elapsed_seconds=fields.get("reviewElapsedSeconds"),
+        current_user=current_user,
+    )
+    if (
+        entry.source_type == "ocr_ingestion"
+        and entry.review_status == "verified"
+        and not entry_has_source_supported_date(db, entry)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Source-supported date evidence is required before verifying a candidate",
+        )
 
     db.commit()
     db.refresh(entry)
     return serialize_entry(entry)
+
+
+def entry_has_source_supported_date(db: Session, entry: LogbookEntry) -> bool:
+    evidence = db.scalars(
+        select(LogbookEntryEvidence).where(
+            LogbookEntryEvidence.logbook_entry_id == entry.id,
+            LogbookEntryEvidence.field_name == "entry_date",
+        )
+    ).all()
+    return any(
+        item.evidence_type in {"ocr_span", "correction", "human_override"}
+        for item in evidence
+    )

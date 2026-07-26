@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,6 +26,12 @@ from app.models.core import (
 )
 from app.services.cost_tags import normalize_tag_value, upload_cost_tags
 from app.services.ingestion import create_ingestion_job, extract_entries_from_job, process_ingestion_job
+from app.services.layout_first_ocr import LayoutFirstVLMOCRProvider
+from app.services.ocr_provider import OCRProvider, TextractOCRProvider, get_ocr_provider
+from app.services.ocr_benchmark import (
+    materialize_ocr_benchmark_selection,
+    resolve_ocr_benchmark_selection,
+)
 from app.services.storage import store_s3_file
 
 DEFAULT_INPUT = Path("backend/.data/ocr-feasibility/input/N3671L_page2.pdf")
@@ -42,8 +50,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-number", default=DEFAULT_N_NUMBER)
     parser.add_argument("--account-tag", default=DEFAULT_ACCOUNT_TAG)
     parser.add_argument("--section", choices=["airframe", "engine", "propeller"], default="airframe")
+    parser.add_argument(
+        "--provider",
+        choices=["configured", "textract", "layout_first_vlm"],
+        default="configured",
+        help="Select the OCR engine explicitly for reproducible comparisons.",
+    )
     parser.add_argument("--max-pages", type=int, default=DEFAULT_MAX_PAGES)
     parser.add_argument("--extract-entries", action="store_true")
+    parser.add_argument(
+        "--benchmark-partition",
+        choices=["ocr_refinement", "full_ingestion", "ingestion_ad_holdout"],
+    )
+    parser.add_argument("--benchmark-document", choices=["aircraft", "engine"])
     return parser.parse_args()
 
 
@@ -55,6 +74,14 @@ def pdf_page_count(path: Path) -> int:
 
     reader = PdfReader(str(path))
     return len(reader.pages)
+
+
+def build_provider(provider_name: str) -> OCRProvider:
+    if provider_name == "textract":
+        return TextractOCRProvider()
+    if provider_name == "layout_first_vlm":
+        return LayoutFirstVLMOCRProvider()
+    return get_ocr_provider()
 
 
 def get_or_create_user(db: Session) -> User:
@@ -234,9 +261,13 @@ def summarize_job(db: Session, *, job_id: str, entries: list[LogbookEntry]) -> d
         "ocrProvider": latest_run.provider_name if latest_run else None,
         "ocrProviderVersion": latest_run.provider_version if latest_run else None,
         "ocrProviderMode": ocr_metadata.get("provider_mode"),
+        "ocrProviderChannel": ocr_metadata.get("provider_channel"),
         "ocrFeatureTypes": ocr_metadata.get("textract_feature_types"),
         "ocrBlockCounts": ocr_metadata.get("textract_block_counts"),
-        "estimatedCostUsd": ocr_metadata.get("estimated_cost_usd"),
+        "processingSeconds": optional_float(latest_run.processing_seconds) if latest_run else None,
+        "pricingUnit": latest_run.pricing_unit if latest_run else None,
+        "pricingRateUsd": optional_float(latest_run.pricing_rate_usd) if latest_run else None,
+        "estimatedCostUsd": optional_float(latest_run.estimated_cost_usd) if latest_run else None,
         "pages": [
             {
                 "pageId": page.id,
@@ -286,6 +317,8 @@ def summarize_job(db: Session, *, job_id: str, entries: list[LogbookEntry]) -> d
                 "performerName": entry.performer_name,
                 "performerCredential": entry.performer_credential,
                 "tachTime": entry.tach_time,
+                "hobbsTime": entry.hobbs_time,
+                "totalTime": entry.total_time,
                 "reviewStatus": entry.review_status,
             }
             for entry in entries
@@ -300,57 +333,95 @@ def span_counts_by_type(spans) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+def optional_float(value) -> Optional[float]:
+    return float(value) if value is not None else None
+
+
 def main() -> None:
     args = parse_args()
-    pdf_path = args.input.resolve()
-    if not pdf_path.is_file():
-        raise FileNotFoundError(pdf_path)
+    source_path = args.input.resolve()
+    if not source_path.is_file():
+        raise FileNotFoundError(source_path)
+    if bool(args.benchmark_partition) != bool(args.benchmark_document):
+        raise RuntimeError(
+            "--benchmark-partition and --benchmark-document must be provided together"
+        )
 
-    page_count = pdf_page_count(pdf_path)
-    if page_count > args.max_pages:
-        raise RuntimeError(f"Refusing to OCR {page_count} pages; max-pages is {args.max_pages}")
-
-    with SessionLocal() as db:
-        user = get_or_create_user(db)
-        organization = get_or_create_organization(db, account_tag=args.account_tag)
-        get_or_create_membership(db, organization=organization, user=user)
-        aircraft = get_or_create_aircraft(db, organization=organization, user=user, n_number=args.n_number)
-        get_or_create_assignment(db, organization=organization, aircraft=aircraft, user=user)
-        get_or_create_section(db, section_key=args.section)
-        upload = create_s3_upload(db, pdf_path=pdf_path, organization=organization, aircraft=aircraft, user=user)
-        job = create_ingestion_job(db, upload, user.id, args.section)
-        db.commit()
-
-        processed_job = process_ingestion_job(db, job)
-        entries: list[LogbookEntry] = []
-        if args.extract_entries and processed_job.ocr_status == "complete":
-            db.add(
-                PageVerification(
-                    ingestion_job_id=processed_job.id,
-                    verified_by_user_id=user.id,
-                    is_order_confirmed=True,
-                    is_complete=True,
-                    missing_or_uncertain_notes="Auto-confirmed for one-page OCR feasibility run.",
-                    page_order_snapshot={
-                        "pages": [
-                            {"pageId": page.id, "currentPageOrder": page.current_page_order}
-                            for page in processed_job.pages
-                        ]
-                    },
-                )
+    with TemporaryDirectory(prefix="paprnav-ocr-benchmark-") as temp_dir:
+        selection = None
+        pdf_path = source_path
+        if args.benchmark_partition and args.benchmark_document:
+            selection = resolve_ocr_benchmark_selection(
+                source_path=source_path,
+                document=args.benchmark_document,
+                partition=args.benchmark_partition,
             )
-            processed_job.verification_status = "verified"
-            processed_job.status = "ready_for_entry_extraction"
-            processed_job.entry_extraction_status = "ready"
+            pdf_path = Path(temp_dir) / (
+                f"{source_path.stem}_{selection.partition}.pdf"
+            )
+            materialize_ocr_benchmark_selection(
+                source_path=source_path,
+                output_path=pdf_path,
+                selection=selection,
+            )
+
+        page_count = pdf_page_count(pdf_path)
+        if page_count > args.max_pages:
+            raise RuntimeError(
+                f"Refusing to OCR {page_count} pages; max-pages is {args.max_pages}"
+            )
+
+        with SessionLocal() as db:
+            user = get_or_create_user(db)
+            organization = get_or_create_organization(db, account_tag=args.account_tag)
+            get_or_create_membership(db, organization=organization, user=user)
+            aircraft = get_or_create_aircraft(db, organization=organization, user=user, n_number=args.n_number)
+            get_or_create_assignment(db, organization=organization, aircraft=aircraft, user=user)
+            get_or_create_section(db, section_key=args.section)
+            upload = create_s3_upload(db, pdf_path=pdf_path, organization=organization, aircraft=aircraft, user=user)
+            job = create_ingestion_job(db, upload, user.id, args.section)
             db.commit()
-            entries = extract_entries_from_job(db, processed_job)
 
-        summary = summarize_job(db, job_id=processed_job.id, entries=entries)
+            processed_job = process_ingestion_job(db, job, provider=build_provider(args.provider))
+            entries: list[LogbookEntry] = []
+            if args.extract_entries and processed_job.ocr_status == "complete":
+                db.add(
+                    PageVerification(
+                        ingestion_job_id=processed_job.id,
+                        verified_by_user_id=user.id,
+                        is_order_confirmed=True,
+                        is_complete=True,
+                        missing_or_uncertain_notes=(
+                            f"Auto-confirmed for guarded {page_count}-page OCR feasibility run."
+                        ),
+                        page_order_snapshot={
+                            "pages": [
+                                {"pageId": page.id, "currentPageOrder": page.current_page_order}
+                                for page in processed_job.pages
+                            ]
+                        },
+                    )
+                )
+                processed_job.verification_status = "verified"
+                processed_job.status = "ready_for_entry_extraction"
+                processed_job.entry_extraction_status = "ready"
+                db.commit()
+                entries = extract_entries_from_job(db, processed_job)
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
-    print(json.dumps(summary, indent=2, sort_keys=True))
-    print(f"summary={args.output}")
+            summary = summarize_job(db, job_id=processed_job.id, entries=entries)
+            if selection is not None:
+                summary["benchmark"] = {
+                    "manifestVersion": selection.manifest_version,
+                    "partition": selection.partition,
+                    "document": selection.document,
+                    "sourceSha256": selection.source_sha256,
+                    "sourcePages": selection.source_pages,
+                }
+
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        print(f"summary={args.output}")
 
 
 if __name__ == "__main__":

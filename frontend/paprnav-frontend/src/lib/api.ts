@@ -118,6 +118,7 @@ export interface LogbookEntryUpdateRequest {
   hobbsTime?: number | null;
   totalTime?: number | null;
   reviewStatus?: "draft" | "needs_review" | "verified";
+  reviewElapsedSeconds?: number;
 }
 
 export interface LogbookEntryCreateRequest {
@@ -204,6 +205,27 @@ export interface IngestionPage {
   heightPx: number | null;
   rotationDegrees: number | null;
   extractionConfidence: number | null;
+  inspectionStatus?: string | null;
+  sourcePageFingerprint?: string | null;
+  canonicalImageSha256?: string | null;
+  renderProfile?: string | null;
+  renderMetadata?: Record<string, unknown> | null;
+  pageClassification?: Record<string, unknown> | null;
+  nativeTextEvaluation?: Record<string, unknown> | null;
+  extractionPlan?: Record<string, unknown> | null;
+  stageResults?: Record<string, unknown> | null;
+  logicalRegions?: Array<{
+    id: string;
+    regionKey: string;
+    regionType: string;
+    bboxLeft: number;
+    bboxTop: number;
+    bboxWidth: number;
+    bboxHeight: number;
+    bboxUnits: string;
+    readingOrder: number;
+    classification: Record<string, unknown> | null;
+  }>;
   spans: OCRTextSpan[];
 }
 
@@ -250,8 +272,25 @@ export interface ExtractedLogbookEntryCandidate {
   hobbsTime: number | null;
   totalTime: number | null;
   reviewStatus: string;
+  validationStatus?: string | null;
+  validationResults?: Record<string, unknown> | null;
   region: CandidateRegion | null;
   evidence: LogbookEntryEvidence[];
+}
+
+export interface IngestionReviewMetrics {
+  ingestionJobId: string;
+  extractedEntryCount: number;
+  reviewedEntryCount: number;
+  verifiedEntryCount: number;
+  verificationRate: number;
+  medianReviewSeconds: number | null;
+  meanEditedFieldCount: number | null;
+  acceptedFieldAccuracy: number | null;
+  acceptedFieldCount: number;
+  decidedFieldCount: number;
+  unresolvedFieldCount: number;
+  nullFieldCount: number;
 }
 
 export interface ExtractLogbookEntriesResponse {
@@ -570,6 +609,10 @@ export function uploadLogbookFile(
 
 export function getIngestionJob(jobId: string) {
   return apiFetch<IngestionJobDetailResponse>(`/api/v1/ingestion-jobs/${jobId}`);
+}
+
+export function getIngestionReviewMetrics(jobId: string) {
+  return apiFetch<IngestionReviewMetrics>(`/api/v1/ingestion-jobs/${jobId}/review-metrics`);
 }
 
 export function verifyIngestionPages(

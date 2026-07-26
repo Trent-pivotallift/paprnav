@@ -8,7 +8,11 @@ from app.services.ad_identity import normalize_ad_number
 
 SCHEMA_VERSION = "maintenance_entry_v1"
 EXPLICIT_AD_PATTERN = re.compile(
-    r"\bAD\s*((?:\d{4}|\d{2})-\d{2}-\d{2})\b",
+    r"\bAD\s*((?:\d{4}|\d{2})-\d{2}-\d{2}(?:R\d+)?)\b",
+    re.IGNORECASE,
+)
+CHAINED_AD_PATTERN = re.compile(
+    r"(?:\band\b|&)\s*((?:\d{4}|\d{2})-\d{2}-\d{2}R\d+)\b",
     re.IGNORECASE,
 )
 ACTION_PATTERN = re.compile(
@@ -90,24 +94,41 @@ def extract_structured_maintenance_data(lines: list[str]) -> dict[str, Any]:
 
     ad_references = []
     for segment in segments:
-        ad_matches = list(EXPLICIT_AD_PATTERN.finditer(segment))
-        for index, match in enumerate(ad_matches):
-            normalized = normalize_ad_number(match.group(0))
+        explicit_matches = list(EXPLICIT_AD_PATTERN.finditer(segment))
+        if not explicit_matches:
+            continue
+        first_explicit_start = explicit_matches[0].start()
+        ad_matches = [
+            (match, False)
+            for match in explicit_matches
+        ]
+        ad_matches.extend(
+            (match, True)
+            for match in CHAINED_AD_PATTERN.finditer(segment)
+            if match.start() > first_explicit_start
+        )
+        ad_matches.sort(key=lambda item: item[0].start())
+        for index, (match, is_chained) in enumerate(ad_matches):
+            normalized = normalize_ad_number(match.group(1))
             if normalized is None:
                 continue
-            reference_context = ad_reference_context(
-                segment,
-                match,
-                previous_match=(
-                    ad_matches[index - 1]
-                    if index > 0
-                    else None
-                ),
-                next_match=(
-                    ad_matches[index + 1]
-                    if index + 1 < len(ad_matches)
-                    else None
-                ),
+            reference_context = (
+                segment
+                if is_chained
+                else ad_reference_context(
+                    segment,
+                    match,
+                    previous_match=(
+                        ad_matches[index - 1][0]
+                        if index > 0
+                        else None
+                    ),
+                    next_match=(
+                        ad_matches[index + 1][0]
+                        if index + 1 < len(ad_matches)
+                        else None
+                    ),
+                )
             )
             ad_references.append(
                 {

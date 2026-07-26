@@ -8,3 +8,5 @@ pytest
 httpx
 boto3
 pypdf
+Pillow
+reportlab

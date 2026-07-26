@@ -27,6 +27,7 @@ class LogbookEntryUpdateRequest(BaseModel):
     hobbsTime: Optional[float] = Field(default=None, ge=0)
     totalTime: Optional[float] = Field(default=None, ge=0)
     reviewStatus: Optional[Literal["draft", "needs_review", "verified"]] = None
+    reviewElapsedSeconds: Optional[float] = Field(default=None, ge=0, le=86400)
 
 
 class LogbookEntryResponse(BaseModel):

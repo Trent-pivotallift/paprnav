@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 from html.parser import HTMLParser
 from io import BytesIO
+import os
 from pathlib import Path
 import time
 from typing import Any, Optional
@@ -102,12 +103,16 @@ class OllamaGLMRegionRecognizer:
         base_url: str,
         model: str,
         timeout_seconds: float,
+        num_gpu: Optional[int] = None,
+        num_ctx: int = 16384,
         http_client: Optional[Any] = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         validate_loopback_ollama_url(self.base_url)
         self.model_version = model
         self.timeout_seconds = timeout_seconds
+        self.num_gpu = num_gpu
+        self.num_ctx = num_ctx
         self.http_client = http_client
 
     def recognize(self, image: Any, task_type: str) -> RegionRecognition:
@@ -125,8 +130,11 @@ class OllamaGLMRegionRecognizer:
                 "top_k": 1,
                 "repeat_penalty": 1.1,
                 "num_predict": 8192,
+                "num_ctx": self.num_ctx,
             },
         }
+        if self.num_gpu is not None:
+            payload["options"]["num_gpu"] = self.num_gpu
         started = time.monotonic()
         client = self.http_client
         if client is not None:
@@ -157,6 +165,8 @@ class OllamaGLMRegionRecognizer:
             "raw_content_persisted": False,
             "raw_artifact_location": None,
             "latency_ms": round((time.monotonic() - started) * 1000, 3),
+            "num_ctx": self.num_ctx,
+            "num_gpu": self.num_gpu,
         }
         for key in ("total_duration", "load_duration", "prompt_eval_count", "eval_count"):
             if body.get(key) is not None:
@@ -192,6 +202,8 @@ class LayoutFirstVLMOCRProvider(OCRProvider):
                 str(self.settings.layout_first_layout_threshold),
                 self.settings.layout_first_recognition_model,
                 self.settings.layout_first_ollama_base_url,
+                os.getenv("PAPRNAV_LAYOUT_FIRST_OLLAMA_NUM_GPU", "default"),
+                os.getenv("PAPRNAV_LAYOUT_FIRST_OLLAMA_NUM_CTX", "16384"),
             )
         )
         self.configuration_hash = f"layout-first:{sha256(config_signature.encode('utf-8')).hexdigest()[:16]}"
@@ -228,6 +240,12 @@ class LayoutFirstVLMOCRProvider(OCRProvider):
             base_url=self.settings.layout_first_ollama_base_url,
             model=self.settings.layout_first_recognition_model,
             timeout_seconds=self.settings.layout_first_timeout_seconds,
+            num_gpu=(
+                int(os.environ["PAPRNAV_LAYOUT_FIRST_OLLAMA_NUM_GPU"])
+                if os.getenv("PAPRNAV_LAYOUT_FIRST_OLLAMA_NUM_GPU") is not None
+                else None
+            ),
+            num_ctx=int(os.getenv("PAPRNAV_LAYOUT_FIRST_OLLAMA_NUM_CTX", "16384")),
         )
 
         pages: list[OCRPageResult] = []
@@ -555,13 +573,38 @@ def validate_layout_region(region: LayoutRegion) -> None:
                 )
 
 
-def crop_layout_region(image: Any, region: LayoutRegion) -> Any:
+def crop_layout_region(
+    image: Any,
+    region: LayoutRegion,
+    *,
+    padding_ratio: float = 0.01,
+    max_dimension_px: int = 2048,
+) -> Any:
+    if not 0 <= padding_ratio <= 0.05:
+        raise ValueError("Layout crop padding must be between 0 and 0.05")
+    if max_dimension_px < 512:
+        raise ValueError("Layout crop maximum dimension must be at least 512")
     width, height = image.size
-    left = round(region.bbox_left * width)
-    top = round(region.bbox_top * height)
-    right = round((region.bbox_left + region.bbox_width) * width)
-    bottom = round((region.bbox_top + region.bbox_height) * height)
-    return image.crop((left, top, right, bottom))
+    left = round(max(0, region.bbox_left - padding_ratio) * width)
+    top = round(max(0, region.bbox_top - padding_ratio) * height)
+    right = round(
+        min(1, region.bbox_left + region.bbox_width + padding_ratio) * width
+    )
+    bottom = round(
+        min(1, region.bbox_top + region.bbox_height + padding_ratio) * height
+    )
+    crop = image.crop((left, top, right, bottom))
+    longest_edge = max(crop.size)
+    if longest_edge <= max_dimension_px:
+        return crop
+    from PIL import Image
+
+    scale = max_dimension_px / longest_edge
+    resized = (
+        max(1, round(crop.width * scale)),
+        max(1, round(crop.height * scale)),
+    )
+    return crop.resize(resized, Image.Resampling.LANCZOS)
 
 
 def render_upload_pages(

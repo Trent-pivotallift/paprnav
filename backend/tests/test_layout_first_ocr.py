@@ -8,6 +8,8 @@ from app.models.core import IngestionPage, OCRTextSpan
 from app.services.ingestion import (
     entry_drafts_from_page,
     parse_date,
+    parse_float_field,
+    parse_performer,
     span_requires_raw_ocr_correction,
     strip_date,
 )
@@ -16,6 +18,7 @@ from app.services.layout_first_ocr import (
     LayoutRegion,
     OllamaGLMRegionRecognizer,
     RegionRecognition,
+    crop_layout_region,
     layout_region_from_glm,
     recognized_content_to_text,
 )
@@ -92,6 +95,32 @@ def region(
 def write_test_png(path: Path) -> None:
     path.parent.mkdir(parents=True)
     Image.new("RGB", (1000, 800), "white").save(path)
+
+
+def test_layout_crop_adds_bounded_context_without_crossing_page_edges() -> None:
+    image = Image.new("RGB", (1000, 800), "white")
+    interior = region("interior", order=1, left=0.10, confidence=90)
+    assert crop_layout_region(image, interior).size == (460, 672)
+
+    edge = LayoutRegion(
+        provider_region_id="edge",
+        reading_order=1,
+        label="text",
+        task_type="text",
+        layout_confidence=90,
+        bbox_left=0,
+        bbox_top=0,
+        bbox_width=0.20,
+        bbox_height=0.20,
+    )
+    assert crop_layout_region(image, edge).size == (210, 168)
+    with pytest.raises(ValueError, match="padding"):
+        crop_layout_region(image, edge, padding_ratio=0.1)
+    large_image = Image.new("RGB", (5000, 4000), "white")
+    resized_crop = crop_layout_region(large_image, interior)
+    assert max(resized_crop.size) == 2048
+    with pytest.raises(ValueError, match="maximum dimension"):
+        crop_layout_region(image, edge, max_dimension_px=500)
 
 
 def test_layout_first_provider_preserves_regions_and_separate_confidence(
@@ -302,6 +331,61 @@ def test_parse_date_handles_region_ocr_concatenated_labels() -> None:
 
     assert extracted is True
     assert parsed.isoformat() == "2013-12-05"
+
+
+def test_parse_date_uses_earliest_entry_date_before_iso_ad_reference() -> None:
+    parsed, extracted = parse_date(
+        "12-10-14 Tach-1293.2. Complied with AD 2011-10-09 on both seats."
+    )
+
+    assert extracted is True
+    assert parsed.isoformat() == "2014-12-10"
+
+
+def test_parse_date_skips_invalid_earlier_candidate() -> None:
+    parsed, extracted = parse_date(
+        "Date 99-99-99 corrected to 12-10-14."
+    )
+
+    assert extracted is True
+    assert parsed.isoformat() == "2014-12-10"
+
+
+def test_parse_float_field_accepts_hyphen_separator() -> None:
+    assert parse_float_field(["Tach - 1289.83"], "Tach") == 1289.83
+
+
+def test_parse_float_field_rejects_one_digit_conflict_with_standalone_table_value() -> None:
+    assert parse_float_field(["4454.2", "TOTAL TIME: 4954 Hrs."], "Total") is None
+
+
+def test_parse_performer_extracts_typed_mechanic_and_credential() -> None:
+    assert parse_performer(["Ronald Stegemoller", "A&P# 2192007 I.A."]) == (
+        "Ronald Stegemoller",
+        "A&P#2192007 I.A.",
+    )
+
+
+def test_parse_performer_extracts_repair_facility_and_work_order() -> None:
+    assert parse_performer(
+        [
+            "Jones Avionics FAA CRS#YVJR478Y",
+            "W.O. Reference #12305",
+        ]
+    ) == ("Jones Avionics", "FAA CRS#YVJR478Y; W.O. #12305")
+
+
+def test_parse_performer_does_not_invent_work_order_from_intervening_text() -> None:
+    assert parse_performer(
+        ["Jones Avionics FAA CRS#YVJR478Y", "Inspector W.O. Certified Reference to #20,000 ft"]
+    ) == ("Jones Avionics", "FAA CRS#YVJR478Y")
+
+
+def test_parse_performer_does_not_treat_signature_date_label_as_name() -> None:
+    assert parse_performer(["This date Carlis Jones", "A&P 497795"]) == (
+        None,
+        "A&P#497795",
+    )
 
 
 def test_strip_date_preserves_ad_reference_inside_description() -> None:

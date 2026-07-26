@@ -635,6 +635,10 @@ def test_ocr_extraction_orders_entries_by_date_then_page(
     detail_response = client.get(f"/api/v1/ingestion-jobs/{job_id}")
     assert detail_response.status_code == 200
     pages = detail_response.json()["pages"]
+    assert pages[0]["extractionPlan"]["selectedProvider"] == "out_of_order_fixture"
+    assert pages[0]["extractionPlan"]["nativeTextMayBypassOCR"] is False
+    assert pages[0]["stageResults"]["recognition"]["status"] == "complete"
+    assert pages[0]["logicalRegions"][0]["regionKey"] == "full"
     verify_response = client.post(
         f"/api/v1/ingestion-jobs/{job_id}/page-verification",
         json={
@@ -874,6 +878,8 @@ def test_ocr_extraction_splits_multiple_logbook_entries_on_one_analysis_page(
     assert date_evidence["evidenceType"] == "ocr_span"
     assert date_evidence["span"]["spanType"] == "LINE"
     assert date_evidence["span"]["bboxLeft"] is not None
+    assert extracted_candidates[0]["validationStatus"] in {"passed", "passed_with_review"}
+    assert extracted_candidates[0]["validationResults"]["profile"] == "logbook-candidate-validation-v1"
 
     entries = db_session.scalars(
         select(LogbookEntry)
@@ -895,6 +901,7 @@ def test_ocr_extraction_splits_multiple_logbook_entries_on_one_analysis_page(
             "tachTime": 1277.0,
             "totalTime": None,
             "reviewStatus": "needs_review",
+            "reviewElapsedSeconds": 42.125,
         },
     )
     assert update_response.status_code == 200
@@ -910,3 +917,21 @@ def test_ocr_extraction_splits_multiple_logbook_entries_on_one_analysis_page(
     tach_override = next(evidence for evidence in override_evidence if evidence.field_name == "tach_time")
     assert tach_override.review_metadata["previousValue"] == 1276.8
     assert tach_override.review_metadata["newValue"] == 1277.0
+    review_outcome = next(evidence for evidence in override_evidence if evidence.field_name == "review_outcome")
+    assert review_outcome.review_metadata["reviewElapsedSeconds"] == 42.125
+    assert review_outcome.review_metadata["sourceOcrProvider"] == "aws_textract"
+    assert review_outcome.review_metadata["fieldDecisions"]["entry_date"] == "accepted"
+    assert review_outcome.review_metadata["fieldDecisions"]["tach_time"] == "corrected"
+    assert review_outcome.review_metadata["fieldDecisions"]["total_time"] == "null"
+    assert review_outcome.review_metadata["editedFieldCount"] == 3
+
+    metrics_response = client.get(
+        f"/api/v1/ingestion-jobs/{job_id}/review-metrics"
+    )
+    assert metrics_response.status_code == 200
+    metrics = metrics_response.json()
+    assert metrics["extractedEntryCount"] == 2
+    assert metrics["reviewedEntryCount"] == 1
+    assert metrics["medianReviewSeconds"] == 42.125
+    assert metrics["meanEditedFieldCount"] == 3
+    assert metrics["acceptedFieldCount"] > 0

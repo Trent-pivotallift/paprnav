@@ -589,6 +589,14 @@ Audit notes:
 
 - Keep both original/source page number and current user-confirmed order.
 - Do not discard page image references after structured entries are created.
+- Preserve source-page fingerprints, canonical-render hashes/configuration,
+  page/layout classification, native-text reliability measurements, logical
+  regions, extraction plan, selected route/provider, and page-stage results.
+- A `pdf_native_text` route does not replace immutable source evidence. The
+  original PDF and canonical page remain available for review and printing.
+- For initially native-routed early-adopter pages, retain the activation ID,
+  reviewer outcome, corrections, unresolved fields, evidence coverage, and
+  review duration required by `.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`.
 
 ### PageVerification
 
@@ -722,9 +730,9 @@ Required fields:
 - `ocr_text_span_id`
 - `ocr_correction_id`
 - `evidence_type`: source_page, ocr_span, correction, extracted_field, fallback, human_override
-- `field_name`: entry_date, description, performer_name, performer_credential, tach_time, hobbs_time, total_time, other
+- `field_name`: entry_date, description, performer_name, performer_credential, tach_time, hobbs_time, total_time, review_outcome, other
 - `confidence`
-- `review_metadata`: optional JSON for human review evidence, including previous/new values and reviewer identity when a structured OCR candidate is edited.
+- `review_metadata`: optional JSON for human review evidence, including previous/new values and reviewer identity when a structured OCR candidate is edited. A `review_outcome` record also stores elapsed review seconds, source OCR provider/version, field-level accepted/corrected/null decisions, and edited-field count.
 - `created_at`
 
 Relationships:
@@ -738,6 +746,7 @@ Audit notes:
 - Use `fallback` evidence when extraction relied on a weak source span or could not support a structured field.
 - Do not store a guessed current date for unknown OCR dates. OCR candidates may have `logbook_entries.entry_date = null` until human review supplies a supported date.
 - Use `human_override` evidence when a reviewer changes a structured OCR candidate field. The structured entry can be updated, but the audit trail must preserve prior/new values in `review_metadata`.
+- Record one `human_override`/`review_outcome` evidence row for each timed OCR candidate save or verification action so reviewer effort can be compared by provider without storing a second mutable benchmark record.
 
 ## AD-Related Model Boundary
 

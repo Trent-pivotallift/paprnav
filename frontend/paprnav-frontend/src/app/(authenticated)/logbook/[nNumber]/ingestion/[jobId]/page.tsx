@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, ChevronLeft, FileText, MapPinned, Maximize2, Wand2, X } from "lucide-react";
@@ -16,7 +16,9 @@ import {
   ExtractedLogbookEntryCandidate,
   extractLogbookEntries,
   getIngestionJob,
+  getIngestionReviewMetrics,
   IngestionJobDetailResponse,
+  IngestionReviewMetrics,
   LogbookEntryEvidence,
   OCRTextSpan,
   updateLogbookEntry,
@@ -37,10 +39,6 @@ function backendProxyPath(path: string) {
 
 function uploadPreviewPath(detail: IngestionJobDetailResponse) {
   return backendProxyPath(detail.job.uploadDownloadUrl ?? `/api/v1/uploads/${detail.job.uploadId}/download`);
-}
-
-function formatMaybeNumber(value: number | null) {
-  return value === null ? "Needs review" : value.toString();
 }
 
 function formatBbox(span: OCRTextSpan) {
@@ -69,7 +67,10 @@ function evidenceLabel(evidence: LogbookEntryEvidence) {
 type CandidateEditDraft = {
   entryDate?: string;
   tachTime?: string;
+  hobbsTime?: string;
   totalTime?: string;
+  performerName?: string;
+  performerCredential?: string;
   description?: string;
 };
 
@@ -83,8 +84,8 @@ function candidateDisplayValue(entry: ExtractedLogbookEntryCandidate, draft: Can
   if (fieldName === "description") {
     return entry.description;
   }
-  const numberValue = entry[fieldName];
-  return numberValue === null ? "" : String(numberValue);
+  const value = entry[fieldName];
+  return value === null ? "" : String(value);
 }
 
 function candidateFieldIsDirty(entry: ExtractedLogbookEntryCandidate, draft: CandidateEditDraft, fieldName: keyof CandidateEditDraft) {
@@ -95,7 +96,7 @@ function candidateFieldIsDirty(entry: ExtractedLogbookEntryCandidate, draft: Can
 }
 
 function candidateIsDirty(entry: ExtractedLogbookEntryCandidate, draft: CandidateEditDraft) {
-  return (["entryDate", "tachTime", "totalTime", "description"] as const).some((fieldName) =>
+  return (["entryDate", "tachTime", "hobbsTime", "totalTime", "performerName", "performerCredential", "description"] as const).some((fieldName) =>
     candidateFieldIsDirty(entry, draft, fieldName),
   );
 }
@@ -117,6 +118,7 @@ export default function IngestionReviewPage() {
   const nNumber = normalizeNNumber(params.nNumber as string);
   const jobId = params.jobId as string;
   const [detail, setDetail] = useState<IngestionJobDetailResponse | null>(null);
+  const [reviewMetrics, setReviewMetrics] = useState<IngestionReviewMetrics | null>(null);
   const [notes, setNotes] = useState("");
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -125,6 +127,7 @@ export default function IngestionReviewPage() {
   const [activeEvidenceId, setActiveEvidenceId] = useState<string | null>(null);
   const [isEvidenceExpanded, setIsEvidenceExpanded] = useState(false);
   const [candidateEdits, setCandidateEdits] = useState<Record<string, CandidateEditDraft>>({});
+  const candidateReviewStartedAt = useRef<Record<string, number>>({});
 
   const lowConfidenceSpans = useMemo(
     () =>
@@ -133,7 +136,13 @@ export default function IngestionReviewPage() {
         .filter((span) => span.spanType.toUpperCase() === "LINE" && (span.confidence ?? 100) < 80) ?? [],
     [detail],
   );
-  const extractedEntries = detail?.extractedEntries ?? [];
+  const extractedEntries = useMemo(() => detail?.extractedEntries ?? [], [detail?.extractedEntries]);
+  useEffect(() => {
+    const startedAt = Date.now();
+    for (const entry of extractedEntries) {
+      candidateReviewStartedAt.current[entry.id] ??= startedAt;
+    }
+  }, [extractedEntries]);
   const evidenceOptions = useMemo(
     () => extractedEntries.flatMap((entry, entryIndex) => entry.evidence.map((evidence) => ({ entryIndex, entry, evidence }))),
     [extractedEntries],
@@ -148,8 +157,12 @@ export default function IngestionReviewPage() {
   const loadJob = useCallback(async () => {
     setError(null);
     try {
-      const response = await getIngestionJob(jobId);
+      const [response, metrics] = await Promise.all([
+        getIngestionJob(jobId),
+        getIngestionReviewMetrics(jobId),
+      ]);
       setDetail(response);
+      setReviewMetrics(metrics);
       setNotes(response.latestVerification?.missingOrUncertainNotes ?? "");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to load ingestion job.");
@@ -234,7 +247,10 @@ export default function IngestionReviewPage() {
     }));
   }
 
-  async function handleCandidateSave(entry: ExtractedLogbookEntryCandidate) {
+  async function handleCandidateSave(
+    entry: ExtractedLogbookEntryCandidate,
+    reviewStatus: "needs_review" | "verified",
+  ) {
     if (!detail) {
       return;
     }
@@ -246,12 +262,18 @@ export default function IngestionReviewPage() {
       return;
     }
     let tachTime: number | null;
+    let hobbsTime: number | null;
     let totalTime: number | null;
     try {
       tachTime = parseOptionalCandidateNumber(candidateDisplayValue(entry, draft, "tachTime"), "Tach");
+      hobbsTime = parseOptionalCandidateNumber(candidateDisplayValue(entry, draft, "hobbsTime"), "Hobbs");
       totalTime = parseOptionalCandidateNumber(candidateDisplayValue(entry, draft, "totalTime"), "Total");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Enter valid numeric values before saving.");
+      return;
+    }
+    if (reviewStatus === "verified" && !entryDate) {
+      setError("A date is required before verifying a candidate. Leave it blank and save for review if the source is uncertain.");
       return;
     }
     setIsSaving(true);
@@ -261,15 +283,23 @@ export default function IngestionReviewPage() {
       await updateLogbookEntry(detail.job.aircraftId, entry.id, {
         entryDate: entryDate || null,
         description,
+        performerName: candidateDisplayValue(entry, draft, "performerName").trim() || null,
+        performerCredential: candidateDisplayValue(entry, draft, "performerCredential").trim() || null,
         tachTime,
+        hobbsTime,
         totalTime,
-        reviewStatus: "needs_review",
+        reviewStatus,
+        reviewElapsedSeconds: Math.max(
+          0,
+          (Date.now() - (candidateReviewStartedAt.current[entry.id] ?? Date.now())) / 1000,
+        ),
       });
+      candidateReviewStartedAt.current[entry.id] = Date.now();
       setCandidateEdits((current) => ({
         ...current,
         [entry.id]: {},
       }));
-      setMessage("Candidate edits saved for review.");
+      setMessage(reviewStatus === "verified" ? "Candidate verified." : "Candidate edits saved for review.");
       await loadJob();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to save candidate edits.");
@@ -341,6 +371,52 @@ export default function IngestionReviewPage() {
                 <Status label="Entry extraction" value={detail.job.entryExtractionStatus} />
               </CardContent>
             </Card>
+
+            {reviewMetrics && reviewMetrics.extractedEntryCount > 0 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Review Metrics</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 text-sm sm:grid-cols-3">
+                  <Status
+                    label="Verified"
+                    value={`${reviewMetrics.verifiedEntryCount}/${reviewMetrics.extractedEntryCount}`}
+                  />
+                  <Status
+                    label="Verification rate"
+                    value={`${Math.round(reviewMetrics.verificationRate * 100)}%`}
+                  />
+                  <Status
+                    label="Median review"
+                    value={
+                      reviewMetrics.medianReviewSeconds === null
+                        ? "not measured"
+                        : `${reviewMetrics.medianReviewSeconds.toFixed(1)} sec`
+                    }
+                  />
+                  <Status
+                    label="Mean edits"
+                    value={
+                      reviewMetrics.meanEditedFieldCount === null
+                        ? "not measured"
+                        : reviewMetrics.meanEditedFieldCount.toFixed(1)
+                    }
+                  />
+                  <Status
+                    label="Accepted-field accuracy"
+                    value={
+                      reviewMetrics.acceptedFieldAccuracy === null
+                        ? "not measured"
+                        : `${Math.round(reviewMetrics.acceptedFieldAccuracy * 100)}%`
+                    }
+                  />
+                  <Status
+                    label="Unresolved/null"
+                    value={`${reviewMetrics.unresolvedFieldCount}/${reviewMetrics.nullFieldCount}`}
+                  />
+                </CardContent>
+              </Card>
+            ) : null}
 
             <Card>
               <CardHeader>
@@ -439,7 +515,7 @@ export default function IngestionReviewPage() {
                           </div>
                         </div>
 
-                        <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                        <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
                           <CandidateTextField
                             id={`candidate-${entry.id}-date`}
                             label="Date"
@@ -461,6 +537,16 @@ export default function IngestionReviewPage() {
                             disabled={isSaving}
                           />
                           <CandidateTextField
+                            id={`candidate-${entry.id}-hobbs`}
+                            label="Hobbs"
+                            type="number"
+                            value={candidateDisplayValue(entry, draft, "hobbsTime")}
+                            placeholder="Not recorded"
+                            isDirty={candidateFieldIsDirty(entry, draft, "hobbsTime")}
+                            onValueChange={(value) => updateCandidateEdit(entry.id, "hobbsTime", value)}
+                            disabled={isSaving}
+                          />
+                          <CandidateTextField
                             id={`candidate-${entry.id}-total`}
                             label="Total"
                             type="number"
@@ -468,6 +554,29 @@ export default function IngestionReviewPage() {
                             placeholder="Needs review"
                             isDirty={candidateFieldIsDirty(entry, draft, "totalTime")}
                             onValueChange={(value) => updateCandidateEdit(entry.id, "totalTime", value)}
+                            disabled={isSaving}
+                          />
+                        </div>
+
+                        <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                          <CandidateTextField
+                            id={`candidate-${entry.id}-performer`}
+                            label="Performer or facility"
+                            type="text"
+                            value={candidateDisplayValue(entry, draft, "performerName")}
+                            placeholder="Not extracted"
+                            isDirty={candidateFieldIsDirty(entry, draft, "performerName")}
+                            onValueChange={(value) => updateCandidateEdit(entry.id, "performerName", value)}
+                            disabled={isSaving}
+                          />
+                          <CandidateTextField
+                            id={`candidate-${entry.id}-credential`}
+                            label="Certificate or work order"
+                            type="text"
+                            value={candidateDisplayValue(entry, draft, "performerCredential")}
+                            placeholder="Not extracted"
+                            isDirty={candidateFieldIsDirty(entry, draft, "performerCredential")}
+                            onValueChange={(value) => updateCandidateEdit(entry.id, "performerCredential", value)}
                             disabled={isSaving}
                           />
                         </div>
@@ -483,9 +592,31 @@ export default function IngestionReviewPage() {
                             className={`min-h-32 text-sm leading-6 ${candidateFieldIsDirty(entry, draft, "description") ? "border-amber-400 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20" : ""}`}
                             disabled={isSaving}
                           />
-                          <div className="flex justify-end">
-                            <Button type="button" onClick={() => handleCandidateSave(entry)} disabled={isSaving || !isDirty}>
-                              Save Candidate
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleCandidateSave(entry, "needs_review")}
+                              disabled={isSaving || !isDirty}
+                            >
+                              Save for Review
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => handleCandidateSave(entry, "verified")}
+                              disabled={
+                                isSaving ||
+                                !candidateDisplayValue(entry, draft, "entryDate").trim() ||
+                                (!isDirty && entry.reviewStatus === "verified")
+                              }
+                              title={
+                                candidateDisplayValue(entry, draft, "entryDate").trim()
+                                  ? "Save this candidate as human verified"
+                                  : "Enter a source-supported date before verification"
+                              }
+                            >
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Verify Entry
                             </Button>
                           </div>
                         </div>
@@ -713,7 +844,7 @@ function CandidateTextField({
 }: {
   id: string;
   label: string;
-  type: "date" | "number";
+  type: "date" | "number" | "text";
   value: string;
   placeholder?: string;
   isDirty: boolean;
@@ -729,7 +860,7 @@ function CandidateTextField({
         id={id}
         type={type}
         min={type === "number" ? 0 : undefined}
-        step={type === "number" ? "0.1" : undefined}
+        step={type === "number" ? "any" : undefined}
         inputMode={type === "number" ? "decimal" : undefined}
         value={value}
         onChange={(event) => onValueChange(event.target.value)}

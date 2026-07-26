@@ -145,7 +145,31 @@ PAPRNAV_OCR_PROVIDER=deterministic
 PAPRNAV_OCR_MAX_PDF_PAGES=3
 ```
 
-The local layout-first feasibility provider detects document regions with
+PDF ingestion now inspects and fingerprints the source, renders immutable
+canonical pages, classifies layout/content, and applies provider-neutral
+routing. Pages that satisfy the conservative native-text gate bypass Textract;
+scanned, handwritten, mixed, degraded, image-dominant, spread, and uncertain
+pages continue to Textract. See
+`.ai/NATIVE_TEXT_ROUTING_ACTIVATION_2026-07-26.md`.
+
+The approved OCR-refinement path and provider decisions are closed in
+`.ai/OCR_PATH_CLOSURE_2026-07-26.md`. Early-adopter review and worker
+reliability are subsequent operational stages, not unfinished OCR engine work.
+
+The controlled native fixtures are not final production proof. When
+early-adopter PDFs are ingested, every initially native-routed page must be
+reviewed against its canonical render using
+`.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`.
+
+Google Document AI has an evaluation-only adapter in
+`app/services/google_document_ai.py`. Install
+`requirements-google-ocr.txt` in an isolated environment and use
+`app.scripts.run_google_document_ai_evaluation` only with the frozen
+OCR-refinement partition. The 2026-07-26 run passed technical mapping 11 out
+of 11 but passed the existing three-page quality gate 0 out of 3, so Google is
+not registered in active provider selection.
+
+Historical/paused: the local layout-first feasibility provider detects document regions with
 PP-DocLayout-V3 and recognizes each crop with GLM-OCR through local Ollama:
 
 ```bash

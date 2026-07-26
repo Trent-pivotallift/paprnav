@@ -300,7 +300,10 @@ Response: one entry plus source evidence links when available.
 
 `PATCH /api/v1/aircraft/{aircraftId}/logbook-entries/{entryId}`
 
-Request: partial manual entry fields.
+Request: partial manual entry fields. OCR review clients may also send
+`reviewElapsedSeconds` with `reviewStatus`; the backend records a provider-
+attributed review outcome containing accepted, corrected, and null decisions
+for every structured field.
 
 Response: updated logbook entry.
 
@@ -375,6 +378,25 @@ Returns the stored original file when the authenticated user can access the link
 `GET /api/v1/ingestion-jobs/{jobId}`
 
 Returns job status, extracted page placeholders, OCR spans, corrections, and latest page verification.
+
+The detail response also exposes provider-neutral inspection, classification,
+extraction-plan, route, and stage-result metadata. Consumers must distinguish
+`pdf_native_text` pages from Textract-routed pages and display the canonical
+page as the review source for both routes.
+
+During early-adopter onboarding, every initially native-routed page is subject
+to the required review checkpoint in
+`.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`; native routing does not remove the
+page or field evidence requirements.
+
+### Get Review Metrics
+
+`GET /api/v1/ingestion-jobs/{jobId}/review-metrics`
+
+Returns entry/field review counts, verification rate, accepted/null/unresolved
+field outcomes, edited-field count, evidence coverage, and reviewer duration.
+Early-adopter reporting must additionally group page counts by native bypass
+and Textract route and state `X passed out of Y` native-routed pages.
 
 ### Verify Page Order And Completeness
 

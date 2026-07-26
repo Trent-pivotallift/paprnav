@@ -34,7 +34,10 @@ These are the assumptions for the next reviewable production plan. They are not 
 - Database: managed Postgres through RDS or Aurora PostgreSQL, with migrations run as an explicit deployment step.
 - Object storage: S3 for uploaded logbooks and retained AD source artifacts, with server-side encryption, bucket versioning or object retention decisions, lifecycle policies, and least-privilege IAM access.
 - Secrets/config: AWS Secrets Manager or SSM Parameter Store for database URLs, session secrets, provider API keys, OCR credentials, and external provider settings. No production secrets should be committed to the repo or GitHub workflow files.
-- OCR provider: AWS Textract remains the production-oriented target behind the existing OCR provider abstraction.
+- OCR path: conservatively reliable native PDF text may bypass OCR; scanned,
+  handwritten, mixed, degraded, and uncertain pages route to AWS Textract
+  through the provider-neutral abstraction. Google, Mistral, and local
+  layout-first providers are not active production routes.
 - AD ingestion: FAA DRS bulk ZIP/Access ingestion remains fixture-first in CI; live DRS retrieval or Web UI validation stays manually gated and out of CI.
 - AD extraction: provider-backed LLM extraction remains env-gated; CI uses deterministic and fake-provider tests only.
 - Observability: product/workflow observability remains in Postgres for MVP. Infrastructure logs/metrics should be added in the deployment design, not treated as a substitute for product events.

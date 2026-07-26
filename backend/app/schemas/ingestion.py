@@ -17,6 +17,7 @@ class IngestionJobSummary(BaseModel):
     logbookSection: Optional[str]
     errorCode: Optional[str]
     errorMessage: Optional[str]
+    documentInspection: Optional[dict] = None
 
 
 class OCRCorrectionResponse(BaseModel):
@@ -47,6 +48,19 @@ class OCRTextSpanResponse(BaseModel):
     corrections: list[OCRCorrectionResponse] = []
 
 
+class LogicalPageRegionResponse(BaseModel):
+    id: str
+    regionKey: str
+    regionType: str
+    bboxLeft: float
+    bboxTop: float
+    bboxWidth: float
+    bboxHeight: float
+    bboxUnits: str
+    readingOrder: int
+    classification: Optional[dict] = None
+
+
 class IngestionPageResponse(BaseModel):
     id: str
     sourcePageNumber: int
@@ -59,6 +73,16 @@ class IngestionPageResponse(BaseModel):
     heightPx: Optional[int]
     rotationDegrees: Optional[float]
     extractionConfidence: Optional[float]
+    inspectionStatus: Optional[str] = None
+    sourcePageFingerprint: Optional[str] = None
+    canonicalImageSha256: Optional[str] = None
+    renderProfile: Optional[str] = None
+    renderMetadata: Optional[dict] = None
+    pageClassification: Optional[dict] = None
+    nativeTextEvaluation: Optional[dict] = None
+    extractionPlan: Optional[dict] = None
+    stageResults: Optional[dict] = None
+    logicalRegions: list[LogicalPageRegionResponse] = []
     spans: list[OCRTextSpanResponse] = []
 
 
@@ -91,6 +115,8 @@ class ExtractedLogbookEntryCandidateResponse(BaseModel):
     hobbsTime: Optional[float]
     totalTime: Optional[float]
     reviewStatus: str
+    validationStatus: Optional[str] = None
+    validationResults: Optional[dict] = None
     region: Optional[CandidateRegionResponse] = None
     evidence: list[LogbookEntryEvidenceResponse] = []
 
@@ -143,3 +169,18 @@ class ExtractedLogbookEntryResponse(BaseModel):
 
 class ExtractLogbookEntriesResponse(BaseModel):
     entries: list[ExtractedLogbookEntryResponse]
+
+
+class IngestionReviewMetricsResponse(BaseModel):
+    ingestionJobId: str
+    extractedEntryCount: int
+    reviewedEntryCount: int
+    verifiedEntryCount: int
+    verificationRate: float
+    medianReviewSeconds: Optional[float]
+    meanEditedFieldCount: Optional[float]
+    acceptedFieldAccuracy: Optional[float]
+    acceptedFieldCount: int
+    decidedFieldCount: int
+    unresolvedFieldCount: int
+    nullFieldCount: int

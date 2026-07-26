@@ -23,6 +23,13 @@ from app.models.core import (
 from app.services.ocr_provider import OCRProvider, get_ocr_provider
 from app.services.cost_tags import upload_billable_account_tag
 from app.services.page_images import attach_page_image
+from app.services.pdf_inspection import inspect_and_prepare_upload
+from app.services.page_planning import (
+    finalize_page_extraction_plan,
+    mark_page_stage_failure,
+)
+from app.services.candidate_validation import validate_entry_candidate
+from app.services.selective_ocr import process_upload_with_selective_routing
 
 LOW_CONFIDENCE_THRESHOLD = 80.0
 EXTRACTION_PROVIDER_NAME = "deterministic_logbook_extractor"
@@ -50,6 +57,7 @@ class ExtractedEntryDraft:
     total_time: float | None
     min_confidence: float | None
     requires_review: bool = False
+    validation_result: dict | None = None
 
 
 def create_ingestion_job(db: Session, upload: Upload, created_by_user_id: str, section: str | None) -> IngestionJob:
@@ -70,7 +78,6 @@ def create_ingestion_job(db: Session, upload: Upload, created_by_user_id: str, s
 
 
 def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider | None = None) -> IngestionJob:
-    provider = provider or get_ocr_provider()
     settings = get_settings()
     upload = db.get(Upload, job.upload_id)
     if not upload:
@@ -84,6 +91,15 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
     if existing_run:
         return job
 
+    job.status = "document_inspection"
+    job.page_extraction_status = "running"
+    inspect_and_prepare_upload(
+        db=db,
+        settings=settings,
+        upload=upload,
+        job=job,
+    )
+    provider = provider or get_ocr_provider()
     now = datetime.now(timezone.utc)
     job.status = "ocr_processing"
     job.page_extraction_status = "running"
@@ -104,12 +120,15 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
     db.flush()
 
     try:
-        result = provider.process_upload(
-            original_filename=upload.original_filename,
-            content_type=upload.content_type,
-            storage_backend=upload.storage_backend,
-            storage_key=upload.storage_key,
+        result = process_upload_with_selective_routing(
+            settings=settings,
+            upload=upload,
+            pages=list(job.pages),
+            provider=provider,
         )
+        run.provider_name = result.provider_name
+        run.provider_version = result.provider_version
+        run.configuration_hash = result.configuration_hash
         if result.metadata:
             run.cost_allocation_tags = {
                 **(run.cost_allocation_tags or {}),
@@ -135,22 +154,34 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
                 "estimated_cost_usd",
             )
         for page_result in result.pages:
-            page = IngestionPage(
-                ingestion_job_id=job.id,
-                upload_id=upload.id,
-                source_page_number=page_result.source_page_number,
-                current_page_order=page_result.source_page_number,
-                page_label=page_result.page_label,
-                image_storage_backend=upload.storage_backend,
-                image_storage_key=upload.storage_key,
-                width_px=page_result.width_px,
-                height_px=page_result.height_px,
-                rotation_degrees=page_result.rotation_degrees,
-                extraction_confidence=page_result.extraction_confidence,
+            page = db.scalar(
+                select(IngestionPage).where(
+                    IngestionPage.ingestion_job_id == job.id,
+                    IngestionPage.source_page_number == page_result.source_page_number,
+                )
             )
-            db.add(page)
-            db.flush()
-            attach_page_image(settings=settings, upload=upload, page=page)
+            if page is None:
+                page = IngestionPage(
+                    ingestion_job_id=job.id,
+                    upload_id=upload.id,
+                    source_page_number=page_result.source_page_number,
+                    current_page_order=page_result.source_page_number,
+                    image_storage_backend=upload.storage_backend,
+                    image_storage_key=upload.storage_key,
+                )
+                db.add(page)
+                db.flush()
+            page.page_label = page_result.page_label
+            page.width_px = page.width_px or page_result.width_px
+            page.height_px = page.height_px or page_result.height_px
+            page.rotation_degrees = (
+                page.rotation_degrees
+                if page.rotation_degrees is not None
+                else page_result.rotation_degrees
+            )
+            page.extraction_confidence = page_result.extraction_confidence
+            if page.image_storage_key in {None, upload.storage_key}:
+                attach_page_image(settings=settings, upload=upload, page=page)
             for span_result in page_result.spans:
                 db.add(
                     OCRTextSpan(
@@ -171,6 +202,26 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
                         reading_order=span_result.reading_order,
                         relationships=span_result.relationships,
                     )
+                )
+            db.flush()
+            db.expire(page, ["ocr_spans"])
+            finalize_page_extraction_plan(
+                db,
+                page=page,
+                provider_name=page_result.source_provider_name or result.provider_name,
+                provider_version=page_result.source_provider_version or result.provider_version,
+            )
+
+        returned_page_numbers = {
+            page_result.source_page_number for page_result in result.pages
+        }
+        for page in job.pages:
+            if page.source_page_number not in returned_page_numbers:
+                mark_page_stage_failure(
+                    page,
+                    stage="recognition",
+                    error_code="provider_page_missing",
+                    retry_eligible=True,
                 )
 
         run.status = "complete"
@@ -257,7 +308,22 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
 
     drafts: list[ExtractedEntryDraft] = []
     for page in sorted(job.pages, key=lambda item: item.current_page_order):
-        drafts.extend(entry_drafts_from_page(page))
+        page_drafts = entry_drafts_from_page(page)
+        for draft in page_drafts:
+            draft.validation_result = validate_entry_candidate(draft)
+        drafts.extend(page_drafts)
+        stages = dict(page.stage_results or {})
+        stages["validation"] = {
+            "status": "complete",
+            "attemptNumber": 1,
+            "profile": "logbook-candidate-validation-v1",
+            "candidateCount": len(page_drafts),
+            "rejectedCandidateCount": sum(
+                draft.validation_result["status"] == "rejected"
+                for draft in page_drafts
+            ),
+        }
+        page.stage_results = stages
 
     entries: list[LogbookEntry] = []
     for draft in sorted(drafts, key=lambda item: (item.entry_date or date.max, item.page.current_page_order)):
@@ -277,11 +343,19 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
             review_status=(
                 "verified"
                 if not draft.requires_review
+                and draft.validation_result is not None
+                and draft.validation_result["acceptedForAutomaticVerification"]
                 and draft.date_was_extracted
                 and draft.min_confidence is not None
                 and draft.min_confidence >= LOW_CONFIDENCE_THRESHOLD
                 else "needs_review"
             ),
+            validation_status=(
+                draft.validation_result["status"]
+                if draft.validation_result
+                else "not_run"
+            ),
+            validation_results=draft.validation_result,
         )
         db.add(entry)
         db.flush()
@@ -296,6 +370,7 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
                 span,
                 field_name,
                 evidence_type=draft.field_evidence_types.get(field_name),
+                validation_result=draft.validation_result,
             )
 
     job.entry_extraction_status = "complete"
@@ -343,7 +418,7 @@ def split_logbook_entry_line_clusters(page: IngestionPage, line_spans: list[OCRT
             return column_clusters
 
     anchors = [span for span in line_spans if is_entry_anchor_line(span)]
-    if not has_analysis_structure or len(anchors) <= 1:
+    if len(anchors) <= 1:
         return [line_spans]
 
     anchors = sorted(anchors, key=lambda item: (span_center_y(item), item.bbox_left or 0))
@@ -485,6 +560,12 @@ def is_entry_anchor_line(span: OCRTextSpan) -> bool:
     text = effective_span_text(span)
     if not parse_date(text)[1]:
         return False
+    if re.search(
+        r"\bAD(?:s|'s)?\s*[:#]?\s*\d{2,4}[-/]\d{1,2}[-/]\d{1,2}\b",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return False
     lowered = text.lower()
     has_logbook_signal = any(token in lowered for token in ("tach", "total", "date", "aircraft", "avionics", "service"))
     return has_logbook_signal or date_appears_near_line_start(text)
@@ -599,6 +680,7 @@ def add_entry_evidence(
     span: OCRTextSpan,
     field_name: str,
     evidence_type: str | None = None,
+    validation_result: dict | None = None,
 ) -> None:
     correction = span.corrections[-1] if span.corrections else None
     db.add(
@@ -615,6 +697,13 @@ def add_entry_evidence(
             extraction_provider_name=EXTRACTION_PROVIDER_NAME,
             extraction_provider_version=EXTRACTION_PROVIDER_VERSION,
             extraction_schema_version=EXTRACTION_SCHEMA_VERSION,
+            review_metadata={
+                "validationProfile": validation_result.get("profile"),
+                "validationStatus": validation_result.get("status"),
+                "fieldValidation": validation_result.get("fieldResults", {}).get(field_name),
+            }
+            if validation_result
+            else None,
         )
     )
 
@@ -631,7 +720,13 @@ def extraction_field_spans(line_spans: list[OCRTextSpan]) -> tuple[dict[str, OCR
         field_evidence_types["entry_date"] = "fallback"
     field_spans["description"] = line_spans[0]
 
-    performer_span = find_line_span(line_spans, lambda text: text.lower().startswith("performer:"))
+    performer_span = find_line_span(
+        line_spans,
+        lambda text: any(
+            parse_performer([line]) != (None, None)
+            for line in text.splitlines()
+        ),
+    )
     if performer_span is not None:
         field_spans["performer_name"] = performer_span
         field_spans["performer_credential"] = performer_span
@@ -660,21 +755,32 @@ def find_float_field_span(line_spans: list[OCRTextSpan], field_name: str) -> OCR
 
 
 def parse_date(text: str) -> tuple[date | None, bool]:
-    match = ISO_DATE_PATTERN.search(text)
-    if match:
-        return datetime(int(match.group(1)), int(match.group(2)), int(match.group(3))).date(), True
-    match = SHORT_DATE_PATTERN.search(text)
-    if not match:
+    matches = [
+        (match.start(), "iso", match)
+        for match in ISO_DATE_PATTERN.finditer(text)
+    ]
+    matches.extend(
+        (match.start(), "short", match)
+        for match in SHORT_DATE_PATTERN.finditer(text)
+    )
+    if not matches:
         return None, False
-    month = int(match.group(1))
-    day = int(match.group(2))
-    year = int(match.group(3))
-    if year < 100:
-        year += 2000 if year < 70 else 1900
-    try:
-        return datetime(year, month, day).date(), True
-    except ValueError:
-        return None, False
+    for _, date_format, match in sorted(matches, key=lambda item: item[0]):
+        if date_format == "iso":
+            year = int(match.group(1))
+            month = int(match.group(2))
+            day = int(match.group(3))
+        else:
+            month = int(match.group(1))
+            day = int(match.group(2))
+            year = int(match.group(3))
+        if year < 100:
+            year += 2000 if year < 70 else 1900
+        try:
+            return datetime(year, month, day).date(), True
+        except ValueError:
+            continue
+    return None, False
 
 
 def date_appears_near_line_start(text: str) -> bool:
@@ -729,20 +835,61 @@ def strip_date(text: str) -> str:
 
 
 def strip_entry_metrics(text: str) -> str:
-    text = re.sub(r"\bTach\s*[:=]?\s*[0-9]+(?:\.[0-9]+)?\b", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\bTotal(?:\s+Time)?\s*[:=]?\s*[0-9]+(?:\.[0-9]+)?\b", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\bHobbs\s*[:=]?\s*[0-9]+(?:\.[0-9]+)?\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bTach\s*[-:=]?\s*[0-9]+(?:\.[0-9]+)?\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bTotal(?:\s+Time)?\s*[-:=]?\s*[0-9]+(?:\.[0-9]+)?\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bHobbs\s*[-:=]?\s*[0-9]+(?:\.[0-9]+)?\b", "", text, flags=re.IGNORECASE)
     return re.sub(r"\s{2,}", " ", text).strip(" -;")
 
 
 def parse_performer(lines: list[str]) -> tuple[str | None, str | None]:
-    for line in lines:
+    clean_lines = [line.strip() for line in lines if line.strip()]
+    for line in clean_lines:
         if line.lower().startswith("performer:"):
             value = line.split(":", 1)[1].strip()
             if " A&P" in value:
                 name, credential = value.split(" A&P", 1)
                 return name.strip(), f"A&P{credential}".strip()
             return value, None
+    joined = "\n".join(clean_lines)
+    facility_match = re.search(
+        r"(?m)^([A-Z][A-Za-z0-9 &'./-]{2,80}?)\s+FAA\s+CRS\s*#?\s*"
+        r"([A-Z0-9-]+)(?=\s|$)",
+        joined,
+    )
+    work_order_match = re.search(
+        r"\bW\.?\s*O\.?\s*(?:(?:Reference|Ref\.?)\s*#?\s*|#\s*)"
+        r"([A-Z0-9-]+)",
+        joined,
+        re.IGNORECASE,
+    )
+    if facility_match:
+        credentials = [f"FAA CRS#{facility_match.group(2)}"]
+        if work_order_match:
+            credentials.append(f"W.O. #{work_order_match.group(1)}")
+        return facility_match.group(1).strip(), "; ".join(credentials)
+
+    credential_pattern = re.compile(
+        r"\bA\s*&\s*P\s*#?\s*([A-Z0-9-]+)(?:\s+(I\.?\s*A\.?))?",
+        re.IGNORECASE,
+    )
+    for index, line in enumerate(clean_lines):
+        credential_match = credential_pattern.search(line)
+        if not credential_match:
+            continue
+        credential = f"A&P#{credential_match.group(1)}"
+        if credential_match.group(2):
+            credential += " I.A."
+        name_prefix = line[:credential_match.start()].strip(" ,-/")
+        if name_prefix and re.fullmatch(r"[A-Za-z][A-Za-z .'-]{2,80}", name_prefix):
+            return name_prefix, credential
+        if index > 0:
+            previous = clean_lines[index - 1].strip(" ,-/")
+            if (
+                not previous.lower().startswith(("this date", "date"))
+                and re.fullmatch(r"[A-Za-z][A-Za-z .'-]{2,80}", previous)
+            ):
+                return previous, credential
+        return None, credential
     return None, None
 
 
@@ -751,9 +898,32 @@ def parse_float_field(lines: list[str], field_name: str) -> float | None:
     if field_name.lower() == "total":
         labels.append("Total Time")
     label_pattern = "|".join(re.escape(label) for label in labels)
-    pattern = re.compile(rf"\b(?:{label_pattern})\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
+    pattern = re.compile(rf"\b(?:{label_pattern})\s*[-:=]?\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE)
     for line in lines:
         match = pattern.search(line)
         if match:
+            candidate_text = match.group(1)
+            standalone_values = [
+                standalone.group(1)
+                for item in lines
+                if (standalone := re.fullmatch(
+                    r"\s*([0-9]{3,6}(?:\.[0-9]+)?)\s*(?:hrs?\.?)?\s*",
+                    item,
+                    re.IGNORECASE,
+                ))
+            ]
+            if any(
+                value != candidate_text
+                and len(value.split(".", 1)[0]) == len(candidate_text.split(".", 1)[0])
+                and sum(
+                    first != second
+                    for first, second in zip(
+                        value.split(".", 1)[0],
+                        candidate_text.split(".", 1)[0],
+                    )
+                ) == 1
+                for value in standalone_values
+            ):
+                return None
             return float(match.group(1))
     return None

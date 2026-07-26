@@ -1,0 +1,2 @@
+-r requirements.txt
+google-cloud-documentai==3.15.0

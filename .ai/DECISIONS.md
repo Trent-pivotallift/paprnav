@@ -281,9 +281,9 @@ Provider policy:
 
 Apply this decision incrementally through the OCR feasibility `Next Loop` in `.ai/OCR_FEASIBILITY_STATUS.md`.
 
-### D020: Keep Textract Analysis primary and the local layout-first path as a challenger
+### D020: Keep Textract Analysis primary and pause the local layout-first path
 
-Status: accepted 2026-07-24
+Status: amended and accepted 2026-07-25
 
 The one-page N3671L A/B comparison used two uploads with the identical SHA-256
 `a751b7f7ecb656eb6c8b513d3362b614185e2c10d808f4f4353323e4b84d9304`.
@@ -298,20 +298,38 @@ page regions directly, but it also produced a plausible-looking uncertain Jones
 date and concatenated several right-entry fields. Its recognition confidence is
 unavailable and must remain `null`.
 
-The local provider stays in the repository as a benchmark challenger. It is not
-yet promoted to an ECS runtime. Promotion requires a representative-page
-benchmark showing lower accepted-field error or reviewer effort without
-unsupported fields, plus a calibrated compute rate and an ECS-compatible
-dedicated OCR worker image. Do not add the local model stack to the ordinary API
-image.
+The 2026-07-25 post-refinement benchmark fixed the specific unsafe handwritten
+numeric candidate but regressed airframe completeness from four entries to
+three and increased the two-page airframe runtime to 107.227 seconds. The local
+provider stays in the repository only as historical benchmark code. Pause all
+layout-first GLM-OCR and Ollama work: do not run further experiments, harden the
+runtime, package a worker, build ECS infrastructure, or add the model stack to
+the ordinary API image. Reopening this work requires a new explicit decision
+based on a materially different model/runtime hypothesis.
 
-Future orchestration note: if measured scaling or operational requirements later
-justify replacing ECS/Fargate with EKS, evaluate a WebAssembly (WASM) runtime or
-WASM-based component split before carrying large OCR containers into Kubernetes,
-especially for the local OCR engine. Treat this as an investigation rather than
-a presumed migration: benchmark model/runtime compatibility, GPU and accelerator
-access, cold start, memory use, artifact/model delivery, sandbox boundaries,
-observability, and per-customer compute cost against a dedicated OCI container.
+No WebAssembly, Kubernetes, accelerator, model-distribution, or alternative
+local-runtime investigation is active for layout-first GLM-OCR.
+
+### D021: Activate conservative native-text routing with an early-adopter proof gate
+
+Status: accepted 2026-07-26
+
+Reliably native pages may bypass Textract under
+`active_controlled_fixture_gate_v1`. Scanned, handwritten, mixed, degraded,
+spread, image-dominant, or uncertain pages continue to Textract. The original
+PDF and canonical page render remain immutable evidence regardless of route.
+
+Activation was verified on the frozen 11-page scanned refinement partition and
+three controlled native/mixed fixtures: 14 passed out of 14, with two native
+bypasses and twelve Textract routes. This establishes engineering correctness,
+not production representativeness.
+
+When early-adopter PDFs are ingested, every initially native-routed page must
+receive the visual, structured, and evidence review defined in
+`.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`. At least 10 genuine native-routed
+early-adopter pages must pass with zero critical information loss before the
+route is described as production-proven. A critical omission or unsafe route
+pauses native bypass and restores Textract fallback while the gate is refined.
 
 All providers write usage to `OCRRun` with customer and aircraft attribution,
 billable pages, elapsed processing time, pricing unit, configured pricing rate,
@@ -341,6 +359,22 @@ older replay records remain stored for audit. The list response reports
 `pending_recomputation` when only stale results exist so an empty current result
 set cannot be mistaken for a completed no-match result. Recalculation remains a
 worker operation rather than a side effect of a read request.
+
+### D022: Do not promote Google Document AI after the frozen refinement evaluation
+
+Status: accepted 2026-07-26
+
+Google Enterprise Document OCR processed all 11 frozen refinement pages from
+canonical 300-DPI renders and passed the transport/evidence gate 11 out of 11.
+On the three pages with existing manually reviewed comparison ground truth, it
+passed 0 out of 3: it merged the two aircraft-page-2 entries, missed a
+structured tach value on aircraft page 4, and did not separate the two visible
+engine-page-3 regions. Textract remains the scanned-page provider.
+
+Keep the Google adapter evaluation-only and outside active provider selection.
+Reconsider it only for an approved unresolved-region comparison after
+early-adopter failures create a representative corpus. See
+`.ai/GOOGLE_DOCUMENT_AI_EVALUATION_2026-07-26.md`.
 
 ## Proposed Decisions To Resolve Soon
 
