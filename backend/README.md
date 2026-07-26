@@ -121,10 +121,119 @@ Optional local upload storage configuration:
 
 ```bash
 PAPRNAV_LOCAL_STORAGE_PATH=.data
+PAPRNAV_STORAGE_BACKEND=local
 PAPRNAV_MAX_UPLOAD_SIZE_BYTES=104857600
 ```
 
-Local uploaded files are stored under `.data/`, which is ignored by git. Production storage should use the selected S3-compatible storage target from `.ai/DECISIONS.md`.
+Local uploaded files are stored under `.data/`, which is ignored by git.
+
+Optional S3 upload storage configuration:
+
+```bash
+PAPRNAV_STORAGE_BACKEND=s3
+PAPRNAV_S3_UPLOAD_BUCKET=paprnav-pilot-artifacts-527257972989
+PAPRNAV_S3_UPLOAD_PREFIX=uploads
+AWS_REGION=us-east-1
+```
+
+S3-backed uploads are written with `AES256` server-side encryption and non-sensitive paprnav object metadata tags, including customer account, aircraft, upload, and billing stage tags. These object tags are for paprnav metadata/reconciliation; customer OCR chargeback is calculated from database OCR run records, not AWS Cost Explorer object-tag attribution. Local remains the default for development and CI.
+
+Optional OCR provider configuration:
+
+```bash
+PAPRNAV_OCR_PROVIDER=deterministic
+PAPRNAV_OCR_MAX_PDF_PAGES=3
+```
+
+PDF ingestion now inspects and fingerprints the source, renders immutable
+canonical pages, classifies layout/content, and applies provider-neutral
+routing. Pages that satisfy the conservative native-text gate bypass Textract;
+scanned, handwritten, mixed, degraded, image-dominant, spread, and uncertain
+pages continue to Textract. See
+`.ai/NATIVE_TEXT_ROUTING_ACTIVATION_2026-07-26.md`.
+
+The approved OCR-refinement path and provider decisions are closed in
+`.ai/OCR_PATH_CLOSURE_2026-07-26.md`. Early-adopter review and worker
+reliability are subsequent operational stages, not unfinished OCR engine work.
+
+The controlled native fixtures are not final production proof. When
+early-adopter PDFs are ingested, every initially native-routed page must be
+reviewed against its canonical render using
+`.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`.
+
+Google Document AI has an evaluation-only adapter in
+`app/services/google_document_ai.py`. Install
+`requirements-google-ocr.txt` in an isolated environment and use
+`app.scripts.run_google_document_ai_evaluation` only with the frozen
+OCR-refinement partition. The 2026-07-26 run passed technical mapping 11 out
+of 11 but passed the existing three-page quality gate 0 out of 3, so Google is
+not registered in active provider selection.
+
+Historical/paused: the local layout-first feasibility provider detects document regions with
+PP-DocLayout-V3 and recognizes each crop with GLM-OCR through local Ollama:
+
+```bash
+PAPRNAV_OCR_PROVIDER=layout_first_vlm
+PAPRNAV_LAYOUT_FIRST_LAYOUT_MODEL=PaddlePaddle/PP-DocLayoutV3_safetensors
+PAPRNAV_LAYOUT_FIRST_LAYOUT_DEVICE=cpu
+PAPRNAV_LAYOUT_FIRST_LAYOUT_THRESHOLD=0.3
+PAPRNAV_LAYOUT_FIRST_RECOGNITION_MODEL=glm-ocr:latest
+PAPRNAV_LAYOUT_FIRST_OLLAMA_BASE_URL=http://127.0.0.1:11434
+PAPRNAV_LAYOUT_FIRST_TIMEOUT_SECONDS=120
+PAPRNAV_LAYOUT_FIRST_PDF_DPI=200
+PAPRNAV_LAYOUT_FIRST_COMPUTE_RATE_USD_PER_HOUR=0
+```
+
+Install the optional model dependencies separately from the ordinary API image:
+
+```bash
+python -m venv .venv-glmocr
+.venv-glmocr/bin/pip install -r requirements-layout-ocr.txt
+ollama pull glm-ocr:latest
+```
+
+Run the guarded local one-page acceptance slice:
+
+```bash
+.venv-glmocr/bin/python -m app.scripts.run_layout_first_feasibility
+```
+
+This path keeps the test document local, records one billable work unit per
+processed page, preserves detector confidence separately from recognition
+confidence, and reports recognition confidence as unavailable when GLM-OCR
+does not provide a calibrated score. Local internal cost uses measured
+processing seconds and `PAPRNAV_LAYOUT_FIRST_COMPUTE_RATE_USD_PER_HOUR`; the
+default zero rate means cost is not yet calibrated while page units remain
+attributed to the customer account and aircraft. The local Ollama path is a
+feasibility runtime, not yet the ECS production topology.
+
+AWS Textract remains the AWS baseline provider:
+
+```bash
+PAPRNAV_OCR_PROVIDER=textract
+PAPRNAV_TEXTRACT_API_MODE=async
+PAPRNAV_TEXTRACT_ASYNC_POLL_SECONDS=2
+PAPRNAV_TEXTRACT_ASYNC_TIMEOUT_SECONDS=300
+PAPRNAV_TEXTRACT_ESTIMATED_UNIT_COST_USD_PER_PAGE=0
+```
+
+Mistral OCR is reserved for A/B testing unless explicitly promoted:
+
+```bash
+PAPRNAV_OCR_PROVIDER=mistral
+PAPRNAV_MISTRAL_API_KEY=
+PAPRNAV_MISTRAL_BASE_URL=https://api.mistral.ai/v1
+PAPRNAV_MISTRAL_OCR_MODEL=mistral-ocr-4-0
+PAPRNAV_MISTRAL_OCR_CHANNEL=direct_api
+PAPRNAV_MISTRAL_SAGEMAKER_ENDPOINT_NAME=
+PAPRNAV_MISTRAL_SAGEMAKER_REGION=
+PAPRNAV_MISTRAL_OCR_MODE=ab_test
+PAPRNAV_MISTRAL_OCR_MAX_PDF_PAGES=3
+```
+
+Local development and feasibility scripts load `backend/.env` automatically when present. Explicit process environment variables still take precedence. Tests set `PAPRNAV_DISABLE_DOTENV=1` so real local secrets are not read during automated test runs.
+
+When a third-party OCR provider such as Mistral is used, the upload/review flow should show a conditional third-party processing note. Customer OCR chargeback must be calculated from paprnav `OCRRun` records by provider/model, API mode, billable page count, billable account tag, billable aircraft tag, and configured unit price.
 
 ## Database Migrations
 

@@ -151,6 +151,10 @@ class ADMatchResultResponse(BaseModel):
 
 class ADMatchResultListResponse(BaseModel):
     matches: list[ADMatchResultResponse]
+    matcherStatus: str
+    algorithmName: str
+    algorithmVersion: str
+    reprocessingRequired: bool
 
 
 class ADMatchAdjudicationDecisionRequest(BaseModel):

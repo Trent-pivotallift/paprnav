@@ -19,17 +19,20 @@ services:
   api:
     build:
       context: .
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
     environment:
       DATABASE_URL: postgresql+psycopg://paprnav_user:paprnav_password@db:5432/paprnav_db
       PAPRNAV_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       PAPRNAV_ENV: local
       PAPRNAV_LOCAL_STORAGE_PATH: /app/.data
+      PAPRNAV_STORAGE_BACKEND: local
       PAPRNAV_MAX_UPLOAD_SIZE_BYTES: "104857600"
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +44,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://paprnav_user:paprnav_password@db:5432/paprnav_db
       PAPRNAV_ENV: local
+    volumes:
+      - .:/app
     depends_on:
       db:
         condition: service_healthy
@@ -54,6 +59,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://paprnav_user:paprnav_password@db:5432/paprnav_db
       PAPRNAV_ENV: local
+    volumes:
+      - .:/app
     depends_on:
       db:
         condition: service_healthy

@@ -478,7 +478,7 @@ export default function AircraftLogbookPage() {
                       <div className="flex flex-wrap gap-6 text-base text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-5 w-5" />
-                          <span>{entry.entryDate}</span>
+                          <span>{entry.entryDate ?? "Unknown date"}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <User className="h-5 w-5" />

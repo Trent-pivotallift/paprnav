@@ -3,7 +3,10 @@ from __future__ import annotations
 import re
 
 
-AD_NUMBER_PATTERN = re.compile(r"\b(?:AD\s*)?((?:\d{4}|\d{2})-\d{2}-\d{2})\b", re.IGNORECASE)
+AD_NUMBER_PATTERN = re.compile(
+    r"\b(?:AD\s*)?((?:\d{4}|\d{2})-\d{2}-\d{2})(?:R\d+)?\b",
+    re.IGNORECASE,
+)
 
 
 def normalize_ad_number(value: str | None) -> str | None:

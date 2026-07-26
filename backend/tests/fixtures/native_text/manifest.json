@@ -1,0 +1,74 @@
+{
+  "version": "native-routing-fixtures-v1",
+  "fixtures": {
+    "pure_native": {
+      "filename": "pure_native.pdf",
+      "sha256": "7c43329803d4dd4dae1746e62293acc40f942838bb09ba33f92886d40537383f",
+      "expectedRoute": "native_text",
+      "expectedText": [
+        "Paprnav Controlled Native Maintenance Entry",
+        "Date: 2024-05-10",
+        "Tach: 1250.4  Hobbs: 1402.8  Total Time: 5400.2",
+        "Completed annual inspection in accordance with 14 CFR Part 43 Appendix D.",
+        "Complied with AD 2020-01-02 by inspection; no defects noted.",
+        "Performer: Alex Mechanic A&P 2192007 IA",
+        "Aircraft returned to service."
+      ],
+      "expectedEntryCount": 1,
+      "expectedEntries": [
+        {
+          "entryDate": "2024-05-10",
+          "tachTime": 1250.4,
+          "hobbsTime": 1402.8,
+          "totalTime": 5400.2
+        }
+      ]
+    },
+    "native_table": {
+      "filename": "native_table.pdf",
+      "sha256": "7d9e5fddb2c28f4db1538bae21e5fd8c28554a412728ff1ad3fe107105d902b6",
+      "expectedRoute": "native_text",
+      "expectedText": [
+        "Date",
+        "Times",
+        "Maintenance and approval",
+        "2024-06-01",
+        "Tach 1260.5 / Total 5410.3",
+        "Oil and filter changed; screen inspected clean.",
+        "2024-07-15",
+        "Tach 1288.1 / Total 5437.9",
+        "100-hour inspection completed; returned to service.",
+        "Performer: Taylor Technician A&P 3344556 IA",
+        "AD 2021-03-04 explicitly reviewed; not applicable."
+      ],
+      "expectedEntryCount": 2,
+      "expectedEntries": [
+        {
+          "entryDate": "2024-06-01",
+          "tachTime": 1260.5,
+          "totalTime": 5410.3
+        },
+        {
+          "entryDate": "2024-07-15",
+          "tachTime": 1288.1,
+          "totalTime": 5437.9
+        }
+      ]
+    },
+    "mixed_native_image": {
+      "filename": "mixed_native_image.pdf",
+      "sha256": "5c416910ed704a7c51025476606b2b00ce38caab5836017070187e8ed4a4b9fe",
+      "expectedRoute": "aws_textract",
+      "expectedText": [
+        "Paprnav Controlled Mixed Maintenance Page",
+        "Date: 2024-08-20"
+      ],
+      "expectedEntryCount": 1,
+      "expectedEntries": [
+        {
+          "entryDate": "2024-08-20"
+        }
+      ]
+    }
+  }
+}

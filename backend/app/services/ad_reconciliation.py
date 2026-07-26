@@ -27,7 +27,7 @@ MANAGED_ISSUE_TYPES = {
     "target_applicability_stale",
     "supersession_correction_conflict",
 }
-DEGRADED_SOURCE_STATUSES = {"failed", "stale", "unavailable"}
+DEGRADED_SOURCE_STATUSES = {"partial", "failed", "stale", "unavailable"}
 DEGRADED_APPLICABILITY_STATUSES = {"failed", "stale", "unavailable"}
 
 
@@ -337,4 +337,3 @@ def resolve_inactive_issues(
         resolved += 1
     db.flush()
     return resolved
-

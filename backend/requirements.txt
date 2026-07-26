@@ -6,3 +6,7 @@ psycopg[binary]
 python-multipart
 pytest
 httpx
+boto3
+pypdf
+Pillow
+reportlab

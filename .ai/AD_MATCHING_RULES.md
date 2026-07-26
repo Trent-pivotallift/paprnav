@@ -1,6 +1,6 @@
 # paprnav AD-To-Logbook Matching Rules
 
-Last updated: 2026-06-18
+Last updated: 2026-07-25
 
 This document defines the first-pass matching rules for T051/T052. It is a product and implementation boundary, not an official compliance attestation.
 
@@ -73,7 +73,7 @@ These are product workflow statuses. They are not official legal compliance stat
 
 ## Evidence Rules
 
-Candidate logbook entries are cited when description or raw OCR text contains:
+Candidate logbook entries may be cited when description or raw OCR text contains:
 
 - the AD number
 - affected product words
@@ -81,6 +81,24 @@ Candidate logbook entries are cited when description or raw OCR text contains:
 - title terms from the AD source
 
 Each cited entry stores the matched text and rationale. OCR-created entries remain traceable through existing `LogbookEntryEvidence` records.
+
+`candidate_satisfied` requires all of:
+
+- an explicit AD-prefixed reference that normalizes to the directive number
+- a positive compliance or inspection disposition
+- a human-verified logbook entry
+
+Negated statements such as `not complied`, `did not comply`, `not inspected`, or
+`inspection not completed` are never positive compliance evidence. They remain
+reviewable evidence and route to adjudication. When one OCR line contains
+multiple clauses or AD citations, each AD's disposition is parsed from the
+line context owned by that citation and bounded by neighboring AD citations and
+sentence separators. Internal comma-set-off phrases remain in the claim, while
+decimal regulation references such as `43.13` are not sentence boundaries.
+Negative evidence is evaluated conservatively across the citation context.
+Positive compliance or inspection evidence must occur in the citation's
+immediate clause so an unrelated later action cannot promote the AD to
+`candidate_satisfied`.
 
 ## HITL Adjudication Rules
 
@@ -108,15 +126,24 @@ High-confidence candidates generally include an AD number citation. Lower-confid
 
 ## Current Implementation
 
-The first implementation is `deterministic_ad_logbook_matcher` version `0.1.0`.
+The current implementation is `deterministic_ad_logbook_matcher` version `0.3.0`.
 
 It handles:
 
-- one-time AD evidence
-- simple recurring AD evidence when the interval is structured
+- normalized two- and four-digit explicit AD references
+- verified one-time positive compliance evidence
+- negative-language guards that prevent false satisfaction
+- recurring AD evidence routed to adjudication until due-state calculation exists
 - unresolved cases routed to adjudication
 - evidence/rationale persistence
+- one structured-text parse per entry per aircraft matching run
 - idempotent replay by algorithm/version/input hash
+
+Older versioned replay records remain stored for audit, while the normal
+aircraft match-list API returns only results from the current algorithm version.
+Its `matcherStatus` distinguishes `current`, `pending_recomputation`, and
+`not_run`; matching remains an explicit worker operation rather than a side
+effect of a GET request.
 
 It does not yet handle:
 

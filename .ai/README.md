@@ -1,6 +1,6 @@
 # paprnav AI Project State
 
-Last updated: 2026-06-18
+Last updated: 2026-06-27
 
 This folder is the shared project memory for AI agents working on paprnav. Keep it concise, current, and useful for handoffs.
 
@@ -15,9 +15,13 @@ The current codebase is an early local MVP build:
 - Local development uses Docker Compose for the backend API and Postgres database.
 - Persisted SQLAlchemy/Alembic models exist for users, organizations, memberships, aircraft, assignments, logbook sections, logbook entries, auth sessions, and uploads.
 - Backend endpoint tests now cover auth, aircraft visibility, logbook entry, upload/download, and unauthorized access boundaries.
-- There is no AWS infrastructure code or GitHub Actions workflow in this checkout.
-- Deterministic local OCR ingestion, page verification, OCR correction, and structured logbook extraction are implemented for the local MVP slice.
-- Federal Register AD discovery, AD persistence, deterministic structured extraction, AD extraction review, first-pass AD-to-logbook matching, HITL match adjudication, compliance worklist, and human product observability are implemented locally.
+- AWS pilot infrastructure now exists under `infra/terraform` and has been applied for the foundation slice: S3 artifacts/state buckets, ECR repos, ECS cluster, CloudWatch log groups, and AWS Budget. Terraform state is remote in S3. GitHub Actions workflow remains blocked by credential scope.
+- The OCR path is closed for the approved refinement scope: immutable PDF/page
+  evidence, conservative native-text bypass, Textract fallback, deterministic
+  validation, structured extraction, and evidence-backed review are
+  implemented. See `.ai/OCR_PATH_CLOSURE_2026-07-26.md`.
+- The AD pipeline is now DRS-first for the primary corpus/applicability path, with Federal Register used for comparison, enrichment, publication metadata, and delta monitoring.
+- DRS bulk fixture import, Federal Register enrichment/matching, AD persistence, deterministic structured extraction, AD extraction review, component-aware AD-to-logbook matching, HITL match adjudication, compliance worklist, reconciliation, and human product observability are implemented locally.
 
 ## Important Paths
 
@@ -29,13 +33,20 @@ The current codebase is an early local MVP build:
 - AI project memory: `.ai`
 - MVP definition: `.ai/MVP_COMPLETION.md`
 - AD ingestion review: `.ai/AD_INGESTION_REVIEW.md`
+- Local MVP demo path: `.ai/LOCAL_MVP_DEMO.md`
 - Backend/OCR data model plan: `.ai/DATA_MODEL.md`
 - MVP AD ingestion spec: `.ai/AD_INGESTION_MVP_SPEC.md`
 - AD collection handoff findings: `.ai/AD_COLLECTION_HANDOFF.md`
 - AD matching rules: `.ai/AD_MATCHING_RULES.md`
 - Interim API contract: `.ai/API_CONTRACT.md`
 - Environment variable guide: `.ai/ENVIRONMENT.md`
+- Infrastructure and CI unblock plan: `.ai/INFRASTRUCTURE.md`
+- AWS pilot Terraform planning loop: `.ai/AWS_PILOT_TERRAFORM_PLAN.md`
+- AWS CLI profile names and deploy role: `.ai/AWS_PROFILES.md`
+- Current AWS deployment status: `.ai/AWS_DEPLOYMENT_STATUS.md`
 - External provider references: `.ai/PROVIDER_REFERENCES.md`
+- Pilot onboarding GUI: `/logbook/onboarding`
+- Claude reviewer workflow: `.ai/CLAUDE_REVIEWER.md`
 
 ## Useful Local Commands
 
@@ -63,10 +74,13 @@ docker compose exec -T api python -m app.workers.ad_extraction
 docker compose exec -T api python -m app.workers.ad_matching
 ```
 
+AD reconciliation is currently implemented as `backend/app/services/ad_reconciliation.py` and exercised by `backend/tests/test_ad_reconciliation.py`; there is not yet a dedicated CLI worker module for it.
+
 ## Current Repo Notes
 
 - The Git repository is at the project root.
-- Latest known pushed checkpoint before this task wave: `b37b285 Build local MVP backend integration`.
+- Latest known pushed checkpoint before the 2026-06-27 roadmap reconciliation: `9640b5f Add AD reconciliation worker`.
+- `.ai/GOAL_TASKS.md` was reconciled on 2026-06-27 to mark stale early ready tasks as completed or superseded and to refresh blocked CI/infrastructure/release-audit tasks.
 - Avoid treating `.next` or `node_modules` as source of truth.
 
 ## How Agents Should Work Here

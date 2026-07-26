@@ -1,6 +1,6 @@
 # paprnav Provider References
 
-Last updated: 2026-06-21
+Last updated: 2026-07-24
 
 Use this file whenever implementation depends on an external provider, API, SDK, CLI, file format, or output shape. Check current official documentation first, then record the mapping here before coding or marking the task complete.
 
@@ -14,15 +14,87 @@ Do not design provider contracts from trained memory. For each provider-backed t
 - Map provider-specific output to paprnav's provider-neutral schema.
 - Note confidence scales, geometry units, pagination, async behavior, IDs, raw artifacts, and replay/audit implications.
 
+## AWS Cost Allocation And S3 Object Tags
+
+- Status: pilot billing/accounting design input
+- Date checked: 2026-07-08
+- References:
+  - https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-tagging.html
+  - https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html
+
+Verified fields and behaviors:
+
+- S3 object tags are key/value pairs used to categorize storage.
+- S3 objects can have up to 10 tags, with unique tag keys.
+- Tags are case-sensitive.
+- S3 supports adding tags when creating objects through PUT Object or multipart upload tagging headers, or adding/replacing them later through object tagging APIs.
+- AWS Billing cost allocation tags apply to taggable AWS resources after activation. S3 object tags are object metadata and should not be treated as a per-customer AWS Cost Explorer dimension.
+- AWS recommends not putting sensitive information in tags.
+
+paprnav mapping notes:
+
+- Store non-sensitive internal tags only: customer account tag, aircraft tag, upload tag, billing stage, project, environment, and app.
+- Do not put customer names, emails, N-numbers, serial numbers, or raw logbook content in AWS tags.
+- Upload rows persist `cost_allocation_tags` and `initial_ocr_billable_to_tag`.
+- OCR runs persist `billable_account_tag`, `billable_aircraft_tag`, `billable_page_count`, and `cost_allocation_tags`.
+- When S3-backed uploads are implemented, apply the persisted upload tag set as S3 object tags for paprnav reconciliation and object-level metadata.
+- Textract OCR requests are not tagged per customer. paprnav must calculate chargeable OCR by persisted OCR run page counts and billable account/aircraft tags.
+
 ## OCR Providers
+
+### GLM-OCR Layout-First Pipeline
+
+- Status: paused historical feasibility provider; no active runtime,
+  hardening, packaging, deployment, or benchmark work
+- Date checked: 2026-07-24
+- References:
+  - https://github.com/zai-org/GLM-OCR
+  - https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md
+  - https://huggingface.co/PaddlePaddle/PP-DocLayoutV3_safetensors
+  - https://huggingface.co/zai-org/GLM-OCR
+- Versions used for the first slice:
+  - `glmocr==0.1.5`
+  - `PaddlePaddle/PP-DocLayoutV3_safetensors`
+  - PP-DocLayout-V3 snapshot `97d101e6db2642e162a1d05392d1b0231c91033e`
+  - Ollama model `glm-ocr:latest`
+  - Ollama model layer `sha256:65493e1f85b9ea4ba3ed793515fde13cbdbea7d74ad2c662b566b146eab0081e`
+
+Verified fields and behaviors:
+
+- The official GLM-OCR project combines PP-DocLayout-V3 region detection with parallel crop recognition by GLM-OCR.
+- Layout detector output includes semantic labels, detector score, normalized `bbox_2d` coordinates on a `0-1000` scale, polygon coordinates, task type, and reading index.
+- GLM-OCR supports a local Ollama `/api/generate` recognition channel.
+- The local Ollama response provides recognized content and runtime/token metadata but does not provide a calibrated recognition-confidence value.
+- The GLM-OCR SDK code is Apache-2.0, the GLM-OCR model is MIT, and the PP-DocLayout-V3 component is Apache-2.0 according to the official project.
+
+paprnav mapping notes:
+
+- Historical selection path: `PAPRNAV_OCR_PROVIDER=layout_first_vlm`. Do not
+  select it without a new explicit decision reopening the provider evaluation.
+- Convert detector boxes and polygons from `0-1000` coordinates to paprnav ratio geometry.
+- Store detector confidence only in layout metadata. Store recognition confidence as `null`; never substitute the detector score as text confidence.
+- Store each recognized crop as a `REGION_*` OCR span so the complete entry region remains available for evidence highlighting.
+- Convert table HTML to plain text through `HTMLParser` before domain extraction.
+- Preserve the region label, layout confidence, recognition model, content hash, recognition latency, and model runtime metadata in span relationships.
+- Count every processed page as a billable page so local compute work can still be allocated to the customer account and aircraft through the existing `OCRRun` records.
+- Keep the layout model and GLM-OCR dependencies isolated in
+  `requirements-layout-ocr.txt`; do not add them to any active API or worker
+  image.
+- The initial private N3671L run detected exactly two table regions, corresponding to the two visible logbook entries. The metered rerun completed in `22.302147` seconds on a 16 GB Apple Silicon Mac.
+- The post-refinement result fixed one unsafe numeric candidate but regressed
+  airframe completeness and latency. Textract Analysis remains primary and the
+  local provider is paused.
+- Local internal cost uses processing seconds and a configured compute-hour rate. The zero feasibility rate means uncalibrated cost, not free compute.
 
 ### AWS Textract
 
 - Status: target production OCR provider
-- Date checked: 2026-06-18
+- Date checked: 2026-07-07
 - References:
   - https://docs.aws.amazon.com/textract/latest/APIReference/API_Block.html
   - https://docs.aws.amazon.com/textract/latest/APIReference/API_Geometry.html
+  - https://docs.aws.amazon.com/textract/latest/APIReference/API_DetectDocumentText.html
+  - https://docs.aws.amazon.com/textract/latest/APIReference/API_StartDocumentTextDetection.html
 
 Verified fields and behaviors:
 
@@ -34,14 +106,97 @@ Verified fields and behaviors:
 - `Page` identifies the detected page; values greater than 1 are returned for multipage PDF/TIFF documents.
 - `Relationships` connect blocks, such as line-to-word child relationships.
 - Provider block IDs are operation-local, not durable global IDs.
+- `DetectDocumentText` returns detected text as `Block` objects and is synchronous.
+- `DetectDocumentText` accepts document bytes or S3 object references and returns `DocumentMetadata.Pages`.
+- Synchronous operations have a smaller document-size limit than asynchronous operations; current docs list 10 MB for synchronous and 500 MB for asynchronous PDF processing.
+- `StartDocumentTextDetection` starts asynchronous text detection for JPEG, PNG, TIFF, and PDF documents stored in S3 and returns a `JobId`.
+- `StartDocumentTextDetection` supports idempotency through `ClientRequestToken`, optional `OutputConfig`, optional KMS key, and optional SNS notification channel.
 
 paprnav mapping notes:
 
+- The provider-neutral router may select `pdf_native_text` only when every
+  criterion in `.ai/NATIVE_TEXT_ROUTING_ACTIVATION_2026-07-26.md` passes.
+  Native-routed pages bypass Textract; scanned, handwritten, mixed, degraded,
+  image-dominant, spread, or uncertain pages remain Textract-routed.
+- Controlled fixtures establish engineering activation only. Initially, every
+  native-routed early-adopter page requires comparison with its canonical
+  render under `.ai/EARLY_ADOPTER_NATIVE_TEXT_REVIEW.md`.
 - Store confidence on a `0-100` scale to avoid lossy Textract conversion.
 - Store bounding boxes with explicit units; Textract boxes should map to ratio units.
 - Preserve optional polygon and rotation data when present.
 - Preserve provider block IDs and relationships for audit/replay, but do not use them as stable domain IDs.
 - Fixture OCR output should include page, line, and word examples with mixed confidence values.
+- Current implementation adds an env-gated `aws_textract` provider behind the existing OCR provider abstraction. It uses `DetectDocumentText` for first-pass synchronous OCR and maps `LINE`/`WORD` Blocks into `OCRTextSpan` rows.
+- Local MVP and CI still default to deterministic OCR. `PAPRNAV_OCR_PROVIDER=textract` is required to call Textract.
+- S3-backed upload storage is env-gated with `PAPRNAV_STORAGE_BACKEND=s3`; when enabled, upload objects are written with server-side encryption and the persisted upload cost tag set. Textract S3 references use `PAPRNAV_TEXTRACT_S3_BUCKET` when set, otherwise `PAPRNAV_S3_UPLOAD_BUCKET`.
+- Production PDF-heavy ingestion should move to S3-backed asynchronous `StartDocumentTextDetection` before broad volunteer ingestion, because multipage PDFs and larger uploads need the async path.
+
+Future Textract adapter evaluation:
+
+- Textract adapters currently customize the Queries feature; they should not be
+  treated as a general OCR or handwriting model upgrade.
+- Defer training until approved early-adopter data reveals recurring logbook
+  formats and repeated labeled failures for stable questions such as tach,
+  total time, AD reference, performer, or approval fields.
+- Maintain disjoint training and test documents, freeze adapter/query versions,
+  and compare adapted versus unadapted Textract on prior regression pages.
+- Do not consume the frozen full-ingestion or ingestion/AD holdout partitions
+  for adapter training.
+- Promotion requires measurable accepted-field or reviewer-effort improvement
+  with no loss of null preservation, evidence coverage, or route safety.
+
+### Google Enterprise Document OCR
+
+- Status: evaluated through the US Google Cloud API; not active routing
+- Date checked: 2026-07-26
+- Evaluation: `.ai/GOOGLE_DOCUMENT_AI_EVALUATION_2026-07-26.md`
+- Paprnav sends individual canonical 300-DPI PNG pages, not entire PDFs.
+- The adapter maps lines, words, confidence, polygons, image-quality
+  diagnostics, processor metadata, request labels, latency, pages, and
+  estimated cost into provider-neutral results.
+- Technical result: 11 passed out of 11.
+- Frozen three-page quality result: 0 passed out of 3; do not promote.
+- The adapter is intentionally absent from `get_ocr_provider()` and active
+  selective routing.
+- Local evaluation used Application Default Credentials. A future AWS
+  deployment would require workload identity federation, cross-cloud privacy
+  approval, and billing reconciliation rather than a committed JSON key.
+
+### Mistral OCR
+
+- Status: third-party A/B candidate; not the default provider
+- Date checked: 2026-07-19
+- Reference:
+  - https://mistral.ai/fr/news/ocr-4/
+  - https://docs.mistral.ai/models/model-cards/ocr-4-0
+  - https://docs.mistral.ai/api/endpoint/ocr
+  - https://docs.mistral.ai/studio-api/regional-inference
+- Target env vars:
+  - `PAPRNAV_MISTRAL_API_KEY`
+  - `PAPRNAV_MISTRAL_BASE_URL`
+  - `PAPRNAV_MISTRAL_OCR_MODEL`
+  - `PAPRNAV_MISTRAL_OCR_CHANNEL`
+  - `PAPRNAV_MISTRAL_SAGEMAKER_ENDPOINT_NAME`
+  - `PAPRNAV_MISTRAL_SAGEMAKER_REGION`
+  - `PAPRNAV_MISTRAL_OCR_MODE`
+  - `PAPRNAV_MISTRAL_OCR_MAX_PDF_PAGES`
+
+paprnav mapping notes:
+
+- Pin the A/B target to `PAPRNAV_MISTRAL_OCR_MODEL=mistral-ocr-4-0`, based on Mistral's OCR 4 release page.
+- Mistral must be introduced behind the existing OCR provider abstraction as `PAPRNAV_OCR_PROVIDER=mistral`.
+- Direct Mistral OCR uses the OCR endpoint `POST /v1/ocr`; current docs support `pages`, `include_blocks`, `confidence_scores_granularity`, `table_format`, and `usage_info.pages_processed`.
+- Use base64 `data:application/pdf;base64,...` document URLs for the internal A/B slice instead of public S3 URLs.
+- Direct Mistral API and SageMaker OCR-4 access are different deployment channels. Do not treat them as interchangeable in cost, IAM, logging, data-processing, or network-risk notes.
+- Current regional inference docs list the EU endpoint as available and the US endpoint as coming soon. Do not treat direct API calls as US-resident unless a US regional/private endpoint is explicitly configured and verified.
+- If the SageMaker channel is selected, use `PAPRNAV_MISTRAL_OCR_CHANNEL=sagemaker` and track endpoint/model package identifiers separately from `PAPRNAV_MISTRAL_API_KEY`.
+- SageMaker invocation should use AWS IAM and `sagemaker-runtime:InvokeEndpoint` permissions scoped to the OCR-4 endpoint. Endpoint hourly/runtime cost must be tracked separately from direct API per-page pricing.
+- Keep default local/CI OCR deterministic and keep AWS Textract available as the AWS baseline.
+- Use Mistral first only for the N3671L A/B feasibility run, not customer-default processing.
+- When Mistral is used, the upload/review flow must make a conditional third-party processing note visible to the user or reviewer.
+- Persist provider name, provider version/model, API mode/channel, billable page count, billable account tag, billable aircraft tag, usage info, and estimated provider unit cost for chargeback.
+- Customer OCR chargeback must come from paprnav `OCRRun` records, not provider dashboard totals.
+- Promote Mistral to replacement or augmentation only after comparing entry count, field extraction quality, dash/blank preservation, evidence geometry, reviewer effort, and per-page cost against Textract on the same documents.
 
 ### Tesseract
 
@@ -238,19 +393,78 @@ paprnav mapping notes:
 - Internal deterministic extraction is intentionally conservative and review-first.
 - Future provider-backed extraction must check current provider docs before implementation and map request/response shape, model/version, structured output behavior, confidence/uncertainty, citations, retries, and idempotency here.
 
+### OpenAI Responses API Structured Outputs
+
+- Status: optional provider-backed AD extraction path for T067, gated by configuration and retaining deterministic fallback
+- Date checked: 2026-06-27
+- References:
+  - https://developers.openai.com/api/docs/guides/structured-outputs
+  - https://developers.openai.com/api/reference/resources/responses/methods/create
+
+Verified fields and behaviors:
+
+- Responses API creation accepts a `text.format` object that controls model output format.
+- `{"type": "json_schema"}` enables Structured Outputs and constrains the model to match the supplied JSON schema.
+- JSON Schema response format includes `type=json_schema`, `name`, `schema`, optional `description`, and optional `strict`.
+- `strict=true` enables exact schema adherence with the supported JSON Schema subset.
+- Responses may expose model text through an `output_text` convenience field or through message `output` content items.
+
+paprnav mapping notes:
+
+- The OpenAI provider request uses `model`, structured system/user `input`, and `text.format` with `type=json_schema` and `strict=true`.
+- Preserve response id, model, usage, provider request shape, schema version, prompt hash, and raw response metadata in `ADExtraction.raw_response` for audit/replay.
+- Provider version encodes model and prompt/ruleset hash so the existing idempotency key covers input content hash, model, prompt/ruleset hash, and schema version.
+- The provider returns a model-reported `confidence` on a `0.0-1.0` scale; paprnav treats this as review-routing metadata, not a calibrated probability.
+- Missing applicability/compliance details, provider uncertainty, low confidence, or disagreement with deterministic safety-critical fields must route to `ADExtractionReview` instead of silently changing authoritative applicability.
+- If the provider is disabled, unavailable, returns invalid structured output, or raises an error, extraction falls back to the deterministic provider.
+
 ## GitHub Actions
 
 - Status: no workflow committed
-- Date checked: 2026-06-21
-- References: TBD if workflow syntax or permissions become nontrivial
+- Date checked: 2026-06-27
+- References:
+  - https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+  - https://docs.github.com/en/actions/tutorials/authenticate-with-github_token
+  - https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws
 
 Notes:
 
 - A CI workflow draft was intentionally not retained because the available GitHub OAuth token lacked `workflow` scope to push `.github/workflows/ci.yml`.
-- Reintroduce CI only after checking current GitHub Actions docs and using credentials with workflow scope.
+- Reintroduce CI only after using credentials with workflow scope.
+- Workflow files must be YAML files under `.github/workflows`.
+- The first CI workflow should use least-privilege `permissions: contents: read`.
+- GitHub recommends granting `GITHUB_TOKEN` the least required permissions.
+- AWS deployment workflows, once added, should use OIDC rather than long-lived AWS keys; GitHub's AWS OIDC guidance uses `https://token.actions.githubusercontent.com` as the provider URL, `sts.amazonaws.com` as the audience for the official AWS credentials action, and a trust policy constrained by the `sub` condition.
 
 Required before adding deployment or privileged workflow steps:
 
-- Current GitHub Actions workflow syntax docs.
-- Current permissions and OIDC-to-AWS docs if AWS deploy is added.
+- Current AWS service docs for the selected runtime, database, storage, secrets, logging, and IaC tooling.
+- Repository credential with workflow scope to create/update `.github/workflows/ci.yml`.
 - Cache behavior and security guidance for pull requests.
+
+## Terraform And AWS Pilot IAM
+
+- Status: planning reference for controlled AWS volunteer pilot; no Terraform files committed yet
+- Date checked: 2026-06-28
+- References:
+  - https://developer.hashicorp.com/terraform/language/backend/s3
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html
+  - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
+
+Verified fields and behaviors:
+
+- Terraform S3 backend stores state in an S3 object at the configured bucket/key.
+- Terraform recommends enabling S3 bucket versioning for state recovery.
+- Current Terraform S3 backend supports S3 lockfiles through `use_lockfile`; DynamoDB-based locking is documented as deprecated for future removal.
+- Terraform backend credentials and sensitive data should not be hardcoded into backend configuration or plan files.
+- AWS IAM best practices include human federation with temporary credentials, workload IAM roles, MFA, least privilege, Access Analyzer, regular credential cleanup, and policy conditions.
+- ECS task execution role is separate from task IAM role. The execution role lets ECS/Fargate pull images, publish logs, and resolve referenced secrets; application AWS API permissions belong in task roles.
+
+paprnav mapping notes:
+
+- Do not use `marketer-pipeline-agent` for paprnav Terraform work.
+- Use a paprnav-specific bootstrap identity only long enough to establish state storage and deploy/runtime roles.
+- Use a `paprnav-terraform-deploy` role for Terraform plan and later explicitly approved apply.
+- Use separate ECS runtime roles: execution, backend task, worker task, and frontend task.
+- Scope pilot resources with `Project=paprnav`, `Environment=pilot`, and `us-east-1` account/region guardrails.
+- Store Terraform state in an encrypted, versioned S3 bucket with S3 lockfile support.

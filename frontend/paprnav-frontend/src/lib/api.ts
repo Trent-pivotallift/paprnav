@@ -36,6 +36,8 @@ export interface Aircraft {
   propellerMake: string | null;
   propellerModel: string | null;
   propellerSerialNumber: string | null;
+  customerAccountTag: string | null;
+  aircraftCostTag: string | null;
   installedComponents: InstalledComponent[];
   lastLogEntryDate: string | null;
   complianceStatus: string;
@@ -54,6 +56,21 @@ export interface InstalledComponent {
 
 export interface AircraftListResponse {
   aircraft: Aircraft[];
+}
+
+export interface AircraftCreateRequest {
+  nNumber: string;
+  make: string;
+  model: string;
+  serialNumber?: string | null;
+  year?: number | null;
+  airframeSerialNumber?: string | null;
+  engineMake?: string | null;
+  engineModel?: string | null;
+  engineSerialNumber?: string | null;
+  propellerMake?: string | null;
+  propellerModel?: string | null;
+  propellerSerialNumber?: string | null;
 }
 
 export interface AircraftAssignment {
@@ -76,7 +93,7 @@ export interface LogbookEntry {
   id: string;
   aircraftId: string;
   section: LogbookSection;
-  entryDate: string;
+  entryDate: string | null;
   description: string;
   performerName: string | null;
   performerCredential: string | null;
@@ -93,7 +110,7 @@ export interface LogbookEntryListResponse {
 
 export interface LogbookEntryUpdateRequest {
   section?: LogbookSection;
-  entryDate?: string;
+  entryDate?: string | null;
   description?: string;
   performerName?: string | null;
   performerCredential?: string | null;
@@ -101,6 +118,7 @@ export interface LogbookEntryUpdateRequest {
   hobbsTime?: number | null;
   totalTime?: number | null;
   reviewStatus?: "draft" | "needs_review" | "verified";
+  reviewElapsedSeconds?: number;
 }
 
 export interface LogbookEntryCreateRequest {
@@ -123,6 +141,9 @@ export interface Upload {
   sha256: string;
   status: string;
   downloadUrl: string;
+  pilotConsentAccepted: boolean;
+  initialOcrBillableToTag: string | null;
+  costAllocationTags: Record<string, string> | null;
 }
 
 export interface UploadCreateResponse {
@@ -133,6 +154,7 @@ export interface UploadCreateResponse {
 export interface IngestionJobSummary {
   id: string;
   uploadId: string;
+  uploadDownloadUrl?: string;
   aircraftId: string;
   status: string;
   pageExtractionStatus: string;
@@ -178,10 +200,32 @@ export interface IngestionPage {
   pageLabel: string | null;
   imageStorageBackend: string | null;
   imageStorageKey: string | null;
+  imageDownloadUrl: string | null;
   widthPx: number | null;
   heightPx: number | null;
   rotationDegrees: number | null;
   extractionConfidence: number | null;
+  inspectionStatus?: string | null;
+  sourcePageFingerprint?: string | null;
+  canonicalImageSha256?: string | null;
+  renderProfile?: string | null;
+  renderMetadata?: Record<string, unknown> | null;
+  pageClassification?: Record<string, unknown> | null;
+  nativeTextEvaluation?: Record<string, unknown> | null;
+  extractionPlan?: Record<string, unknown> | null;
+  stageResults?: Record<string, unknown> | null;
+  logicalRegions?: Array<{
+    id: string;
+    regionKey: string;
+    regionType: string;
+    bboxLeft: number;
+    bboxTop: number;
+    bboxWidth: number;
+    bboxHeight: number;
+    bboxUnits: string;
+    readingOrder: number;
+    classification: Record<string, unknown> | null;
+  }>;
   spans: OCRTextSpan[];
 }
 
@@ -196,18 +240,61 @@ export interface IngestionJobDetailResponse {
   job: IngestionJobSummary;
   pages: IngestionPage[];
   latestVerification: PageVerification | null;
+  extractedEntries: ExtractedLogbookEntryCandidate[];
+}
+
+export interface LogbookEntryEvidence {
+  id: string;
+  fieldName: string | null;
+  evidenceType: string;
+  confidence: number | null;
+  span: OCRTextSpan | null;
+  reviewMetadata?: Record<string, unknown> | null;
+}
+
+export interface CandidateRegion {
+  pageId: string;
+  bboxLeft: number;
+  bboxTop: number;
+  bboxWidth: number;
+  bboxHeight: number;
+  bboxUnits: "ratio";
+}
+
+export interface ExtractedLogbookEntryCandidate {
+  id: string;
+  entryDate: string | null;
+  section: LogbookSection;
+  description: string;
+  performerName: string | null;
+  performerCredential: string | null;
+  tachTime: number | null;
+  hobbsTime: number | null;
+  totalTime: number | null;
+  reviewStatus: string;
+  validationStatus?: string | null;
+  validationResults?: Record<string, unknown> | null;
+  region: CandidateRegion | null;
+  evidence: LogbookEntryEvidence[];
+}
+
+export interface IngestionReviewMetrics {
+  ingestionJobId: string;
+  extractedEntryCount: number;
+  reviewedEntryCount: number;
+  verifiedEntryCount: number;
+  verificationRate: number;
+  medianReviewSeconds: number | null;
+  meanEditedFieldCount: number | null;
+  acceptedFieldAccuracy: number | null;
+  acceptedFieldCount: number;
+  decidedFieldCount: number;
+  unresolvedFieldCount: number;
+  nullFieldCount: number;
 }
 
 export interface ExtractLogbookEntriesResponse {
-  entries: Array<{
-    id: string;
-    entryDate: string;
-    section: LogbookSection;
-    description: string;
-    performerName: string | null;
-    performerCredential: string | null;
-    reviewStatus: string;
-  }>;
+  entries: ExtractedLogbookEntryCandidate[];
 }
 
 export interface AirworthinessDirective {
@@ -377,6 +464,10 @@ export interface ObservabilityListResponse {
 
 export interface ADMatchResultListResponse {
   matches: ADMatchResult[];
+  matcherStatus: "current" | "pending_recomputation" | "not_run";
+  algorithmName: string;
+  algorithmVersion: string;
+  reprocessingRequired: boolean;
 }
 
 interface ApiErrorPayload {
@@ -454,6 +545,13 @@ export function listAircraft() {
   return apiFetch<AircraftListResponse>("/api/v1/aircraft");
 }
 
+export function createAircraft(payload: AircraftCreateRequest) {
+  return apiFetch<Aircraft>("/api/v1/aircraft", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listAircraftAssignments(aircraftId: string) {
   return apiFetch<AircraftAssignmentListResponse>(`/api/v1/aircraft/${aircraftId}/assignments`);
 }
@@ -488,11 +586,19 @@ export function updateLogbookEntry(aircraftId: string, entryId: string, payload:
   });
 }
 
-export function uploadLogbookFile(aircraftId: string, file: File, section?: LogbookSection) {
+export function uploadLogbookFile(
+  aircraftId: string,
+  file: File,
+  section?: LogbookSection,
+  options: { pilotConsentAccepted?: boolean } = {},
+) {
   const formData = new FormData();
   formData.append("file", file);
   if (section) {
     formData.append("section", section);
+  }
+  if (options.pilotConsentAccepted !== undefined) {
+    formData.append("pilotConsentAccepted", String(options.pilotConsentAccepted));
   }
 
   return apiFetch<UploadCreateResponse>(`/api/v1/aircraft/${aircraftId}/uploads`, {
@@ -503,6 +609,10 @@ export function uploadLogbookFile(aircraftId: string, file: File, section?: Logb
 
 export function getIngestionJob(jobId: string) {
   return apiFetch<IngestionJobDetailResponse>(`/api/v1/ingestion-jobs/${jobId}`);
+}
+
+export function getIngestionReviewMetrics(jobId: string) {
+  return apiFetch<IngestionReviewMetrics>(`/api/v1/ingestion-jobs/${jobId}/review-metrics`);
 }
 
 export function verifyIngestionPages(

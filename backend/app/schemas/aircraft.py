@@ -64,6 +64,8 @@ class AircraftResponse(BaseModel):
     propellerMake: Optional[str]
     propellerModel: Optional[str]
     propellerSerialNumber: Optional[str]
+    customerAccountTag: Optional[str]
+    aircraftCostTag: Optional[str]
     installedComponents: list[InstalledComponentResponse] = []
     lastLogEntryDate: Optional[date]
     complianceStatus: str

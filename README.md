@@ -52,4 +52,8 @@ docker compose run --rm seed
 docker compose exec -T api python -m pytest
 ```
 
-The backend exposes local MVP auth, aircraft, assignment, logbook entry, upload, download, deterministic OCR ingestion, page verification, OCR correction, and structured OCR-to-logbook extraction endpoints. AD ingestion is not implemented yet.
+The backend exposes local MVP auth, aircraft, assignment, logbook entry,
+upload/download, provider-neutral PDF inspection and OCR routing, page
+verification, OCR correction, structured extraction, and evidence-backed
+review endpoints. The approved OCR-refinement path is complete; see
+`.ai/OCR_PATH_CLOSURE_2026-07-26.md`.

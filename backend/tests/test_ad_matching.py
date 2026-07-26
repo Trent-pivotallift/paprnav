@@ -19,14 +19,44 @@ from app.models.core import (
 )
 from app.services.ad_discovery import hash_json
 from app.services.ad_applicability import populate_applicability_from_extraction
+from app.services import ad_matching
 from app.services.ad_matching import match_aircraft_ads
 from tests.conftest import login
+
+
+def test_match_status_distinguishes_not_run_from_current_empty(
+    client: TestClient,
+    db_session: Session,
+    demo_data: dict[str, object],
+) -> None:
+    aircraft = demo_data["aircraft"]
+    login(client, "owner.test@paprnav.local")
+
+    not_run_response = client.get(
+        f"/api/v1/ads/aircraft/{aircraft.id}/matches"
+    )
+    assert not_run_response.status_code == 200
+    assert not_run_response.json()["matches"] == []
+    assert not_run_response.json()["matcherStatus"] == "not_run"
+    assert not_run_response.json()["reprocessingRequired"] is False
+
+    stats = match_aircraft_ads(db_session, aircraft.id)
+
+    assert stats["directives_seen"] == 0
+    current_response = client.get(
+        f"/api/v1/ads/aircraft/{aircraft.id}/matches"
+    )
+    assert current_response.status_code == 200
+    assert current_response.json()["matches"] == []
+    assert current_response.json()["matcherStatus"] == "current"
+    assert current_response.json()["reprocessingRequired"] is False
 
 
 def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     client: TestClient,
     db_session: Session,
     demo_data: dict[str, object],
+    monkeypatch,
 ) -> None:
     aircraft = demo_data["aircraft"]
     owner_user = demo_data["owner_user"]
@@ -91,11 +121,33 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     )
     db_session.commit()
 
+    extraction_calls = 0
+    original_extractor = ad_matching.extract_structured_maintenance_data
+
+    def recording_extractor(lines: list[str]) -> dict:
+        nonlocal extraction_calls
+        extraction_calls += 1
+        return original_extractor(lines)
+
+    monkeypatch.setattr(
+        ad_matching,
+        "extract_structured_maintenance_data",
+        recording_extractor,
+    )
     stats = match_aircraft_ads(db_session, aircraft.id)
 
     assert stats["directives_seen"] == 3
-    assert stats["matched"] == 2
-    assert stats["unresolved"] == 1
+    assert stats["matched"] == 1
+    assert stats["unresolved"] == 2
+    entry_count = len(
+        db_session.scalars(
+            select(LogbookEntry).where(
+                LogbookEntry.aircraft_id == aircraft.id,
+                LogbookEntry.entry_date.is_not(None),
+            )
+        ).all()
+    )
+    assert extraction_calls == entry_count
     one_time_match = db_session.scalar(
         select(ADMatchResult).where(ADMatchResult.status == "candidate_satisfied", ADMatchResult.match_type == "one_time")
     )
@@ -105,15 +157,37 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
 
     recurring_match = db_session.scalar(select(ADMatchResult).where(ADMatchResult.match_type == "simple_recurring"))
     assert recurring_match is not None
-    assert recurring_match.status == "candidate_satisfied"
+    assert recurring_match.status == "needs_adjudication"
+    assert "recurring_due_status_unknown" in recurring_match.unresolved_reasons
 
     adjudication_count = len(db_session.scalars(select(ADMatchAdjudication)).all())
-    assert adjudication_count == 1
+    assert adjudication_count == 2
+
+    db_session.add(
+        ADMatchResult(
+            aircraft_id=one_time_match.aircraft_id,
+            directive_id=one_time_match.directive_id,
+            extraction_id=one_time_match.extraction_id,
+            status="candidate_satisfied",
+            match_type="one_time",
+            confidence=0.99,
+            rationale="Stale matcher result that must not be surfaced.",
+            unresolved_reasons=[],
+            algorithm_name="deterministic_ad_logbook_matcher",
+            algorithm_version="0.1.0",
+            input_hash="stale-version-result",
+        )
+    )
+    db_session.commit()
 
     login(client, "owner.test@paprnav.local")
     response = client.get(f"/api/v1/ads/aircraft/{aircraft.id}/matches")
     assert response.status_code == 200
-    matches = response.json()["matches"]
+    match_payload = response.json()
+    assert match_payload["matcherStatus"] == "current"
+    assert match_payload["algorithmVersion"] == "0.3.0"
+    assert match_payload["reprocessingRequired"] is False
+    matches = match_payload["matches"]
     assert len(matches) == 3
     candidate = next(match for match in matches if match["status"] == "candidate_satisfied")
     assert candidate["evidence"][0]["logbookEntryId"]
@@ -153,6 +227,128 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     assert observability_response.json()["events"]
     assert observability_response.json()["workflowEvents"]
     assert observability_response.json()["feedback"]
+
+    current_results = db_session.scalars(
+        select(ADMatchResult).where(
+            ADMatchResult.aircraft_id == aircraft.id,
+            ADMatchResult.algorithm_version == "0.3.0",
+        )
+    ).all()
+    for result in current_results:
+        result.algorithm_version = "0.2.0"
+    completion_event = db_session.scalar(
+        select(ProductEvent)
+        .where(
+            ProductEvent.aircraft_id == aircraft.id,
+            ProductEvent.event_type == "ad_matching_completed",
+        )
+        .order_by(ProductEvent.event_time.desc())
+    )
+    assert completion_event is not None
+    completion_event.properties_json = {
+        **(completion_event.properties_json or {}),
+        "algorithm_version": "0.2.0",
+    }
+    db_session.commit()
+
+    stale_response = client.get(
+        f"/api/v1/ads/aircraft/{aircraft.id}/matches"
+    )
+    assert stale_response.status_code == 200
+    assert stale_response.json()["matches"] == []
+    assert stale_response.json()["matcherStatus"] == "pending_recomputation"
+    assert stale_response.json()["reprocessingRequired"] is True
+
+
+def test_ad_matching_normalizes_legacy_ad_numbers_and_requires_verified_claims(
+    db_session: Session,
+    demo_data: dict[str, object],
+) -> None:
+    aircraft = demo_data["aircraft"]
+    owner_user = demo_data["owner_user"]
+    airframe = db_session.scalar(
+        select(LogbookSection).where(LogbookSection.key == "airframe")
+    )
+    assert airframe is not None
+    entries = [
+        (
+            date(2012, 12, 17),
+            "C/W AD 11-10-09 on seat rails by inspecting.",
+            "verified",
+        ),
+        (
+            date(2013, 1, 10),
+            "Complied with AD 2012-01-02 by replacement.",
+            "needs_review",
+        ),
+        (
+            date(2013, 2, 10),
+            "AD 2013-02-03 reviewed for planning.",
+            "verified",
+        ),
+        (
+            date(2014, 3, 10),
+            "AD 2014-03-04 will not be complied with until parts arrive.",
+            "verified",
+        ),
+    ]
+    for entry_date, text, review_status in entries:
+        db_session.add(
+            LogbookEntry(
+                aircraft_id=aircraft.id,
+                logbook_section_id=airframe.id,
+                entry_date=entry_date,
+                description=text,
+                performer_name="A. Mechanic",
+                performer_credential="A&P IA",
+                source_type="ocr_ingestion",
+                created_by_user_id=owner_user.id,
+                raw_text=text,
+                review_status=review_status,
+            )
+        )
+
+    for index, ad_number in enumerate(
+        ("2011-10-09", "2012-01-02", "2013-02-03", "2014-03-04"),
+        start=1,
+    ):
+        create_approved_extraction(
+            db_session,
+            title="Airworthiness Directives; Cessna 172R Seat Rails",
+            document_number=f"legacy-{index}",
+            ad_number=ad_number,
+            affected_products=["Cessna 172R"],
+            compliance_actions=["Inspect or replace seat rail components."],
+            compliance_intervals=[],
+        )
+    db_session.commit()
+
+    stats = match_aircraft_ads(db_session, aircraft.id)
+
+    assert stats["matched"] == 1
+    assert stats["unresolved"] == 3
+    results = db_session.scalars(
+        select(ADMatchResult).order_by(ADMatchResult.created_at)
+    ).all()
+    results_by_ad = {
+        result.directive.ad_number: result
+        for result in results
+    }
+    assert results_by_ad["2011-10-09"].status == "candidate_satisfied"
+    assert results_by_ad["2011-10-09"].confidence > 0.8
+    assert (
+        "logbook_entry_unverified"
+        in results_by_ad["2012-01-02"].unresolved_reasons
+    )
+    assert (
+        "explicit_compliance_claim_missing"
+        in results_by_ad["2013-02-03"].unresolved_reasons
+    )
+    assert results_by_ad["2014-03-04"].status == "needs_adjudication"
+    assert (
+        "explicit_compliance_claim_missing"
+        in results_by_ad["2014-03-04"].unresolved_reasons
+    )
 
 
 def create_approved_extraction(
