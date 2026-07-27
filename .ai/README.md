@@ -1,6 +1,6 @@
 # paprnav AI Project State
 
-Last updated: 2026-06-27
+Last updated: 2026-07-26
 
 This folder is the shared project memory for AI agents working on paprnav. Keep it concise, current, and useful for handoffs.
 
@@ -22,6 +22,7 @@ The current codebase is an early local MVP build:
   implemented. See `.ai/OCR_PATH_CLOSURE_2026-07-26.md`.
 - The AD pipeline is now DRS-first for the primary corpus/applicability path, with Federal Register used for comparison, enrichment, publication metadata, and delta monitoring.
 - DRS bulk fixture import, Federal Register enrichment/matching, AD persistence, deterministic structured extraction, AD extraction review, component-aware AD-to-logbook matching, HITL match adjudication, compliance worklist, reconciliation, and human product observability are implemented locally.
+- Reusable AD coverage now links normalized airframe/component targets to one retained DRS source snapshot. Later clients reuse existing coverage without duplicate downloads. A platform-admin view reports physical source storage, estimated logical coverage storage, benefiting clients/aircraft, actual cost, and separate inactive future allocation. See `.ai/AD_COVERAGE_ATTRIBUTION_REFINEMENT_2026-07-26.md`.
 
 ## Important Paths
 
@@ -44,6 +45,7 @@ The current codebase is an early local MVP build:
 - AWS pilot Terraform planning loop: `.ai/AWS_PILOT_TERRAFORM_PLAN.md`
 - AWS CLI profile names and deploy role: `.ai/AWS_PROFILES.md`
 - Current AWS deployment status: `.ai/AWS_DEPLOYMENT_STATUS.md`
+- AD coverage/cost refinement closure: `.ai/AD_COVERAGE_ATTRIBUTION_REFINEMENT_2026-07-26.md`
 - External provider references: `.ai/PROVIDER_REFERENCES.md`
 - Pilot onboarding GUI: `/logbook/onboarding`
 - Claude reviewer workflow: `.ai/CLAUDE_REVIEWER.md`

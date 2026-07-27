@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { UserAvatar } from "@/components/UserAvatar";
 import { MobileNav } from "@/components/MobileNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/components/AuthProvider";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -19,6 +20,10 @@ const navLinks = [
 
 export function Header() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const visibleLinks = user?.memberships.some((membership) => membership.role === "platform_admin")
+    ? [...navLinks, { href: "/admin/ad-costs", label: "AD Costs" }]
+    : navLinks;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -32,7 +37,7 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          {navLinks.map((link) => (
+          {visibleLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}

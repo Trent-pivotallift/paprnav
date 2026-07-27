@@ -17,6 +17,8 @@ from sqlalchemy.orm import Session
 
 from app.models.core import ADPublication, ADReconciliationIssue, ADSourceSnapshot, AirworthinessDirective
 from app.services.ad_applicability import ensure_issue, get_or_create_target, upsert_target_applicability
+from app.services.ad_costs import record_ad_cost_entry
+from app.services.ad_coverage import refresh_coverage_sets_for_snapshot
 from app.services.ad_identity import AD_NUMBER_PATTERN, normalize_ad_number
 
 PARSER_NAME = "drs_bulk_importer"
@@ -44,6 +46,7 @@ def import_drs_bulk_rows(
         row_count=len(rows),
         table_inventory={"rows": len(rows)},
         metadata={"fixtureFirst": True},
+        storage_bytes=None,
     )
     return import_drs_rows_into_snapshot(db, rows, snapshot)
 
@@ -91,6 +94,7 @@ def import_drs_rows_into_snapshot(db: Session, rows: list[dict[str, Any]], snaps
             )
             stats["applicabilities_upserted"] += 1
     db.flush()
+    refresh_coverage_sets_for_snapshot(db, snapshot)
     return stats
 
 
@@ -113,6 +117,7 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
             table_inventory={"zipMembers": members, "accessDatabases": accdb_members},
             metadata={"accessParsing": "pending"},
             status="in_progress",
+            storage_bytes=len(content),
         )
         if not accdb_members:
             snapshot.status = "failed"
@@ -280,6 +285,7 @@ def upsert_snapshot(
     table_inventory: dict[str, Any],
     metadata: dict[str, Any],
     status: str = "complete",
+    storage_bytes: int | None = None,
 ) -> ADSourceSnapshot:
     snapshot = db.scalar(select(ADSourceSnapshot).where(ADSourceSnapshot.content_hash == content_hash, ADSourceSnapshot.source_system == "drs"))
     if snapshot is None:
@@ -296,6 +302,7 @@ def upsert_snapshot(
             row_count=row_count,
             table_inventory=table_inventory,
             metadata_json=metadata,
+            storage_bytes=storage_bytes,
         )
         db.add(snapshot)
     else:
@@ -305,7 +312,26 @@ def upsert_snapshot(
         snapshot.status = status
         snapshot.parser_name = PARSER_NAME
         snapshot.parser_version = PARSER_VERSION
+        if storage_bytes is not None:
+            snapshot.storage_bytes = storage_bytes
     db.flush()
+    record_ad_cost_entry(
+        db,
+        idempotency_key=f"drs-source-storage:{snapshot.content_hash}",
+        scope_type="shared_source",
+        cost_category="source_storage",
+        usage_quantity=snapshot.storage_bytes or 0,
+        usage_unit="physical_byte",
+        source_snapshot_id=snapshot.id,
+        actual_cost_usd=0,
+        allocated_cost_usd=0,
+        attribution_status="platform_shared_unallocated",
+        metadata={
+            "sourceSystem": "drs",
+            "billingActive": False,
+            "costCalibrationStatus": "uncalibrated",
+        },
+    )
     return snapshot
 
 

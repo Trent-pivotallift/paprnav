@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import ads, aircraft, auth, health, ingestion, logbook_entries, observability, root, uploads
+from app.api.routes import admin, ads, aircraft, auth, health, ingestion, logbook_entries, observability, root, uploads
 
 api_router = APIRouter()
 api_router.include_router(root.router)
@@ -13,3 +13,4 @@ api_router.include_router(uploads.download_router)
 api_router.include_router(ingestion.router)
 api_router.include_router(ads.router)
 api_router.include_router(observability.router)
+api_router.include_router(admin.router)

@@ -790,6 +790,27 @@ Request:
 }
 ```
 
+## Platform Administration
+
+### AD / DRS Cost Attribution
+
+`GET /api/v1/admin/ad-costs`
+
+Requires an active membership with role `platform_admin`. Returns a read-only
+summary containing:
+
+- globally retained DRS source snapshots and physical storage bytes;
+- reusable applicability coverage grouped by normalized target make/model and
+  component type;
+- coverage status/version, AD count, source-document count, and estimated
+  logical storage;
+- clients and aircraft currently benefiting from each coverage set;
+- which aircraft first triggered each set;
+- recorded actual cost and separate future allocated cost.
+
+`billingActive` is `false` and `allocationPolicyStatus` is `not_active` until a
+future allocation policy is explicitly approved and versioned.
+
 ## Open Contract Items
 
 - Exact pagination shape for list endpoints.

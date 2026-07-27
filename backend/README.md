@@ -283,6 +283,8 @@ The backend currently has:
 - Deterministic local OCR ingestion job, page verification, OCR correction, and structured extraction endpoints
 - Federal Register AD discovery, structured AD extraction, AD extraction review, and first-pass AD-to-logbook match endpoints
 - HITL AD match adjudication endpoints
+- Reusable airframe/component AD coverage resolution backed by one retained DRS source snapshot
+- Platform-admin AD/DRS storage and cost-attribution summary at `GET /api/v1/admin/ad-costs`
 - Product observability and feedback endpoints
 - Owner-versus-maintenance aircraft visibility boundaries
 
@@ -293,6 +295,15 @@ The backend does not yet have:
 - Production AWS worker scheduling or object storage
 
 See `.ai/GOAL_TASKS.md` from the project root for the current implementation roadmap.
+
+Aircraft creation/update and the AD matching worker resolve reusable AD
+coverage from the current retained DRS snapshot. A later client with the same
+airframe/component applicability targets links to the existing coverage rather
+than downloading or duplicating DRS data.
+
+The admin cost response separates physical shared-source storage, estimated
+logical coverage storage, and aircraft-specific comparison usage. Actual and
+future allocated costs remain separate; customer allocation is not active.
 
 ## Checks
 

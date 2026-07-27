@@ -470,6 +470,63 @@ export interface ADMatchResultListResponse {
   reprocessingRequired: boolean;
 }
 
+export interface ADSourceSnapshotCost {
+  id: string;
+  contentHash: string;
+  filename: string | null;
+  status: string;
+  capturedAt: string | null;
+  storageBytes: number;
+  rowCount: number | null;
+}
+
+export interface ADCoverageClient {
+  organizationId: string;
+  organizationName: string;
+  aircraftId: string;
+  nNumber: string;
+  triggeredCreation: boolean;
+  linkedAt: string;
+}
+
+export interface ADCoverageCost {
+  id: string;
+  status: string;
+  coverageVersion: string;
+  productType: string;
+  productSubtype: string | null;
+  make: string | null;
+  model: string | null;
+  directiveCount: number;
+  sourceDocumentCount: number;
+  derivedLogicalStorageBytes: number;
+  sourceSnapshotId: string | null;
+  sourceContentHash: string | null;
+  lastBuiltAt: string | null;
+  lastResolvedAt: string | null;
+  actualCostUsd: string;
+  allocatedCostUsd: string;
+  clients: ADCoverageClient[];
+}
+
+export interface ADCostAdminSummary {
+  generatedAt: string;
+  allocationPolicyStatus: string;
+  allocationPolicyVersion: string | null;
+  billingActive: boolean;
+  totals: {
+    sharedSourceStorageBytes: number;
+    derivedLogicalStorageBytes: number;
+    actualCostUsd: string;
+    allocatedCostUsd: string;
+    coverageSetCount: number;
+    clientCount: number;
+    aircraftCount: number;
+  };
+  sourceSnapshots: ADSourceSnapshotCost[];
+  coverages: ADCoverageCost[];
+}
+
 interface ApiErrorPayload {
   detail?: string;
 }
@@ -691,6 +748,10 @@ export function listObservability(params: Record<string, string> = {}) {
   const query = new URLSearchParams(params);
   const suffix = query.toString() ? `?${query.toString()}` : "";
   return apiFetch<ObservabilityListResponse>(`/api/v1/observability${suffix}`);
+}
+
+export function getADCostAdminSummary() {
+  return apiFetch<ADCostAdminSummary>("/api/v1/admin/ad-costs");
 }
 
 export function createFeedback(payload: {

@@ -3,7 +3,7 @@ from datetime import date as PythonDate
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -106,6 +106,8 @@ class Aircraft(TimestampMixin, Base):
     uploads = relationship("Upload", back_populates="aircraft")
     ad_match_results = relationship("ADMatchResult", back_populates="aircraft")
     installed_components = relationship("InstalledComponent", back_populates="aircraft")
+    ad_coverage_subscriptions = relationship("ADCoverageSubscription", back_populates="aircraft")
+    ad_cost_entries = relationship("ADCostLedgerEntry", back_populates="aircraft")
 
 
 class InstalledComponent(TimestampMixin, Base):
@@ -468,9 +470,12 @@ class ADSourceSnapshot(TimestampMixin, Base):
     row_count: Mapped[int] = mapped_column(Integer, nullable=True)
     table_inventory: Mapped[dict] = mapped_column(JSON, nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    storage_bytes: Mapped[int] = mapped_column(BigInteger, nullable=True)
 
     publications = relationship("ADPublication", back_populates="source_snapshot")
     reconciliation_issues = relationship("ADReconciliationIssue", back_populates="source_snapshot")
+    coverage_sets = relationship("ADCoverageSet", back_populates="current_source_snapshot")
+    cost_entries = relationship("ADCostLedgerEntry", back_populates="source_snapshot")
 
 
 class AirworthinessDirective(TimestampMixin, Base):
@@ -615,6 +620,95 @@ class ADTargetApplicability(TimestampMixin, Base):
     target = relationship("ApplicabilityTarget", back_populates="applicabilities")
     source_publication = relationship("ADPublication")
     match_results = relationship("ADMatchResult", back_populates="target_applicability")
+
+
+class ADCoverageSet(TimestampMixin, Base):
+    __tablename__ = "ad_coverage_sets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("cov"))
+    target_id: Mapped[str] = mapped_column(
+        ForeignKey("applicability_targets.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    current_source_snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_source_snapshots.id"),
+        nullable=True,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="awaiting_source_snapshot", index=True)
+    coverage_version: Mapped[str] = mapped_column(String(128), nullable=False, default="unversioned")
+    first_triggered_by_aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=True, index=True)
+    first_triggered_by_organization_id: Mapped[str] = mapped_column(
+        ForeignKey("organizations.id"),
+        nullable=True,
+        index=True,
+    )
+    directive_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    source_document_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    derived_storage_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    last_built_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_resolved_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    target = relationship("ApplicabilityTarget")
+    current_source_snapshot = relationship("ADSourceSnapshot", back_populates="coverage_sets")
+    first_triggered_by_aircraft = relationship("Aircraft", foreign_keys=[first_triggered_by_aircraft_id])
+    first_triggered_by_organization = relationship("Organization", foreign_keys=[first_triggered_by_organization_id])
+    subscriptions = relationship("ADCoverageSubscription", back_populates="coverage_set")
+    cost_entries = relationship("ADCostLedgerEntry", back_populates="coverage_set")
+
+
+class ADCoverageSubscription(TimestampMixin, Base):
+    __tablename__ = "ad_coverage_subscriptions"
+    __table_args__ = (
+        UniqueConstraint("coverage_set_id", "aircraft_id", name="uq_ad_coverage_subscription"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("cvs"))
+    coverage_set_id: Mapped[str] = mapped_column(ForeignKey("ad_coverage_sets.id"), nullable=False, index=True)
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="active", index=True)
+    triggered_creation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    linked_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_resolved_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    coverage_set = relationship("ADCoverageSet", back_populates="subscriptions")
+    aircraft = relationship("Aircraft", back_populates="ad_coverage_subscriptions")
+    organization = relationship("Organization")
+
+
+class ADCostLedgerEntry(TimestampMixin, Base):
+    __tablename__ = "ad_cost_ledger_entries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("acl"))
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    scope_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    cost_category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_snapshot_id: Mapped[str] = mapped_column(ForeignKey("ad_source_snapshots.id"), nullable=True, index=True)
+    coverage_set_id: Mapped[str] = mapped_column(ForeignKey("ad_coverage_sets.id"), nullable=True, index=True)
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=True, index=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=True, index=True)
+    usage_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False, default=Decimal("0"))
+    usage_unit: Mapped[str] = mapped_column(String(64), nullable=False)
+    actual_cost_usd: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False, default=Decimal("0"))
+    allocated_cost_usd: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False, default=Decimal("0"))
+    attribution_status: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        default="informational_unallocated",
+        index=True,
+    )
+    allocation_policy_version: Mapped[str] = mapped_column(String(64), nullable=True)
+    incurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    source_snapshot = relationship("ADSourceSnapshot", back_populates="cost_entries")
+    coverage_set = relationship("ADCoverageSet", back_populates="cost_entries")
+    aircraft = relationship("Aircraft", back_populates="ad_cost_entries")
+    organization = relationship("Organization")
 
 
 class ADReconciliationIssue(TimestampMixin, Base):

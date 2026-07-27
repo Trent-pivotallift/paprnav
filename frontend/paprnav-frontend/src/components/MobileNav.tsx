@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, FileWarning, User, LogOut, Sun, Moon, Monitor, Activity } from "lucide-react";
+import { LayoutDashboard, FileWarning, User, LogOut, Sun, Moon, Monitor, Activity, Database } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,9 @@ export function MobileNav() {
   const router = useRouter();
   const { setTheme, theme } = useTheme();
   const { user, signOut } = useAuth();
+  const visibleLinks = user?.memberships.some((membership) => membership.role === "platform_admin")
+    ? [...navLinks, { href: "/admin/ad-costs", label: "AD Costs", icon: Database }]
+    : navLinks;
   const name = user?.name ?? "Signed In";
   const email = user?.email ?? "";
   const initials = name
@@ -66,7 +69,7 @@ export function MobileNav() {
       {/* Navigation Links */}
       <nav className="flex-1 px-4 py-4">
         <ul className="space-y-1">
-          {navLinks.map((link) => {
+          {visibleLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
