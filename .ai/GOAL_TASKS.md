@@ -1,6 +1,6 @@
 # paprnav Agent-Digestible Tasks
 
-Last updated: 2026-06-27
+Last updated: 2026-07-26
 
 Use these as candidates for `/goal`. Each task should be small enough for one agent run to complete, verify, and summarize without needing broad product decisions.
 
@@ -1967,3 +1967,52 @@ Notes:
 
 - Add AWS Budget notification email before real volunteer/Textract usage.
 - Async S3-backed Textract should persist enough provider/API mode metadata to keep future pricing estimates correct if the product moves beyond plain text detection.
+
+### T074: Reuse AD coverage across clients and attribute shared cost
+
+Status: completed 2026-07-26
+
+Goal: Resolve aircraft/component applicability from a retained DRS source
+snapshot, reuse target coverage for later clients, and preserve cost attribution
+without charging the first client for shared setup.
+
+Acceptance:
+
+- A normalized applicability target has one reusable coverage set.
+- Aircraft and organizations link to coverage without duplicating source data.
+- A second client with the same identities causes no source download request.
+- Airframe, engine, propeller, and future component coverage remain separate.
+- Shared-source, coverage-set, and aircraft-comparison usage have distinct
+  ledger scopes.
+- Actual and future allocated costs use fixed precision and remain separate.
+- The first-trigger relationship is provenance and billing remains inactive.
+- A read-only platform-admin page shows storage/cost by make/model/component and
+  the clients/aircraft benefiting from it.
+- Only verified logbook entries participate in AD matching.
+
+Evidence:
+
+- Added `ADCoverageSet`, `ADCoverageSubscription`, and `ADCostLedgerEntry` plus
+  Alembic revision `20260726_0016`.
+- Aircraft onboarding/update and AD matching resolve coverage from the latest
+  reusable DRS snapshot.
+- DRS import refreshes already-materialized coverage without creating
+  client-specific source copies.
+- Added `GET /api/v1/admin/ad-costs` and frontend `/admin/ad-costs`, restricted
+  to `platform_admin`.
+- Dedicated reuse/attribution fixtures passed 2/2.
+- Focused AD regressions passed 23/23.
+- Full backend regression passed 105/105.
+- Frontend lint passed with zero errors and production build passed.
+- The 22-page full-product partition and 11-page final holdout were not used.
+
+Suggested checks:
+
+```bash
+cd backend
+.venv/bin/python -m pytest -q
+.venv/bin/alembic heads
+cd ../frontend/paprnav-frontend
+npm run lint
+npm run build
+```

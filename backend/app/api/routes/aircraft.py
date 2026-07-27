@@ -20,6 +20,7 @@ from app.schemas.aircraft import (
     InstalledComponentResponse,
 )
 from app.services.installed_components import sync_installed_components_from_aircraft
+from app.services.ad_coverage import resolve_aircraft_ad_coverage
 from app.services.cost_tags import ensure_aircraft_cost_tag, ensure_organization_account_tag
 from app.services.observability import record_product_event
 
@@ -226,6 +227,7 @@ def create_aircraft(
     ensure_organization_account_tag(owner_membership.organization)
     ensure_aircraft_cost_tag(aircraft)
     sync_installed_components_from_aircraft(db, aircraft)
+    resolve_aircraft_ad_coverage(db, aircraft.id)
     record_product_event(
         db,
         event_type="aircraft_created",
@@ -275,6 +277,7 @@ def update_aircraft(
 
     apply_aircraft_fields(aircraft, payload)
     sync_installed_components_from_aircraft(db, aircraft)
+    resolve_aircraft_ad_coverage(db, aircraft.id)
     db.commit()
     db.refresh(aircraft)
     return serialize_aircraft(db, aircraft)

@@ -759,6 +759,38 @@ AD ingestion, extraction, supersession, matching, and adjudication are specified
 - Installed component roles/types must not assume fixed-wing-only aircraft. The schema should support airframe, engine, propeller, rotorcraft airframe, rotor system, drivetrain/transmission, appliance, unknown, and other roles.
 - Rotorcraft/rotorwing component identity should be represented explicitly when known; do not overload propeller fields for rotor or drivetrain components.
 
+### ADCoverageSet
+
+Represents reusable applicability coverage for one normalized
+`ApplicabilityTarget`. It points to the current retained DRS source snapshot and
+stores coverage status/version, directive and source-document counts, estimated
+logical storage, build/resolve timestamps, and the aircraft/organization that
+first triggered materialization.
+
+The first-trigger fields are provenance only. They do not assign the shared
+source or setup cost to that client.
+
+### ADCoverageSubscription
+
+Links an aircraft and owning organization to a reusable coverage set. The
+unique `(coverage_set_id, aircraft_id)` constraint makes repeated resolution
+idempotent. `triggered_creation` distinguishes the first aircraft from later
+beneficiaries, and inactive rows preserve identity-change history instead of
+being deleted.
+
+### ADCostLedgerEntry
+
+Records separately attributable AD/DRS usage and cost:
+
+- `shared_source`: physical DRS/source storage or source processing;
+- `coverage_set`: reusable applicability materialization and logical storage;
+- `aircraft`: coverage links and AD/logbook comparison work.
+
+Required accounting fields include usage quantity/unit, fixed-precision actual
+cost, fixed-precision allocated cost, attribution status, optional allocation
+policy version, and links to source snapshot, coverage set, organization, and
+aircraft where applicable. Actual and allocated cost must not be conflated.
+
 ## Suggested Migration Grouping
 
 When T017 implements the first schema, a practical migration order is:

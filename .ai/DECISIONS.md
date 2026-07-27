@@ -376,6 +376,46 @@ Reconsider it only for an approved unresolved-region comparison after
 early-adopter failures create a representative corpus. See
 `.ai/GOOGLE_DOCUMENT_AI_EVALUATION_2026-07-26.md`.
 
+### D023: Reuse AD coverage across clients and record attribution before billing
+
+Status: accepted 2026-07-26
+
+Paprnav stores each FAA DRS bulk release once as a platform-shared source
+snapshot. Aircraft onboarding does not download a client-specific copy of the
+DRS corpus. After an aircraft/component identity is verified, Paprnav resolves
+normalized airframe, engine, propeller, rotorcraft, and appliance targets
+against the retained current snapshot and materializes reusable coverage state
+for those targets.
+
+When another client onboards an aircraft with a previously resolved target,
+Paprnav links that aircraft and organization to the existing coverage set and
+runs only aircraft-specific AD/logbook comparison. It must not redownload,
+re-extract, or duplicate the shared source material. New component identities
+may create additional coverage sets while continuing to reuse the same source
+snapshot.
+
+Cost reporting separates:
+
+- physical DRS/source storage and source processing shared by the platform;
+- logical storage and processing for a reusable applicability coverage set;
+- aircraft-specific AD-to-logbook comparison work.
+
+The aircraft or client that first triggers a coverage set is retained as
+provenance, not as the party responsible for all shared cost. Actual incurred
+cost and future allocated cost are separate ledger values. Customer billing and
+cost allocation remain inactive until a human-approved allocation policy is
+versioned and activated.
+
+The first admin view is read-only and restricted to `platform_admin`. It groups
+coverage by make/model while preserving component type underneath, shows the
+clients and aircraft benefiting from each coverage set, and labels derived
+storage as an estimated logical measurement so it is not confused with or
+double-counted against physical source storage.
+
+Only verified logbook entries participate in AD compliance matching.
+Unverified OCR candidates remain in the human-review workflow and cannot
+produce positive or negative compliance evidence.
+
 ## Proposed Decisions To Resolve Soon
 
 ### P001: Authentication provider

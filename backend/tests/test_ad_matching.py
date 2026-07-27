@@ -336,10 +336,8 @@ def test_ad_matching_normalizes_legacy_ad_numbers_and_requires_verified_claims(
     }
     assert results_by_ad["2011-10-09"].status == "candidate_satisfied"
     assert results_by_ad["2011-10-09"].confidence > 0.8
-    assert (
-        "logbook_entry_unverified"
-        in results_by_ad["2012-01-02"].unresolved_reasons
-    )
+    assert results_by_ad["2012-01-02"].evidence_links == []
+    assert "logbook_entry_unverified" not in results_by_ad["2012-01-02"].unresolved_reasons
     assert (
         "explicit_compliance_claim_missing"
         in results_by_ad["2013-02-03"].unresolved_reasons

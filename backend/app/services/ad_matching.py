@@ -22,6 +22,8 @@ from app.models.core import (
     LogbookEntry,
 )
 from app.services.ad_applicability import infer_component_role
+from app.services.ad_costs import record_ad_cost_entry
+from app.services.ad_coverage import resolve_aircraft_ad_coverage
 from app.services.ad_identity import normalize_ad_number
 from app.services.maintenance_extraction import extract_structured_maintenance_data
 from app.services.observability import record_product_event, record_workflow_status
@@ -46,9 +48,14 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
     if not aircraft:
         raise ValueError("Aircraft not found")
 
+    coverage_stats = resolve_aircraft_ad_coverage(db, aircraft_id)
     entries = db.scalars(
         select(LogbookEntry)
-        .where(LogbookEntry.aircraft_id == aircraft_id, LogbookEntry.entry_date.is_not(None))
+        .where(
+            LogbookEntry.aircraft_id == aircraft_id,
+            LogbookEntry.entry_date.is_not(None),
+            LogbookEntry.review_status == "verified",
+        )
         .options(selectinload(LogbookEntry.logbook_section))
         .order_by(LogbookEntry.entry_date.desc(), LogbookEntry.created_at.desc())
     ).all()
@@ -104,6 +111,27 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
         new_status="complete",
         reason=f"matched={stats['matched']} unresolved={stats['unresolved']}",
         actor_type="worker",
+    )
+    record_ad_cost_entry(
+        db,
+        idempotency_key=None,
+        scope_type="aircraft",
+        cost_category="ad_logbook_comparison",
+        usage_quantity=stats["directives_seen"],
+        usage_unit="directive_comparison",
+        aircraft_id=aircraft.id,
+        organization_id=aircraft.owner_organization_id,
+        actual_cost_usd=0,
+        allocated_cost_usd=0,
+        attribution_status="informational_unallocated",
+        metadata={
+            "algorithmName": ALGORITHM_NAME,
+            "algorithmVersion": ALGORITHM_VERSION,
+            "verifiedEntryCount": len(entries),
+            "coverageSetsCreated": coverage_stats["coverage_sets_created"],
+            "coverageSetsReused": coverage_stats["coverage_sets_reused"],
+            "billingActive": False,
+        },
     )
     db.commit()
     return stats
