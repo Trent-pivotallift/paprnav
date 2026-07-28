@@ -133,7 +133,12 @@ Billing note:
 
 - S3 object tags are retained for paprnav metadata/reconciliation, not as a per-customer AWS Cost Explorer dimension.
 - Textract API charges are not tagged per request by AWS; per-customer OCR billing must use paprnav's app-side `OCRRun.billable_page_count`, billable account tag, aircraft tag, and billing status.
-- Customer onboarding OCR measurement remains possible and should be implemented from app-side OCR run records before real volunteer Textract use. The first report should group by billable account tag and aircraft tag and include upload count, OCR run count, billable pages, billing status, provider/API mode, date range, and estimated OCR cost.
+- Customer onboarding OCR measurement is implemented at
+  `GET /api/v1/admin/ocr-billing` from app-side OCR run records. It groups by
+  billable account and aircraft tags; separates chargeable and non-billable
+  pages and estimated cost; and reports upload/run counts, provider/API mode,
+  and filterable date ranges. AWS Budget remains the aggregate project
+  guardrail.
 
 ## S3 Lifecycle Hardening
 
@@ -201,6 +206,5 @@ Recommended next slice:
 3. Build and push API/frontend images to ECR.
 4. Populate runtime Secrets Manager values and run migrations.
 5. Apply or re-plan runtime skeleton with desired counts still at `0`, then raise counts after images/secrets are ready.
-6. Add app-side OCR billing summary/reporting from `OCRRun` and upload/account/aircraft tags before real volunteer Textract use.
-7. Add AWS Budget notification email and apply the alert subscribers.
-8. Move Textract PDF processing to async S3 mode with provider/API mode persisted for pricing.
+6. Add AWS Budget notification email and apply the alert subscribers.
+7. Move Textract PDF processing to async S3 mode with provider/API mode persisted for pricing.

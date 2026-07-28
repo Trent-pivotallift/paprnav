@@ -116,7 +116,19 @@ def process_upload_with_selective_routing(
                 )
             )
         delegate_metadata = delegated.metadata
-        billable_page_count = delegated.billable_page_count or len(delegated.pages)
+        billable_page_count = (
+            delegated.billable_page_count
+            if delegated.billable_page_count is not None
+            else len(delegated.pages)
+        )
+    else:
+        delegate_metadata = {
+            "provider_channel": "local",
+            "provider_mode": "native_text_only",
+            "pricing_unit": "page",
+            "pricing_rate_usd": 0,
+            "estimated_cost_usd": 0,
+        }
 
     return OCRProviderResult(
         provider_name=ROUTER_NAME,

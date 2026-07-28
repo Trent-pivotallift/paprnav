@@ -308,7 +308,11 @@ class TextractOCRProvider(OCRProvider):
         *,
         processing_seconds: float,
     ) -> OCRProviderResult:
-        page_count = result.billable_page_count or len(result.pages)
+        page_count = (
+            result.billable_page_count
+            if result.billable_page_count is not None
+            else len(result.pages)
+        )
         estimated_cost = round(
             page_count * self.estimated_unit_cost_usd_per_page,
             6,
