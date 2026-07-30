@@ -1,6 +1,6 @@
 # paprnav Agent-Digestible Tasks
 
-Last updated: 2026-07-26
+Last updated: 2026-07-27
 
 Use these as candidates for `/goal`. Each task should be small enough for one agent run to complete, verify, and summarize without needing broad product decisions.
 
@@ -1934,7 +1934,7 @@ Evidence:
 
 ### T073: Add OCR billing summary for pilot onboarding
 
-Status: planned
+Status: completed 2026-07-27
 
 Goal: Make onboarding OCR work measurable per customer account and aircraft before real volunteer Textract usage.
 
@@ -1967,6 +1967,29 @@ Notes:
 
 - Add AWS Budget notification email before real volunteer/Textract usage.
 - Async S3-backed Textract should persist enough provider/API mode metadata to keep future pricing estimates correct if the product moves beyond plain text detection.
+
+Evidence:
+
+- Added platform-admin-only `GET /api/v1/admin/ocr-billing`.
+- Summary groups by billable account and aircraft tags and supports date,
+  account, aircraft, and billing-status filters.
+- Chargeable and non-billable page counts and estimated costs remain separate.
+- Provider channel/mode and version are retained in each group.
+- Cost uses the estimate persisted at ingestion, with the run's persisted
+  pricing rate and page count as a fallback; no provider price is hardcoded in
+  reporting logic.
+- Empty reports and invalid date ranges are covered.
+- Focused billing verification passed 5/5.
+- Focused billing/routing/ingestion regression passed 22/22.
+- Post-review billing/selective/provider regression passed 20/20.
+- Complete backend regression passed 110/110.
+- Frontend lint passed with zero errors and one pre-existing image warning.
+- Frontend production build passed.
+- The 22-page integration partition and 11-page final holdout were not opened.
+- The authorized independent Claude review found four blocking accounting
+  issues. Native-zero preservation, page-unit scoping, completed-run
+  filtering, and half-open date ranges were implemented.
+- The targeted independent closure review found **0 remaining blockers**.
 
 ### T074: Reuse AD coverage across clients and attribute shared cost
 
@@ -2016,3 +2039,31 @@ cd ../frontend/paprnav-frontend
 npm run lint
 npm run build
 ```
+
+### T075: Add maintenance page-review status and user-managed logbook volumes
+
+Status: planned future UI/domain work
+
+Goal: Let maintenance personnel visibly and auditably record that they reviewed
+an individual scanned page, and let authorized users create additional
+physical logbook volumes or component logs for an aircraft.
+
+Acceptance:
+
+- The page viewer shows a maintenance-review checkmark only for a current,
+  non-revoked review performed by an authorized maintenance user.
+- Review details show reviewer, organization, captured role, timestamp,
+  outcome, and notes.
+- Maintenance page review remains distinct from upload completeness, OCR
+  correction, structured-entry verification, AD adjudication, regulatory
+  approval, and return-to-service authorization.
+- Review, correction, supersession, and revocation actions are auditable.
+- Authorized users can create, name, edit, and archive additional logbook
+  volumes or component logs.
+- A log can record its section, component/serial association, volume number,
+  and date range when known.
+- Users can upload pages and add manual entries to the selected log.
+- Archiving a log preserves its original PDFs, pages, entries, evidence, and
+  review history.
+- Permissions, API validation, backend tests, frontend tests, lint, and build
+  checks cover both capabilities before release.

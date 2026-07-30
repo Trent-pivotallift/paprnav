@@ -1,6 +1,6 @@
 # paprnav Requirements
 
-Last updated: 2026-06-20
+Last updated: 2026-07-27
 
 These requirements describe the intended product direction and the current known implementation gaps. They should be refined as the project gains real backend behavior and customer validation.
 
@@ -27,10 +27,21 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - Upload flow should validate file type and size before submitting.
 - Uploaded logbooks are processed through OCR.
 - Users can verify page order and confirm upload completeness before ingestion is treated as final.
+- Each scanned page can receive an explicit maintenance review. The page UI should
+  display a checkmark only when a currently authorized maintenance reviewer has
+  completed that review, and should expose the reviewer, organization, role,
+  timestamp, outcome, and notes.
+- Maintenance review status must remain distinct from owner upload-completeness
+  confirmation, OCR correction, verified structured entries, AD adjudication,
+  and any regulatory approval or return-to-service signature.
 - Low-confidence OCR regions are presented as highlighted snippets requiring user correction.
 - User corrections are stored as auditable HITL annotations.
 - Verified OCR plus user corrections populate structured logbook entries.
 - Users can manually add logbook entries.
+- Authorized users can add additional logbook volumes or component logs to an
+  aircraft, give each log a clear label, associate it with the applicable
+  component/serial number and date range when known, and then upload pages or
+  add entries to that log.
 - Users can open individual logbook entry details.
 - Users can manage profile/account details.
 - The system ingests FAA Airworthiness Directives from the FAA DRS bulk ZIP/Access database first, then compares and enriches those ADs with Federal Register publication records.

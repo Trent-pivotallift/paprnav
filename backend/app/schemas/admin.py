@@ -62,3 +62,53 @@ class ADCostAdminSummaryResponse(BaseModel):
     totals: ADCostTotalsResponse
     sourceSnapshots: list[ADSourceSnapshotCostResponse]
     coverages: list[ADCoverageCostResponse]
+
+
+class OCRBillingUsageResponse(BaseModel):
+    uploadCount: int
+    ocrRunCount: int
+    unattributedRunCount: int
+    unpricedRunCount: int
+    chargeableUnpricedRunCount: int
+    notBillableUnpricedRunCount: int
+    otherBillingStatusUnpricedRunCount: int
+    nonPagePricedRunCount: int
+    chargeablePageCount: int
+    notBillablePageCount: int
+    otherBillingStatusPageCount: int
+    nativeBypassPageCount: int
+    textractPageCount: int
+    totalEstimatedCostUsd: Decimal
+    chargeableEstimatedCostUsd: Decimal
+    notBillableEstimatedCostUsd: Decimal
+    otherBillingStatusEstimatedCostUsd: Decimal
+
+
+class OCRBillingProviderResponse(OCRBillingUsageResponse):
+    providerName: str
+    providerVersion: str
+    providerChannel: Optional[str]
+    providerMode: Optional[str]
+    routingMode: Optional[str]
+
+
+class OCRBillingGroupResponse(OCRBillingUsageResponse):
+    accountTag: Optional[str]
+    aircraftTag: Optional[str]
+    providers: list[OCRBillingProviderResponse]
+
+
+class OCRBillingTotalsResponse(OCRBillingUsageResponse):
+    groupCount: int
+    excludedRunCount: int
+
+
+class OCRBillingSummaryResponse(BaseModel):
+    generatedAt: datetime
+    dateFrom: Optional[datetime]
+    dateTo: Optional[datetime]
+    accountTag: Optional[str]
+    aircraftTag: Optional[str]
+    billingStatus: Optional[str]
+    totals: OCRBillingTotalsResponse
+    groups: list[OCRBillingGroupResponse]

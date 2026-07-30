@@ -138,6 +138,22 @@ AWS_REGION=us-east-1
 
 S3-backed uploads are written with `AES256` server-side encryption and non-sensitive paprnav object metadata tags, including customer account, aircraft, upload, and billing stage tags. These object tags are for paprnav metadata/reconciliation; customer OCR chargeback is calculated from database OCR run records, not AWS Cost Explorer object-tag attribution. Local remains the default for development and CI.
 
+Platform administrators can inspect app-side OCR usage with
+`GET /api/v1/admin/ocr-billing`. The report groups runs by billable customer
+account and aircraft tags, separates chargeable from non-billable pages and
+estimated cost, shows provider/API mode, and supports `dateFrom`, `dateTo`,
+`accountTag`, `aircraftTag`, and `billingStatus` filters. Estimated cost comes
+from pricing metadata persisted on each OCR run; the report does not infer
+customer costs from S3 tags or AWS Cost Explorer. `unpricedRunCount` identifies
+runs that lack enough persisted metadata to estimate cost, so unknown cost is
+not silently presented as a calibrated zero. The report aggregates completed
+runs only and exposes the number of excluded failed/in-flight attempts. Date
+ranges are half-open (`dateFrom` inclusive, `dateTo` exclusive), allowing
+adjacent reporting periods without double counting; timezone-naive filter
+values are interpreted as UTC. Native bypass, Textract
+page use, non-page pricing, unattributed runs, and credited/disputed statuses
+remain visible as separate quantities.
+
 Optional OCR provider configuration:
 
 ```bash

@@ -1,8 +1,10 @@
 # paprnav Data Model Plan
 
-Last updated: 2026-06-16
+Last updated: 2026-07-27
 
-This is the first-pass backend domain model plan for the paprnav MVP. It is a design note only: no database tables, migrations, or ORM models have been implemented by this task.
+This is the evolving backend domain model plan for the paprnav MVP. Some
+entities are implemented while others document future work; implementation
+status remains tracked in `.ai/GOAL_TASKS.md`.
 
 The model assumes FastAPI, Postgres, and a future migration stack. It should be refined before T017 creates actual tables.
 
@@ -170,6 +172,48 @@ Relationships:
 Open questions:
 
 - Whether avionics, appliance, or component-specific sections should be added during MVP.
+
+### LogbookVolume
+
+Represents a user-created physical logbook, binder, volume, or component log.
+This is distinct from `LogbookSection`, which supplies broad categories, and
+from `LogbookEntry`, which represents an individual maintenance record.
+
+Required fields:
+
+- `id`
+- `aircraft_id`
+- `logbook_section_id`
+- `name`
+- `status`: active, archived
+- `created_by_user_id`
+- `created_at`
+- `updated_at`
+
+Recommended fields:
+
+- `component_id`
+- `component_make`
+- `component_model`
+- `component_serial_number`
+- `volume_number`
+- `start_date`
+- `end_date`
+- `notes`
+
+Relationships:
+
+- A volume belongs to one aircraft and one broad logbook section.
+- A volume has many uploads, ingestion pages, and logbook entries.
+- Component-specific volumes may reference an installed component without
+  duplicating the component's authoritative identity.
+
+Audit notes:
+
+- Creating, renaming, archiving, or changing a volume's component association
+  should create an audit event.
+- Archiving a volume must not remove its source PDFs, pages, entries, evidence,
+  or review history.
 
 ### LogbookEntry
 
@@ -621,6 +665,48 @@ Relationships:
 Open questions:
 
 - Whether repeated verification attempts should create multiple records or update a single current verification plus audit events.
+
+### PageMaintenanceReview
+
+Represents an authenticated maintenance review of one scanned page. This is
+separate from the ingestion-job page-order/completeness decision above.
+
+Required fields:
+
+- `id`
+- `ingestion_page_id`
+- `reviewed_by_user_id`
+- `reviewer_organization_id`
+- `reviewer_role_snapshot`
+- `status`: reviewed, needs_correction, revoked
+- `reviewed_at`
+- `created_at`
+- `updated_at`
+
+Recommended fields:
+
+- `notes`
+- `revoked_at`
+- `revoked_by_user_id`
+- `supersedes_review_id`
+
+Relationships:
+
+- Review belongs to one immutable ingestion page.
+- Review belongs to the user and maintenance organization responsible for it.
+- A page may have multiple historical reviews but only one current effective
+  review outcome.
+
+Audit and UI notes:
+
+- The maintenance-review checkmark is derived from a current, non-revoked
+  `reviewed` record; it must not be stored as a freely editable boolean.
+- The UI should reveal who reviewed the page, for which organization, in what
+  role, when, and with what outcome or notes.
+- Corrections, superseding reviews, and revocations preserve prior records.
+- The checkmark means the scanned page was reviewed by maintenance. It does not
+  by itself establish OCR accuracy, entry verification, AD compliance,
+  regulatory approval, or a return-to-service signature.
 
 ### OCRRun
 

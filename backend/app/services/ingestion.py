@@ -225,7 +225,11 @@ def process_ingestion_job(db: Session, job: IngestionJob, provider: OCRProvider 
                 )
 
         run.status = "complete"
-        run.billable_page_count = result.billable_page_count or len(result.pages)
+        run.billable_page_count = (
+            result.billable_page_count
+            if result.billable_page_count is not None
+            else len(result.pages)
+        )
         run.completed_at = datetime.now(timezone.utc)
         job.status = "awaiting_page_review"
         job.page_extraction_status = "complete"
