@@ -126,7 +126,12 @@ High-confidence candidates generally include an AD number citation. Lower-confid
 
 ## Current Implementation
 
-The current implementation is `deterministic_ad_logbook_matcher` version `0.3.0`.
+The current implementation is `deterministic_ad_logbook_matcher` version
+`0.5.0`. It preserves the verified-positive-claim and supersession rules from
+`0.4.0`, exposes only the current result for each recomputation, invalidates
+current results immediately when their logbook inputs change, and routes
+plausibly applicable directives with incomplete component identity to
+adjudication with `component_applicability_uncertain`.
 
 It handles:
 

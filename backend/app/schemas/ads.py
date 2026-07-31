@@ -74,7 +74,7 @@ class ADReviewDecisionResponse(BaseModel):
 class ADMatchEvidenceResponse(BaseModel):
     id: str
     logbookEntryId: str
-    entryDate: date
+    entryDate: Optional[date]
     section: str
     evidenceType: str
     fieldName: Optional[str]
@@ -149,12 +149,22 @@ class ADMatchResultResponse(BaseModel):
     adjudication: Optional[ADMatchAdjudicationResponse]
 
 
+class ADCoverageTargetStatusResponse(BaseModel):
+    productType: str
+    make: Optional[str]
+    model: Optional[str]
+    status: str
+
+
 class ADMatchResultListResponse(BaseModel):
     matches: list[ADMatchResultResponse]
     matcherStatus: str
     algorithmName: str
     algorithmVersion: str
     reprocessingRequired: bool
+    coverageStatus: str
+    coverageWarnings: list[str]
+    coverageTargets: list[ADCoverageTargetStatusResponse]
 
 
 class ADMatchAdjudicationDecisionRequest(BaseModel):

@@ -1,3 +1,4 @@
+from datetime import date
 from io import BytesIO
 
 import pytest
@@ -141,7 +142,7 @@ def test_logbook_entry_crud_and_cross_aircraft_boundary(client: TestClient, demo
     assert create_response.status_code == 201
     entry = create_response.json()
     assert entry["sourceType"] == "manual"
-    assert entry["reviewStatus"] == "verified"
+    assert entry["reviewStatus"] == "needs_review"
 
     list_response = client.get(f"/api/v1/aircraft/{aircraft_id}/logbook-entries?section=airframe")
     assert list_response.status_code == 200
@@ -149,10 +150,26 @@ def test_logbook_entry_crud_and_cross_aircraft_boundary(client: TestClient, demo
 
     update_response = client.patch(
         f"/api/v1/aircraft/{aircraft_id}/logbook-entries/{entry['id']}",
-        json={"reviewStatus": "needs_review", "description": "Annual inspection reviewed."},
+        json={"description": "Annual inspection reviewed."},
     )
     assert update_response.status_code == 200
     assert update_response.json()["reviewStatus"] == "needs_review"
+
+    owner_verify = client.patch(
+        f"/api/v1/aircraft/{aircraft_id}/logbook-entries/{entry['id']}",
+        json={"reviewStatus": "verified"},
+    )
+    assert owner_verify.status_code == 403
+
+    shop_client = TestClient(client.app)
+    login(shop_client, "shop.test@paprnav.local")
+    maintenance_verify = shop_client.patch(
+        f"/api/v1/aircraft/{aircraft_id}/logbook-entries/{entry['id']}",
+        json={"reviewStatus": "verified"},
+    )
+    assert maintenance_verify.status_code == 200
+    assert maintenance_verify.json()["reviewedByUserId"] is not None
+    assert maintenance_verify.json()["reviewedAt"] is not None
 
     stranger_client = TestClient(client.app)
     login(stranger_client, "stranger.test@paprnav.local")
@@ -533,6 +550,92 @@ def test_ordered_ocr_correction_returns_409_after_repeated_order_collisions(
     assert exc_info.value.detail == "Unable to assign OCR correction order; retry the correction"
 
 
+def test_ocr_extraction_with_no_candidates_requires_manual_entry_review(
+    client: TestClient,
+    db_session: Session,
+    demo_data: dict[str, object],
+) -> None:
+    class NoEntryProvider:
+        provider_name = "no_entry_fixture"
+        provider_version = "0.1.0"
+        configuration_hash = "no-entry-fixture"
+
+        def process_upload(self, **_kwargs):
+            return OCRProviderResult(
+                provider_name=self.provider_name,
+                provider_version=self.provider_version,
+                configuration_hash=self.configuration_hash,
+                pages=[
+                    OCRPageResult(
+                        source_page_number=1,
+                        page_label="Page 1",
+                        width_px=100,
+                        height_px=100,
+                        rotation_degrees=0,
+                        extraction_confidence=95,
+                        spans=[
+                            OCRSpanResult(
+                                provider_block_id="cover-line",
+                                span_type="LINE",
+                                text="Aircraft maintenance logbook cover",
+                                confidence=95,
+                                bbox_left=0,
+                                bbox_top=0,
+                                bbox_width=1,
+                                bbox_height=0.1,
+                                bbox_units="ratio",
+                                reading_order=1,
+                            )
+                        ],
+                    )
+                ],
+            )
+
+    aircraft_id = demo_data["aircraft"].id
+    login(client, "owner.test@paprnav.local")
+    upload_response = client.post(
+        f"/api/v1/aircraft/{aircraft_id}/uploads",
+        data={"section": "airframe", "pilotConsentAccepted": "true"},
+        files={
+            "file": (
+                "cover-only.pdf",
+                BytesIO(b"%PDF-1.4 cover-only fixture"),
+                "application/pdf",
+            )
+        },
+    )
+    assert upload_response.status_code == 201
+    job_id = upload_response.json()["ingestionJob"]["id"]
+    job = db_session.get(IngestionJob, job_id)
+    assert job is not None
+    process_ingestion_job(db_session, job, provider=NoEntryProvider())
+    detail = client.get(f"/api/v1/ingestion-jobs/{job_id}").json()
+    verify_response = client.post(
+        f"/api/v1/ingestion-jobs/{job_id}/page-verification",
+        json={
+            "pages": [
+                {
+                    "pageId": page["id"],
+                    "currentPageOrder": page["currentPageOrder"],
+                }
+                for page in detail["pages"]
+            ],
+            "isOrderConfirmed": True,
+            "isComplete": True,
+        },
+    )
+    assert verify_response.status_code == 200
+
+    extract_response = client.post(
+        f"/api/v1/ingestion-jobs/{job_id}/extract-logbook-entries"
+    )
+    assert extract_response.status_code == 200
+    assert extract_response.json()["entries"] == []
+    db_session.expire(job)
+    assert job.status == "awaiting_manual_entry_review"
+    assert job.completed_at is None
+
+
 def test_ocr_extraction_orders_entries_by_date_then_page(
     client: TestClient,
     db_session: Session,
@@ -750,6 +853,16 @@ def test_ocr_extraction_marks_missing_date_as_fallback_evidence(
     evidence_by_field = {evidence.field_name: evidence for evidence in entry.evidence_links}
     assert evidence_by_field["entry_date"].evidence_type == "fallback"
     assert evidence_by_field["entry_date"].ocr_text_span_id == evidence_by_field["description"].ocr_text_span_id
+
+    entry.entry_date = date(2026, 1, 1)
+    db_session.commit()
+    login(client, "shop.test@paprnav.local")
+    verify_without_source_date = client.patch(
+        f"/api/v1/aircraft/{aircraft_id}/logbook-entries/{entry.id}",
+        json={"reviewStatus": "verified"},
+    )
+    assert verify_without_source_date.status_code == 400
+    assert "Source-supported date evidence" in verify_without_source_date.json()["detail"]
 
 
 def test_ocr_extraction_splits_multiple_logbook_entries_on_one_analysis_page(

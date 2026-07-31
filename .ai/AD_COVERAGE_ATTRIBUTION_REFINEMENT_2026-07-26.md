@@ -84,7 +84,7 @@ storage and must not be combined into a customer invoice.
 
 The two-client fixture retained one DRS source snapshot, created three reusable
 coverage sets for airframe/engine/propeller, created six aircraft associations,
-and requested **0 duplicate source downloads**.
+and created **0 duplicate source snapshots**.
 
 ## Corpus Boundary
 

@@ -7,10 +7,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
-from app.api.routes.aircraft import get_visible_aircraft_or_404
+from app.api.routes.admin import ensure_platform_admin
+from app.api.routes.aircraft import (
+    ensure_maintenance_review_access,
+    get_visible_aircraft_or_404,
+)
 from app.db.session import get_db
 from app.models.core import (
     ADDiscoveryRecord,
+    ADCoverageSet,
+    ADCoverageSubscription,
     ADExtraction,
     ADExtractionReview,
     ADMatchAdjudication,
@@ -43,7 +49,13 @@ from app.schemas.ads import (
 )
 from app.services.ad_extraction import validate_extraction_output
 from app.services.ad_applicability import populate_applicability_from_extraction
-from app.services.ad_matching import ALGORITHM_NAME, ALGORITHM_VERSION
+from app.services.ad_coverage import summarize_aircraft_coverage_status
+from app.services.ad_coverage import resolve_aircraft_ad_coverage
+from app.services.ad_matching import (
+    ALGORITHM_NAME,
+    ALGORITHM_VERSION,
+    invalidate_aircraft_match_results,
+)
 from app.services.installed_components import component_display_name
 from app.services.observability import record_product_event, record_workflow_status
 
@@ -79,7 +91,7 @@ def list_extraction_reviews(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ADExtractionReviewListResponse:
-    _ = current_user
+    ensure_platform_admin(current_user)
     reviews = db.scalars(
         select(ADExtractionReview)
         .options(
@@ -105,6 +117,7 @@ def list_aircraft_matches(
             ADMatchResult.aircraft_id == aircraft_id,
             ADMatchResult.algorithm_name == ALGORITHM_NAME,
             ADMatchResult.algorithm_version == ALGORITHM_VERSION,
+            ADMatchResult.is_current.is_(True),
         )
         .options(
             selectinload(ADMatchResult.aircraft),
@@ -118,45 +131,58 @@ def list_aircraft_matches(
         )
         .order_by(ADMatchResult.status.desc(), ADMatchResult.confidence.desc(), ADMatchResult.created_at.desc())
     ).all()
-    latest_completion = db.scalar(
+    latest_matching_event = db.scalar(
         select(ProductEvent)
         .where(
             ProductEvent.aircraft_id == aircraft_id,
-            ProductEvent.event_type == "ad_matching_completed",
+            ProductEvent.event_type.in_(
+                {"ad_matching_completed", "ad_matching_invalidated"}
+            ),
         )
         .order_by(ProductEvent.event_time.desc(), ProductEvent.created_at.desc())
         .limit(1)
     )
     completion_properties = (
-        latest_completion.properties_json
-        if latest_completion and latest_completion.properties_json
+        latest_matching_event.properties_json
+        if latest_matching_event and latest_matching_event.properties_json
         else {}
     )
     completed_with_current_version = (
-        completion_properties.get("algorithm_name") == ALGORITHM_NAME
+        latest_matching_event is not None
+        and latest_matching_event.event_type == "ad_matching_completed"
+        and completion_properties.get("algorithm_name") == ALGORITHM_NAME
         and completion_properties.get("algorithm_version") == ALGORITHM_VERSION
+    )
+    matching_was_invalidated = (
+        latest_matching_event is not None
+        and latest_matching_event.event_type == "ad_matching_invalidated"
     )
     has_stale_results = db.scalar(
         select(ADMatchResult.id)
         .where(
             ADMatchResult.aircraft_id == aircraft_id,
             ADMatchResult.algorithm_name == ALGORITHM_NAME,
-            ADMatchResult.algorithm_version != ALGORITHM_VERSION,
+            (
+                (ADMatchResult.algorithm_version != ALGORITHM_VERSION)
+                | ADMatchResult.is_current.is_(False)
+            ),
         )
         .limit(1)
     ) is not None
     if matches or completed_with_current_version:
         matcher_status = "current"
-    elif has_stale_results:
+    elif matching_was_invalidated or has_stale_results:
         matcher_status = "pending_recomputation"
     else:
         matcher_status = "not_run"
+    coverage = summarize_aircraft_coverage_status(db, aircraft_id)
     return ADMatchResultListResponse(
         matches=[serialize_match_result(match) for match in matches],
         matcherStatus=matcher_status,
         algorithmName=ALGORITHM_NAME,
         algorithmVersion=ALGORITHM_VERSION,
         reprocessingRequired=matcher_status == "pending_recomputation",
+        **coverage,
     )
 
 
@@ -186,7 +212,13 @@ def decide_match_adjudication(
     )
     if not match:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AD match not found")
-    get_visible_aircraft_or_404(db, current_user, match.aircraft_id)
+    aircraft = get_visible_aircraft_or_404(db, current_user, match.aircraft_id)
+    ensure_maintenance_review_access(db, aircraft, current_user)
+    if not match.is_current:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="AD match is stale and must be recomputed before adjudication",
+        )
     adjudication = match.adjudication
     if adjudication is None:
         adjudication = ADMatchAdjudication(match_result_id=match.id)
@@ -248,6 +280,7 @@ def decide_extraction_review(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ADReviewDecisionResponse:
+    ensure_platform_admin(current_user)
     review = db.scalar(
         select(ADExtractionReview)
         .where(ADExtractionReview.id == review_id)
@@ -265,14 +298,56 @@ def decide_extraction_review(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported review decision")
 
     decision_output = payload.output if payload.output is not None else review.proposed_output
+    affected_aircraft_ids = set(
+        db.scalars(
+            select(ADMatchResult.aircraft_id)
+            .where(
+                ADMatchResult.directive_id == review.extraction.directive_id,
+                ADMatchResult.is_current.is_(True),
+            )
+            .distinct()
+        )
+        .all()
+    )
     if payload.decision in {"approved", "edited"}:
-        validate_extraction_output(decision_output)
+        try:
+            validate_extraction_output(decision_output)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(exc),
+            ) from exc
         review.extraction.output = decision_output
         review.extraction.status = "approved"
         review.extraction.directive.extraction_status = "complete"
         review.extraction.directive.review_status = "approved"
         review.extraction.directive.approved_at = datetime.now(timezone.utc)
         populate_applicability_from_extraction(db, review.extraction)
+        db.flush()
+        target_ids = db.scalars(
+            select(ADTargetApplicability.target_id)
+            .where(
+                ADTargetApplicability.directive_id
+                == review.extraction.directive_id
+            )
+            .distinct()
+        ).all()
+        if target_ids:
+            affected_aircraft_ids.update(
+                db.scalars(
+                    select(ADCoverageSubscription.aircraft_id)
+                    .join(
+                        ADCoverageSet,
+                        ADCoverageSet.id
+                        == ADCoverageSubscription.coverage_set_id,
+                    )
+                    .where(
+                        ADCoverageSet.target_id.in_(target_ids),
+                        ADCoverageSubscription.status == "active",
+                    )
+                    .distinct()
+                ).all()
+            )
     else:
         review.extraction.status = "rejected"
         review.extraction.directive.review_status = "rejected"
@@ -283,6 +358,13 @@ def decide_extraction_review(
     review.reviewer_user_id = current_user.id
     review.notes = payload.notes
     review.reviewed_at = datetime.now(timezone.utc)
+    for aircraft_id in affected_aircraft_ids:
+        resolve_aircraft_ad_coverage(db, aircraft_id)
+        invalidate_aircraft_match_results(
+            db,
+            aircraft_id=aircraft_id,
+            actor=current_user,
+        )
     record_product_event(
         db,
         event_type="ad_extraction_review_decided",

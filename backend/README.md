@@ -168,6 +168,16 @@ scanned, handwritten, mixed, degraded, image-dominant, spread, and uncertain
 pages continue to Textract. See
 `.ai/NATIVE_TEXT_ROUTING_ACTIVATION_2026-07-26.md`.
 
+All OCR-derived logbook entries begin in `needs_review`, regardless of provider
+confidence or native-text routing. An ingestion job remains
+`awaiting_entry_review` until an assigned maintenance reviewer explicitly
+verifies every extracted entry. Verification stores the reviewer and a server
+timestamp even when optional client timing is absent. Only individually
+verified entries are eligible as evidence in AD matching; a zero-entry
+extraction remains open as `awaiting_manual_entry_review`.
+Manually transcribed entries also begin in `needs_review` and require the same
+assigned-maintenance verification before they can participate in AD matching.
+
 The approved OCR-refinement path and provider decisions are closed in
 `.ai/OCR_PATH_CLOSURE_2026-07-26.md`. Early-adopter review and worker
 reliability are subsequent operational stages, not unfinished OCR engine work.
@@ -316,6 +326,20 @@ Aircraft creation/update and the AD matching worker resolve reusable AD
 coverage from the current retained DRS snapshot. A later client with the same
 airframe/component applicability targets links to the existing coverage rather
 than downloading or duplicating DRS data.
+
+The aircraft AD-match response reports DRS coverage health separately from
+individual match results. Missing, degraded, or pending coverage produces
+explicit warnings so a completed matcher run cannot be mistaken for complete
+AD coverage. Incomplete component identity and DRS snapshots older than
+`PAPRNAV_DRS_MAX_SNAPSHOT_AGE_DAYS` (default `7`) also prevent a `current`
+coverage status. Superseded or plausibly applicable but identity-uncertain
+directives require adjudication. Logbook evidence changes invalidate the
+current match immediately; retained historical rows are not returned as
+current worklist results.
+Aircraft identity changes and newly approved AD applicability also invalidate
+affected worklists, including prior zero-result runs. AD extraction approval
+requires at least one attributable affected product so subscription-based
+invalidation cannot be bypassed by empty applicability.
 
 The admin cost response separates physical shared-source storage, estimated
 logical coverage storage, and aircraft-specific comparison usage. Actual and

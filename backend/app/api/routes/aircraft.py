@@ -23,6 +23,7 @@ from app.services.installed_components import sync_installed_components_from_air
 from app.services.ad_coverage import resolve_aircraft_ad_coverage
 from app.services.cost_tags import ensure_aircraft_cost_tag, ensure_organization_account_tag
 from app.services.observability import record_product_event
+from app.services.ad_matching import invalidate_aircraft_match_results
 
 router = APIRouter(prefix="/api/v1/aircraft", tags=["aircraft"])
 
@@ -81,6 +82,34 @@ def ensure_owner_access(aircraft: Aircraft, user: User) -> None:
     owner_org_ids = {membership.organization_id for membership in owner_memberships(user)}
     if aircraft.owner_organization_id not in owner_org_ids:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owner access required")
+
+
+def ensure_maintenance_review_access(
+    db: Session,
+    aircraft: Aircraft,
+    user: User,
+) -> None:
+    maintenance_org_ids = {
+        membership.organization_id
+        for membership in maintenance_memberships_for_user(user)
+    }
+    if not maintenance_org_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Assigned maintenance reviewer access required",
+        )
+    assignment = db.scalar(
+        select(AircraftAssignment.id).where(
+            AircraftAssignment.aircraft_id == aircraft.id,
+            AircraftAssignment.organization_id.in_(maintenance_org_ids),
+            AircraftAssignment.status == "active",
+        )
+    )
+    if assignment is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Assigned maintenance reviewer access required",
+        )
 
 
 def serialize_aircraft(db: Session, aircraft: Aircraft) -> AircraftResponse:
@@ -278,6 +307,11 @@ def update_aircraft(
     apply_aircraft_fields(aircraft, payload)
     sync_installed_components_from_aircraft(db, aircraft)
     resolve_aircraft_ad_coverage(db, aircraft.id)
+    invalidate_aircraft_match_results(
+        db,
+        aircraft_id=aircraft.id,
+        actor=current_user,
+    )
     db.commit()
     db.refresh(aircraft)
     return serialize_aircraft(db, aircraft)

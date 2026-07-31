@@ -38,6 +38,8 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - User corrections are stored as auditable HITL annotations.
 - Verified OCR plus user corrections populate structured logbook entries.
 - Users can manually add logbook entries.
+- Manually added entries begin unverified and require an assigned maintenance
+  reviewer before they can participate in AD matching.
 - Authorized users can add additional logbook volumes or component logs to an
   aircraft, give each log a clear label, associate it with the applicable
   component/serial number and date range when known, and then upload pages or
@@ -61,6 +63,10 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - AD source, coverage-set, and aircraft-comparison usage must be separately attributed. The first client to trigger coverage is provenance only and is not automatically charged for shared setup or storage.
 - Actual incurred cost and future allocated cost must remain separate. Customer allocation is informational and non-billable until a versioned allocation policy is explicitly activated.
 - Only human-verified logbook entries may participate in AD compliance matching.
+- Only a user in an actively assigned maintenance organization may verify an
+  OCR-derived entry or adjudicate an aircraft AD match. Each verification must
+  retain the reviewer user and server timestamp. AD extraction approval is a
+  platform-administrator action.
 - If DRS bulk ingestion fails, users must see a degraded-coverage warning rather than a false complete worklist; the warning should mention that historical and DRS-indexed AD coverage is unverified or may be incomplete.
 - Pre-1994 ADs are supported when present in DRS bulk data, but the product must not claim complete historical coverage until validation against DRS Web UI samples and historical FAA/index sources proves completeness. The 2026-06-21 T071 validation result is conditional and does not prove complete historical coverage.
 - DRS collection failures must create admin-visible repair or reconciliation work items.
@@ -107,7 +113,7 @@ Remaining known gaps:
 - AD applicability is modeled with first-class `applicability_targets`, `installed_components`, `ad_publications`, `ad_target_applicability`, `ad_coverage_sets`, and `ad_coverage_subscriptions`. Matching retains approved extraction JSON for audit/replay while using structured component applicability when available.
 - Aircraft component identity supports active installed-component rows and airframe/engine/propeller roles. Rich installation history, serial-range evaluation, appliances, twin-engine cases, and rotorcraft/drivetrain cases still require broader fixtures and refinement.
 - AD extraction is shallow and deterministic. Full applicability/compliance extraction, source-section citations, structured compliance intervals, provider-backed LLM extraction, cache behavior, and richer review reconciliation remain incomplete.
-- AD matching handles first-pass one-time and simple recurring cases and now uses installed components plus DRS/extraction applicability rows when present, but does not yet fully apply serial ranges, conditional applicability, component installation history, or stale-source reconciliation.
+- AD matching handles first-pass one-time and simple recurring cases and now uses installed components plus DRS/extraction applicability rows when present. It invalidates current results after logbook evidence changes and exposes incomplete-identity or stale-snapshot coverage warnings, but does not yet fully apply serial ranges, conditional applicability, component installation history, or deeper source reconciliation.
 - FAA DRS bulk ZIP/Access fixture-first importing is implemented for identifier/source/applicability rows. Browser/Web UI scraping is not the default ingestion path and should be limited to validation/diagnostics unless a later decision changes that.
 - DRS degraded-mode reconciliation issues are implemented for backend worker/admin surfacing; user-facing degraded-mode UX remains to be finished.
 - Federal Register AD-to-FR matching for ADs discovered from DRS bulk data has an initial implementation; the reconciliation worker now flags missing FR matches and correction/supersession publication signals, but deeper legal/source conflict resolution remains future work.

@@ -339,7 +339,7 @@ feasibility work. Pricing rates and estimated costs use fixed-precision database
 columns so account and aircraft rollups do not accumulate binary floating-point
 error.
 
-Deterministic AD matching version `0.3.0` normalizes explicit two- and four-digit
+Deterministic AD matching version `0.5.0` normalizes explicit two- and four-digit
 AD references. Candidate satisfaction requires an explicit normalized AD
 reference, compliance or inspection language, and a verified logbook entry.
 Negated claims such as `not complied` or `inspection not completed`, mere
@@ -359,6 +359,12 @@ older replay records remain stored for audit. The list response reports
 `pending_recomputation` when only stale results exist so an empty current result
 set cannot be mistaken for a completed no-match result. Recalculation remains a
 worker operation rather than a side effect of a read request.
+Known supersession edges force adjudication with `directive_superseded`; prior
+evidence stays visible, but it cannot produce an unqualified satisfied result.
+Version `0.5.0` also distinguishes current results from retained replay
+history. Logbook evidence edits invalidate the current result immediately, and
+plausibly applicable directives with incomplete component identity route to
+adjudication instead of disappearing as not applicable.
 
 ### D022: Do not promote Google Document AI after the frozen refinement evaluation
 
@@ -415,6 +421,40 @@ double-counted against physical source storage.
 Only verified logbook entries participate in AD compliance matching.
 Unverified OCR candidates remain in the human-review workflow and cannot
 produce positive or negative compliance evidence.
+
+### D024: Require explicit entry review and expose aircraft coverage health
+
+Status: accepted 2026-07-29
+
+OCR and native-text confidence may prioritize and accelerate review, but they
+do not verify an extracted maintenance entry. Every `ocr_ingestion` entry
+starts `needs_review`. Its ingestion job remains `awaiting_entry_review` until
+all extracted candidates linked to that job are explicitly marked `verified`;
+only then may the job become complete. Each verified entry becomes eligible
+for AD matching independently; unreviewed siblings keep the ingestion job open
+but do not prevent an already verified entry from participating.
+Manually transcribed entries also begin `needs_review`; owner entry does not
+constitute maintenance verification.
+
+Only a member of an actively assigned maintenance organization may verify an
+OCR-derived entry or adjudicate an aircraft AD match. The current verification
+attestation is stored with a server timestamp and reviewer user ID even when
+the client does not submit timing telemetry. AD extraction approval is limited
+to platform administrators. Any safety-relevant edit or verification-state
+change invalidates current AD match results until the matcher recomputes them.
+Approval or editing of an AD extraction refreshes affected coverage and
+invalidates every aircraft subscribed to its applicability targets, including
+aircraft whose last match run produced zero result rows. An extraction cannot
+be approved without at least one attributable affected product.
+
+The aircraft AD worklist reports reusable coverage health independently from
+matcher execution state. `current` means every active airframe/component
+coverage set is current. Missing snapshots, degraded DRS sources, or pending
+applicability, incomplete installed-component identity, or a DRS snapshot older
+than the configured freshness window produce `degraded` or `not_resolved`
+status and user-facing warnings. The default freshness window is seven days.
+A current matcher result must never suppress those warnings or imply complete
+historical/indexed AD coverage.
 
 ## Proposed Decisions To Resolve Soon
 
