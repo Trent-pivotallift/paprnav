@@ -2003,7 +2003,8 @@ Acceptance:
 
 - A normalized applicability target has one reusable coverage set.
 - Aircraft and organizations link to coverage without duplicating source data.
-- A second client with the same identities causes no source download request.
+- A second client with the same identities reuses the single retained source
+  snapshot without creating duplicate source data.
 - Airframe, engine, propeller, and future component coverage remain separate.
 - Shared-source, coverage-set, and aircraft-comparison usage have distinct
   ledger scopes.
@@ -2067,3 +2068,52 @@ Acceptance:
   review history.
 - Permissions, API validation, backend tests, frontend tests, lint, and build
   checks cover both capabilities before release.
+
+### T076: Prove the controlled full-product ingestion-to-AD path
+
+Status: completed 2026-07-30
+
+Goal: Exercise retained PDF ingestion, human-reviewed structured evidence,
+component-aware AD/DRS coverage, matching, adjudication, coverage warnings,
+reuse, and cost attribution with 10 predeclared controlled scenarios before
+opening the 22-page integration partition.
+
+Acceptance:
+
+- The exact scenario contract in
+  `.ai/FULL_PRODUCT_READINESS_LOOP_2026-07-29.md` is frozen before execution.
+- All 10 controlled scenarios pass.
+- Native-only routing reports zero Textract pages without losing source-page
+  evidence.
+- Only explicitly verified logbook entries participate in AD matching.
+- Airframe, engine, and propeller applicability remain distinct.
+- Recurring, superseded, missing-evidence, and uncertain cases require human
+  adjudication rather than producing false compliance.
+- Degraded DRS coverage is exposed at the aircraft worklist boundary.
+- A second client reuses coverage from the same retained source snapshot
+  without creating a duplicate snapshot.
+- OCR, shared AD source, coverage, and aircraft-comparison costs remain
+  attributable but non-billable.
+- Full backend and frontend regressions pass.
+- The frozen 22-page integration partition and 11-page final holdout remain
+  unopened.
+
+Evidence:
+
+- Controlled readiness contract passed 10/10.
+- Ingestion/human-review stage passed 2/2.
+- Applicability/adjudication stage passed 6/6.
+- Coverage warning/reuse/cost stage passed 2/2.
+- Focused cross-feature regression passed 40/40.
+- Complete backend regression passed 125/125.
+- Frontend lint passed with zero errors and one pre-existing image warning.
+- Frontend production build passed.
+- PDF visual inspection passed 1/1.
+- Both frozen partitions remained unopened.
+- The first independent review found second-order authority, audit,
+  invalidation, applicability, and coverage-health gaps. Those findings were
+  corrected and the focused safety suite passed 40/40.
+- Two targeted closure reviews confirmed the corrections. The final
+  empty-applicability edge was rejected at approval and its edge closure review
+  reported 0 blockers.
+- Alembic reports one head at `20260730_0017`.

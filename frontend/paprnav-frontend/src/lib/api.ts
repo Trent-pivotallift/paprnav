@@ -99,6 +99,8 @@ export interface LogbookEntry {
   performerCredential: string | null;
   sourceType: string;
   reviewStatus: string;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
   tachTime: number | null;
   hobbsTime: number | null;
   totalTime: number | null;
@@ -123,7 +125,7 @@ export interface LogbookEntryUpdateRequest {
 
 export interface LogbookEntryCreateRequest {
   section: LogbookSection;
-  entryDate: string;
+  entryDate: string | null;
   description: string;
   performerName?: string | null;
   performerCredential?: string | null;
@@ -343,7 +345,7 @@ export interface ADExtractionReviewListResponse {
 export interface ADMatchEvidence {
   id: string;
   logbookEntryId: string;
-  entryDate: string;
+  entryDate: string | null;
   section: LogbookSection;
   evidenceType: string;
   fieldName: string | null;
@@ -468,6 +470,14 @@ export interface ADMatchResultListResponse {
   algorithmName: string;
   algorithmVersion: string;
   reprocessingRequired: boolean;
+  coverageStatus: "current" | "degraded" | "not_resolved";
+  coverageWarnings: string[];
+  coverageTargets: Array<{
+    productType: string;
+    make: string | null;
+    model: string | null;
+    status: string;
+  }>;
 }
 
 export interface ADSourceSnapshotCost {

@@ -185,7 +185,7 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     assert response.status_code == 200
     match_payload = response.json()
     assert match_payload["matcherStatus"] == "current"
-    assert match_payload["algorithmVersion"] == "0.3.0"
+    assert match_payload["algorithmVersion"] == "0.5.0"
     assert match_payload["reprocessingRequired"] is False
     matches = match_payload["matches"]
     assert len(matches) == 3
@@ -196,6 +196,17 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     assert candidate["applicability"]["target"]["make"] == "Cessna"
 
     unresolved = next(match for match in matches if match["status"] == "needs_adjudication")
+    owner_decision = client.post(
+        f"/api/v1/ads/matches/{unresolved['id']}/adjudication",
+        json={
+            "decision": "needs_more_info",
+            "notes": "Owner must not adjudicate.",
+            "futureImprovementTags": [],
+        },
+    )
+    assert owner_decision.status_code == 403
+
+    login(client, "shop.test@paprnav.local")
     decision_response = client.post(
         f"/api/v1/ads/matches/{unresolved['id']}/adjudication",
         json={
@@ -231,7 +242,7 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     current_results = db_session.scalars(
         select(ADMatchResult).where(
             ADMatchResult.aircraft_id == aircraft.id,
-            ADMatchResult.algorithm_version == "0.3.0",
+            ADMatchResult.algorithm_version == "0.5.0",
         )
     ).all()
     for result in current_results:
@@ -337,7 +348,6 @@ def test_ad_matching_normalizes_legacy_ad_numbers_and_requires_verified_claims(
     assert results_by_ad["2011-10-09"].status == "candidate_satisfied"
     assert results_by_ad["2011-10-09"].confidence > 0.8
     assert results_by_ad["2012-01-02"].evidence_links == []
-    assert "logbook_entry_unverified" not in results_by_ad["2012-01-02"].unresolved_reasons
     assert (
         "explicit_compliance_claim_missing"
         in results_by_ad["2013-02-03"].unresolved_reasons
@@ -347,6 +357,114 @@ def test_ad_matching_normalizes_legacy_ad_numbers_and_requires_verified_claims(
         "explicit_compliance_claim_missing"
         in results_by_ad["2014-03-04"].unresolved_reasons
     )
+
+
+def test_evidence_change_invalidates_old_match_until_recomputed(
+    client: TestClient,
+    db_session: Session,
+    demo_data: dict[str, object],
+) -> None:
+    aircraft = demo_data["aircraft"]
+    section = db_session.scalar(
+        select(LogbookSection).where(LogbookSection.key == "airframe")
+    )
+    assert section is not None
+    entry = LogbookEntry(
+        aircraft_id=aircraft.id,
+        logbook_section_id=section.id,
+        entry_date=date(2026, 7, 1),
+        description="Complied with AD 2026-70-01 by inspection.",
+        performer_name="Fixture Mechanic",
+        performer_credential="A&P IA",
+        source_type="ocr_ingestion",
+        created_by_user_id=demo_data["owner_user"].id,
+        raw_text="Complied with AD 2026-70-01 by inspection.",
+        review_status="verified",
+        reviewed_by_user_id=demo_data["shop_user"].id,
+    )
+    db_session.add(entry)
+    create_approved_extraction(
+        db_session,
+        title="Airworthiness Directives; Cessna 172R Airplanes",
+        document_number="2026-70001",
+        ad_number="2026-70-01",
+        affected_products=["Cessna 172R"],
+        compliance_actions=["Inspect the airframe."],
+        compliance_intervals=[],
+    )
+    db_session.commit()
+
+    match_aircraft_ads(db_session, aircraft.id)
+    original = db_session.scalar(
+        select(ADMatchResult).where(ADMatchResult.is_current.is_(True))
+    )
+    assert original is not None
+    assert original.status == "candidate_satisfied"
+
+    login(client, "owner.test@paprnav.local")
+    owner_demote = client.patch(
+        f"/api/v1/aircraft/{aircraft.id}/logbook-entries/{entry.id}",
+        json={"reviewStatus": "needs_review"},
+    )
+    assert owner_demote.status_code == 403
+
+    login(client, "shop.test@paprnav.local")
+    demote = client.patch(
+        f"/api/v1/aircraft/{aircraft.id}/logbook-entries/{entry.id}",
+        json={"reviewStatus": "needs_review"},
+    )
+    assert demote.status_code == 200
+    assert demote.json()["reviewedByUserId"] == demo_data["shop_user"].id
+
+    pending = client.get(f"/api/v1/ads/aircraft/{aircraft.id}/matches")
+    assert pending.status_code == 200
+    assert pending.json()["matcherStatus"] == "pending_recomputation"
+    assert pending.json()["matches"] == []
+
+    match_aircraft_ads(db_session, aircraft.id)
+    current_results = db_session.scalars(
+        select(ADMatchResult).where(ADMatchResult.is_current.is_(True))
+    ).all()
+    assert len(current_results) == 1
+    assert current_results[0].status == "needs_adjudication"
+    assert current_results[0].evidence_links == []
+    assert original.is_current is False
+
+
+def test_incomplete_component_identity_routes_to_adjudication(
+    db_session: Session,
+    demo_data: dict[str, object],
+) -> None:
+    aircraft = demo_data["aircraft"]
+    aircraft.engine_model = None
+    engine = next(
+        component
+        for component in aircraft.installed_components
+        if component.role == "engine"
+    )
+    engine.model = None
+    create_approved_extraction(
+        db_session,
+        title="Airworthiness Directives; Lycoming IO-360-L2A Engines",
+        document_number="2026-71001",
+        ad_number="2026-71-01",
+        affected_products=["Lycoming IO-360-L2A Engines"],
+        compliance_actions=["Inspect the engine."],
+        compliance_intervals=[],
+    )
+    db_session.commit()
+
+    stats = match_aircraft_ads(db_session, aircraft.id)
+
+    assert stats["directives_seen"] == 1
+    assert stats["skipped_not_applicable"] == 0
+    assert stats["unresolved"] == 1
+    result = db_session.scalar(
+        select(ADMatchResult).where(ADMatchResult.is_current.is_(True))
+    )
+    assert result is not None
+    assert result.status == "needs_adjudication"
+    assert "component_applicability_uncertain" in result.unresolved_reasons
 
 
 def create_approved_extraction(

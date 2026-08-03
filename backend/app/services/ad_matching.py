@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.core import (
@@ -20,6 +20,7 @@ from app.models.core import (
     AirworthinessDirective,
     InstalledComponent,
     LogbookEntry,
+    ProductEvent,
 )
 from app.services.ad_applicability import infer_component_role
 from app.services.ad_costs import record_ad_cost_entry
@@ -29,7 +30,7 @@ from app.services.maintenance_extraction import extract_structured_maintenance_d
 from app.services.observability import record_product_event, record_workflow_status
 
 ALGORITHM_NAME = "deterministic_ad_logbook_matcher"
-ALGORITHM_VERSION = "0.3.0"
+ALGORITHM_VERSION = "0.5.0"
 ACTION_WORDS = {"comply", "complied", "compliance", "inspect", "inspection", "replace", "replaced", "modify", "modified"}
 
 
@@ -48,6 +49,15 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
     if not aircraft:
         raise ValueError("Aircraft not found")
 
+    db.execute(
+        update(ADMatchResult)
+        .where(
+            ADMatchResult.aircraft_id == aircraft_id,
+            ADMatchResult.algorithm_name == ALGORITHM_NAME,
+            ADMatchResult.is_current.is_(True),
+        )
+        .values(is_current=False)
+    )
     coverage_stats = resolve_aircraft_ad_coverage(db, aircraft_id)
     entries = db.scalars(
         select(LogbookEntry)
@@ -71,8 +81,9 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
         applicability = select_applicable_component(aircraft, extraction)
         has_structured_applicability = bool(extraction.directive.target_applicabilities)
         if has_structured_applicability and applicability is None:
-            stats["skipped_not_applicable"] += 1
-            continue
+            if not structured_applicability_is_uncertain(aircraft, extraction):
+                stats["skipped_not_applicable"] += 1
+                continue
         if not has_structured_applicability and not is_potentially_applicable(aircraft, output):
             stats["skipped_not_applicable"] += 1
             continue
@@ -84,6 +95,11 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
             installed_component=applicability[0] if applicability else None,
             target_applicability=applicability[1] if applicability else None,
             structured_entries=structured_entries,
+            forced_unresolved_reasons=(
+                ["component_applicability_uncertain"]
+                if has_structured_applicability and applicability is None
+                else None
+            ),
         )
         if result.status == "candidate_satisfied":
             stats["matched"] += 1
@@ -138,7 +154,7 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
 
 
 def approved_current_extractions(db: Session) -> list[ADExtraction]:
-    return db.scalars(
+    rows = db.scalars(
         select(ADExtraction)
         .where(ADExtraction.status == "approved")
         .options(
@@ -151,8 +167,12 @@ def approved_current_extractions(db: Session) -> list[ADExtraction]:
             .selectinload(ADTargetApplicability.source_publication),
             selectinload(ADExtraction.directive).selectinload(AirworthinessDirective.superseded_by_edges),
         )
-        .order_by(ADExtraction.created_at.desc())
+        .order_by(ADExtraction.created_at.desc(), ADExtraction.id.desc())
     ).all()
+    current_by_directive: dict[str, ADExtraction] = {}
+    for extraction in rows:
+        current_by_directive.setdefault(extraction.directive_id, extraction)
+    return list(current_by_directive.values())
 
 
 def upsert_match_result(
@@ -163,6 +183,7 @@ def upsert_match_result(
     installed_component: InstalledComponent | None = None,
     target_applicability: ADTargetApplicability | None = None,
     structured_entries: Mapping[str, dict[str, Any]] | None = None,
+    forced_unresolved_reasons: list[str] | None = None,
 ) -> ADMatchResult:
     output = extraction.output
     evidence = rank_candidate_entries(
@@ -171,6 +192,9 @@ def upsert_match_result(
         structured_entries=structured_entries,
     )
     match_type, unresolved_reasons = classify_match_type(output)
+    unresolved_reasons.extend(forced_unresolved_reasons or [])
+    if extraction.directive.superseded_by_edges:
+        unresolved_reasons.append("directive_superseded")
     confidence = evidence[0].confidence if evidence else 0.42
     if evidence:
         strongest_evidence = evidence[0]
@@ -181,13 +205,15 @@ def upsert_match_result(
             "inspected",
         }:
             unresolved_reasons.append("explicit_compliance_claim_missing")
-        if strongest_evidence.entry.review_status != "verified":
-            unresolved_reasons.append("logbook_entry_unverified")
         unresolved_reasons = sorted(set(unresolved_reasons))
     if unresolved_reasons:
         confidence = min(confidence, 0.68)
     applicability_snapshot = build_applicability_snapshot(installed_component, target_applicability)
-    if target_applicability and not installed_component.serial_number:
+    if (
+        target_applicability
+        and installed_component
+        and not installed_component.serial_number
+    ):
         unresolved_reasons = sorted(set(unresolved_reasons + ["component_serial_unknown"]))
         confidence = min(confidence, 0.72)
     status = "candidate_satisfied" if evidence and not unresolved_reasons else "needs_adjudication"
@@ -214,6 +240,7 @@ def upsert_match_result(
         result.rationale = rationale
         result.unresolved_reasons = unresolved_reasons
         result.applicability_snapshot = applicability_snapshot
+        result.is_current = True
         result.computed_at = datetime.now(timezone.utc)
         db.execute(delete(ADMatchEvidence).where(ADMatchEvidence.match_result_id == result.id))
     else:
@@ -232,6 +259,7 @@ def upsert_match_result(
             algorithm_name=ALGORITHM_NAME,
             algorithm_version=ALGORITHM_VERSION,
             input_hash=input_hash,
+            is_current=True,
         )
         db.add(result)
         db.flush()
@@ -252,6 +280,47 @@ def upsert_match_result(
     ensure_adjudication(db, result, status)
     db.flush()
     return result
+
+
+def invalidate_aircraft_match_results(
+    db: Session,
+    *,
+    aircraft_id: str,
+    actor=None,
+) -> int:
+    invalidated = db.execute(
+        update(ADMatchResult)
+        .where(
+            ADMatchResult.aircraft_id == aircraft_id,
+            ADMatchResult.algorithm_name == ALGORITHM_NAME,
+            ADMatchResult.is_current.is_(True),
+        )
+        .values(is_current=False)
+    ).rowcount or 0
+    prior_completion = db.scalar(
+        select(ProductEvent.id)
+        .where(
+            ProductEvent.aircraft_id == aircraft_id,
+            ProductEvent.event_type == "ad_matching_completed",
+        )
+        .limit(1)
+    )
+    if invalidated or prior_completion is not None:
+        event = record_product_event(
+            db,
+            event_type="ad_matching_invalidated",
+            subject_type="aircraft",
+            subject_id=aircraft_id,
+            actor=actor,
+            aircraft_id=aircraft_id,
+            properties={
+                "algorithm_name": ALGORITHM_NAME,
+                "algorithm_version": ALGORITHM_VERSION,
+                "invalidated_result_count": invalidated,
+            },
+        )
+        event.event_time = datetime.now(timezone.utc)
+    return invalidated
 
 
 def ensure_adjudication(db: Session, result: ADMatchResult, status: str) -> None:
@@ -309,9 +378,42 @@ def select_applicable_component(aircraft: Aircraft, extraction: ADExtraction) ->
     return best[0], best[1]
 
 
-def component_target_score(component: InstalledComponent, applicability: ADTargetApplicability, target_role: str) -> float:
-    target = applicability.target
-    score = 0.0
+def structured_applicability_is_uncertain(
+    aircraft: Aircraft,
+    extraction: ADExtraction,
+) -> bool:
+    active_components = [
+        component
+        for component in aircraft.installed_components
+        if component.removed_at is None
+    ]
+    for applicability in extraction.directive.target_applicabilities:
+        if applicability.status not in {"current", "active", "unknown"}:
+            continue
+        target = applicability.target
+        target_role = infer_component_role(
+            target.product_type,
+            target.product_subtype,
+        )
+        for component in active_components:
+            if component_target_role_score(component, target_role) <= 0:
+                continue
+            if (target.make and not component.make) or (
+                target.model and not component.model
+            ):
+                return True
+            if identity_is_close(component.make, target.make) and identity_is_close(
+                component.model,
+                target.model,
+            ):
+                return True
+    return False
+
+
+def component_target_role_score(
+    component: InstalledComponent,
+    target_role: str,
+) -> float:
     compatible_roles = {
         "airframe": {"airframe", "rotorcraft_airframe"},
         "rotorcraft_airframe": {"airframe", "rotorcraft_airframe"},
@@ -320,11 +422,28 @@ def component_target_score(component: InstalledComponent, applicability: ADTarge
         "rotor_system": {"rotor_system", "propeller"},
         "drivetrain_transmission": {"drivetrain_transmission"},
         "appliance": {"appliance", "other", "unknown"},
-        "unknown": {"airframe", "engine", "propeller", "rotorcraft_airframe", "rotor_system", "drivetrain_transmission", "appliance", "other", "unknown"},
+        "unknown": {
+            "airframe",
+            "engine",
+            "propeller",
+            "rotorcraft_airframe",
+            "rotor_system",
+            "drivetrain_transmission",
+            "appliance",
+            "other",
+            "unknown",
+        },
     }
-    if component.role not in compatible_roles.get(target_role, {target_role}):
+    return 0.25 if component.role in compatible_roles.get(
+        target_role, {target_role}
+    ) else 0.0
+
+
+def component_target_score(component: InstalledComponent, applicability: ADTargetApplicability, target_role: str) -> float:
+    target = applicability.target
+    score = component_target_role_score(component, target_role)
+    if score <= 0:
         return 0.0
-    score += 0.25
     if text_matches(component.make, target.make):
         score += 0.35
     elif target.make:
@@ -343,7 +462,26 @@ def text_matches(component_value: str | None, target_value: str | None) -> bool:
         return False
     component_text = normalize_match_text(component_value)
     target_text = normalize_match_text(target_value)
-    return component_text in target_text or target_text in component_text
+    return component_text == target_text
+
+
+def identity_is_close(
+    component_value: str | None,
+    target_value: str | None,
+) -> bool:
+    if not component_value or not target_value:
+        return False
+    component_text = normalize_match_text(component_value)
+    target_text = normalize_match_text(target_value)
+    if component_text == target_text:
+        return False
+    return (
+        min(len(component_text), len(target_text)) >= 4
+        and (
+            component_text.startswith(target_text)
+            or target_text.startswith(component_text)
+        )
+    )
 
 
 def normalize_match_text(value: str) -> str:

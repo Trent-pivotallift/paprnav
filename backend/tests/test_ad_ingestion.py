@@ -6,10 +6,25 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.core import ADDiscoveryRecord, ADExtraction, ADExtractionReview, ADTargetApplicability, AirworthinessDirective
+from app.models.core import (
+    ADCoverageSet,
+    ADCoverageSubscription,
+    ADDiscoveryRecord,
+    ADExtraction,
+    ADExtractionReview,
+    ADTargetApplicability,
+    AirworthinessDirective,
+    ProductEvent,
+)
 from app.services.ad_discovery import FederalRegisterSearchResult, discover_federal_register_ads
 from app.services.ad_extraction import process_pending_ad_extractions
-from tests.conftest import login
+from app.services.ad_matching import match_aircraft_ads
+from tests.conftest import (
+    add_membership,
+    create_organization,
+    create_user,
+    login,
+)
 
 
 class FakeFederalRegisterClient:
@@ -93,7 +108,26 @@ def test_ad_extraction_routes_low_confidence_output_to_review(
     assert review.extraction.provider_name == "deterministic_ad_extractor"
     assert review.extraction.schema_version == "ad_extraction_v1"
 
+    aircraft = demo_data["aircraft"]
+    initial_stats = match_aircraft_ads(db_session, aircraft.id)
+    assert initial_stats["directives_seen"] == 0
+
     login(client, "owner.test@paprnav.local")
+    assert client.get("/api/v1/ads/extraction-reviews").status_code == 403
+
+    admin = create_user(
+        db_session,
+        "ad.admin@paprnav.local",
+        "AD Platform Admin",
+    )
+    admin_org = create_organization(
+        db_session,
+        "Paprnav AD Operations",
+        "platform",
+    )
+    add_membership(db_session, admin_org, admin, "platform_admin")
+    db_session.commit()
+    login(client, "ad.admin@paprnav.local")
     list_response = client.get("/api/v1/ads/extraction-reviews")
     assert list_response.status_code == 200
     reviews = list_response.json()["reviews"]
@@ -103,7 +137,19 @@ def test_ad_extraction_routes_low_confidence_output_to_review(
     assert "Airworthiness Directives" in reviews[0]["sourceText"]
 
     edited_output: dict[str, Any] = reviews[0]["proposedOutput"]
-    edited_output["affectedProducts"] = ["Airbus Helicopters Model H160-B"]
+    edited_output["affectedProducts"] = []
+    empty_applicability = client.post(
+        f"/api/v1/ads/extraction-reviews/{reviews[0]['id']}/decision",
+        json={
+            "decision": "edited",
+            "output": edited_output,
+            "notes": "Applicability could not be attributed.",
+        },
+    )
+    assert empty_applicability.status_code == 422
+    assert "at least one attributable product" in empty_applicability.json()["detail"]
+
+    edited_output["affectedProducts"] = ["Cessna 172R"]
     decision_response = client.post(
         f"/api/v1/ads/extraction-reviews/{reviews[0]['id']}/decision",
         json={"decision": "edited", "output": edited_output, "notes": "Confirmed from source PDF."},
@@ -111,7 +157,38 @@ def test_ad_extraction_routes_low_confidence_output_to_review(
     assert decision_response.status_code == 200
     decided = decision_response.json()["review"]
     assert decided["status"] == "edited"
-    assert decided["decisionOutput"]["affectedProducts"] == ["Airbus Helicopters Model H160-B"]
+    assert decided["decisionOutput"]["affectedProducts"] == ["Cessna 172R"]
+    target_ids = db_session.scalars(
+        select(ADTargetApplicability.target_id).where(
+            ADTargetApplicability.directive_id == review.extraction.directive_id
+        )
+    ).all()
+    assert target_ids
+    assert db_session.scalar(
+        select(ADCoverageSubscription.id)
+        .join(
+            ADCoverageSet,
+            ADCoverageSet.id == ADCoverageSubscription.coverage_set_id,
+        )
+        .where(
+            ADCoverageSet.target_id.in_(target_ids),
+            ADCoverageSubscription.aircraft_id == aircraft.id,
+        )
+    ) is not None
+    assert db_session.scalar(
+        select(ProductEvent.id).where(
+            ProductEvent.aircraft_id == aircraft.id,
+            ProductEvent.event_type == "ad_matching_invalidated",
+        )
+    ) is not None
+
+    login(client, "owner.test@paprnav.local")
+    match_response = client.get(
+        f"/api/v1/ads/aircraft/{aircraft.id}/matches"
+    )
+    assert match_response.status_code == 200
+    assert match_response.json()["matcherStatus"] == "pending_recomputation"
+    assert match_response.json()["reprocessingRequired"] is True
 
     db_session.refresh(review)
     assert review.extraction.status == "approved"

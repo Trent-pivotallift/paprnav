@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -6,9 +6,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.api.routes.aircraft import get_visible_aircraft_or_404
+from app.api.routes.aircraft import (
+    ensure_maintenance_review_access,
+    get_visible_aircraft_or_404,
+)
 from app.db.session import get_db
-from app.models.core import IngestionPage, LogbookEntry, LogbookEntryEvidence, LogbookSection, User
+from app.models.core import IngestionJob, IngestionPage, LogbookEntry, LogbookEntryEvidence, LogbookSection, User
 from app.schemas.logbook_entries import (
     LogbookEntryCreateRequest,
     LogbookEntryListResponse,
@@ -17,6 +20,7 @@ from app.schemas.logbook_entries import (
     LogbookSectionKey,
 )
 from app.services.observability import record_product_event
+from app.services.ad_matching import invalidate_aircraft_match_results
 
 router = APIRouter(prefix="/api/v1/aircraft/{aircraft_id}/logbook-entries", tags=["logbook-entries"])
 
@@ -64,6 +68,8 @@ def serialize_entry(entry: LogbookEntry) -> LogbookEntryResponse:
         performerCredential=entry.performer_credential,
         sourceType=entry.source_type,
         reviewStatus=entry.review_status,
+        reviewedByUserId=entry.reviewed_by_user_id,
+        reviewedAt=entry.reviewed_at,
         tachTime=response_float(entry.tach_time),
         hobbsTime=response_float(entry.hobbs_time),
         totalTime=response_float(entry.total_time),
@@ -127,9 +133,13 @@ def add_review_outcome_evidence(
     updated_values: dict[str, Any],
     review_status: str,
     elapsed_seconds: Optional[float],
+    review_status_changed: bool,
     current_user: User,
 ) -> None:
-    if entry.source_type != "ocr_ingestion" or elapsed_seconds is None:
+    if (
+        entry.source_type != "ocr_ingestion"
+        or (elapsed_seconds is None and not review_status_changed)
+    ):
         return
     source_evidence = db.scalar(
         select(LogbookEntryEvidence)
@@ -167,7 +177,11 @@ def add_review_outcome_evidence(
             review_metadata={
                 "actorUserId": current_user.id,
                 "reviewStatus": review_status,
-                "reviewElapsedSeconds": round(elapsed_seconds, 3),
+                "reviewElapsedSeconds": (
+                    round(elapsed_seconds, 3)
+                    if elapsed_seconds is not None
+                    else None
+                ),
                 "sourceOcrProvider": source_run.provider_name if source_run else None,
                 "sourceOcrProviderVersion": source_run.provider_version if source_run else None,
                 "fieldDecisions": decisions,
@@ -233,7 +247,7 @@ def create_logbook_entry(
         hobbs_time=payload.hobbsTime,
         total_time=payload.totalTime,
         raw_text=None,
-        review_status="verified",
+        review_status="needs_review",
     )
     db.add(entry)
     db.flush()
@@ -275,9 +289,10 @@ def update_logbook_entry(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> LogbookEntryResponse:
-    get_visible_aircraft_or_404(db, current_user, aircraft_id)
+    aircraft = get_visible_aircraft_or_404(db, current_user, aircraft_id)
     entry = get_entry_or_404(db, aircraft_id, entry_id)
     fields = payload.model_dump(exclude_unset=True)
+    original_review_status = entry.review_status
     original_values = {
         "entry_date": entry.entry_date,
         "description": entry.description,
@@ -306,8 +321,31 @@ def update_logbook_entry(
         entry.hobbs_time = fields["hobbsTime"]
     if "totalTime" in fields:
         entry.total_time = fields["totalTime"]
+    if (
+        "reviewStatus" in fields
+        and fields["reviewStatus"] is not None
+        and original_review_status == "verified"
+        and fields["reviewStatus"] != "verified"
+    ):
+        ensure_maintenance_review_access(db, aircraft, current_user)
     if "reviewStatus" in fields and fields["reviewStatus"] is not None:
+        if fields["reviewStatus"] == "verified":
+            ensure_maintenance_review_access(db, aircraft, current_user)
         entry.review_status = fields["reviewStatus"]
+    if entry.review_status == "verified" and any(
+        key in fields
+        for key in {
+            "section",
+            "entryDate",
+            "description",
+            "performerName",
+            "performerCredential",
+            "tachTime",
+            "hobbsTime",
+            "totalTime",
+        }
+    ):
+        ensure_maintenance_review_access(db, aircraft, current_user)
     if entry.review_status == "verified" and entry.entry_date is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A date is required before verifying a candidate")
 
@@ -336,6 +374,7 @@ def update_logbook_entry(
         updated_values=updated_values,
         review_status=entry.review_status,
         elapsed_seconds=fields.get("reviewElapsedSeconds"),
+        review_status_changed=original_review_status != entry.review_status,
         current_user=current_user,
     )
     if (
@@ -348,9 +387,65 @@ def update_logbook_entry(
             detail="Source-supported date evidence is required before verifying a candidate",
         )
 
+    if original_review_status != entry.review_status:
+        if entry.review_status == "verified":
+            entry.reviewed_by_user_id = current_user.id
+            entry.reviewed_at = datetime.now(timezone.utc)
+
+    db.flush()
+    update_ingestion_review_status(db, entry)
+    match_inputs_changed = (
+        original_review_status != entry.review_status
+        or any(
+            original_values[field_name] != updated_values[field_name]
+            for field_name in original_values
+        )
+        or "section" in fields
+    )
+    if match_inputs_changed:
+        invalidate_aircraft_match_results(
+            db,
+            aircraft_id=aircraft_id,
+            actor=current_user,
+        )
     db.commit()
     db.refresh(entry)
     return serialize_entry(entry)
+
+
+def update_ingestion_review_status(db: Session, entry: LogbookEntry) -> None:
+    if entry.source_type != "ocr_ingestion":
+        return
+    job_ids = set(
+        db.scalars(
+            select(LogbookEntryEvidence.ingestion_job_id).where(
+                LogbookEntryEvidence.logbook_entry_id == entry.id
+            )
+        ).all()
+    )
+    for job_id in job_ids:
+        if not job_id:
+            continue
+        review_statuses = db.scalars(
+            select(LogbookEntry.review_status)
+            .join(
+                LogbookEntryEvidence,
+                LogbookEntryEvidence.logbook_entry_id == LogbookEntry.id,
+            )
+            .where(LogbookEntryEvidence.ingestion_job_id == job_id)
+            .distinct()
+        ).all()
+        job = db.get(IngestionJob, job_id)
+        if job is None:
+            continue
+        if review_statuses and all(
+            status_value == "verified" for status_value in review_statuses
+        ):
+            job.status = "complete"
+            job.completed_at = datetime.now(timezone.utc)
+        else:
+            job.status = "awaiting_entry_review"
+            job.completed_at = None
 
 
 def entry_has_source_supported_date(db: Session, entry: LogbookEntry) -> bool:

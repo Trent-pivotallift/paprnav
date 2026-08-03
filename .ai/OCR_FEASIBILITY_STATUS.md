@@ -301,7 +301,7 @@ is not used as a billing dimension.
 
 The deterministic maintenance parser now extracts explicit normalized AD
 references and claim context without treating ordinary entry dates as ADs. AD
-matcher `0.3.0` requires a verified entry with an explicit positive compliance or
+matcher `0.5.0` requires a verified entry with an explicit positive compliance or
 inspection claim before producing `candidate_satisfied`; ambiguous, mentioned,
 negated, or unverified claims route to adjudication. Structured maintenance
 text is parsed once per entry for an aircraft matching run, and the ordinary

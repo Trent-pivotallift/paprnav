@@ -82,6 +82,8 @@ export default function AircraftLogbookPage() {
   const [assignments, setAssignments] = useState<AircraftAssignment[]>([]);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [adMatches, setAdMatches] = useState<ADMatchResult[]>([]);
+  const [adCoverageStatus, setAdCoverageStatus] = useState<"current" | "degraded" | "not_resolved">("not_resolved");
+  const [adCoverageWarnings, setAdCoverageWarnings] = useState<string[]>([]);
   const [maintenanceEmail, setMaintenanceEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
@@ -118,11 +120,15 @@ export default function AircraftLogbookPage() {
       setAircraft(selectedAircraft);
       setEntries(entriesResponse.entries);
       setAdMatches(matchesResponse.matches);
+      setAdCoverageStatus(matchesResponse.coverageStatus);
+      setAdCoverageWarnings(matchesResponse.coverageWarnings);
       setAssignments(assignmentsResponse.assignments);
     } catch (caught) {
       setAircraft(null);
       setEntries([]);
       setAdMatches([]);
+      setAdCoverageStatus("not_resolved");
+      setAdCoverageWarnings([]);
       setAssignments([]);
       setError(caught instanceof Error ? caught.message : "Unable to load logbook entries.");
     } finally {
@@ -275,6 +281,17 @@ export default function AircraftLogbookPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {adjudicationMessage ? <p className="rounded-md border p-3 text-sm">{adjudicationMessage}</p> : null}
+            {adCoverageStatus !== "current" ? (
+              <div className="rounded-md border border-amber-500/40 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                <p className="flex items-center gap-2 font-medium">
+                  <FileWarning className="h-4 w-4" />
+                  AD coverage is {adCoverageStatus.replaceAll("_", " ")}
+                </p>
+                {adCoverageWarnings.map((warning) => (
+                  <p key={warning} className="mt-1 text-xs">{warning}</p>
+                ))}
+              </div>
+            ) : null}
             {adMatches.length ? (
               adMatches.map((match) => (
                 <div key={match.id} className="rounded-md border p-4">
@@ -370,7 +387,9 @@ export default function AircraftLogbookPage() {
                           href={`/logbook/${displayNNumber}/entry/${evidence.logbookEntryId}?logbook=${evidence.section}`}
                           className="block rounded-md bg-muted/40 p-3 text-sm hover:bg-muted"
                         >
-                          <span className="font-medium">{evidence.entryDate}</span>
+                          <span className="font-medium">
+                            {evidence.entryDate ?? "Unknown date"}
+                          </span>
                           <span className="ml-2 text-muted-foreground">{evidence.rationale}</span>
                         </Link>
                       ))}
@@ -472,6 +491,25 @@ export default function AircraftLogbookPage() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg font-semibold flex items-center justify-between">
                         <span>{entry.description}</span>
+                        <span
+                          className={
+                            entry.reviewStatus === "verified"
+                              ? "ml-3 inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                              : "ml-3 inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                          }
+                        >
+                          {entry.reviewStatus === "verified" ? (
+                            <>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Maintenance reviewed
+                            </>
+                          ) : (
+                            <>
+                              <FileWarning className="h-3.5 w-3.5" />
+                              Needs maintenance review
+                            </>
+                          )}
+                        </span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>

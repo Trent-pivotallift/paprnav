@@ -344,16 +344,10 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
             hobbs_time=draft.hobbs_time,
             total_time=draft.total_time,
             raw_text="\n".join(draft.lines),
-            review_status=(
-                "verified"
-                if not draft.requires_review
-                and draft.validation_result is not None
-                and draft.validation_result["acceptedForAutomaticVerification"]
-                and draft.date_was_extracted
-                and draft.min_confidence is not None
-                and draft.min_confidence >= LOW_CONFIDENCE_THRESHOLD
-                else "needs_review"
-            ),
+            # Provider confidence and deterministic validation can prioritize
+            # review, but only a person may verify an OCR-derived maintenance
+            # record for downstream AD matching.
+            review_status="needs_review",
             validation_status=(
                 draft.validation_result["status"]
                 if draft.validation_result
@@ -378,8 +372,10 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
             )
 
     job.entry_extraction_status = "complete"
-    job.status = "complete"
-    job.completed_at = datetime.now(timezone.utc)
+    job.status = (
+        "awaiting_entry_review" if entries else "awaiting_manual_entry_review"
+    )
+    job.completed_at = None
     db.commit()
     return entries
 

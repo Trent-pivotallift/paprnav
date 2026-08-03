@@ -100,7 +100,7 @@ class Aircraft(TimestampMixin, Base):
     cost_allocation_tag: Mapped[str] = mapped_column(String(128), nullable=True, unique=True, index=True)
 
     owner_organization = relationship("Organization", back_populates="owned_aircraft")
-    created_by_user = relationship("User")
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])
     assignments = relationship("AircraftAssignment", back_populates="aircraft")
     logbook_entries = relationship("LogbookEntry", back_populates="aircraft")
     uploads = relationship("Upload", back_populates="aircraft")
@@ -184,12 +184,19 @@ class LogbookEntry(TimestampMixin, Base):
     total_time: Mapped[float] = mapped_column(Float, nullable=True)
     raw_text: Mapped[str] = mapped_column(Text, nullable=True)
     review_status: Mapped[str] = mapped_column(String(64), nullable=False, default="draft")
+    reviewed_by_user_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    reviewed_at: Mapped[Optional[DateTime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     validation_status: Mapped[str] = mapped_column(String(64), nullable=True)
     validation_results: Mapped[dict] = mapped_column(JSON, nullable=True)
 
     aircraft = relationship("Aircraft", back_populates="logbook_entries")
     logbook_section = relationship("LogbookSection", back_populates="entries")
-    created_by_user = relationship("User")
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])
+    reviewed_by_user = relationship("User", foreign_keys=[reviewed_by_user_id])
     evidence_links = relationship("LogbookEntryEvidence", back_populates="logbook_entry")
 
 
@@ -809,6 +816,9 @@ class ADMatchResult(TimestampMixin, Base):
     algorithm_name: Mapped[str] = mapped_column(String(128), nullable=False)
     algorithm_version: Mapped[str] = mapped_column(String(128), nullable=False)
     input_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    is_current: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, index=True
+    )
     computed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     aircraft = relationship("Aircraft", back_populates="ad_match_results")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session, selectinload
@@ -19,6 +19,7 @@ from app.models.core import (
     ApplicabilityTarget,
     InstalledComponent,
 )
+from app.core.config import get_settings
 from app.services.ad_applicability import get_or_create_target
 from app.services.ad_costs import record_ad_cost_entry
 
@@ -34,7 +35,6 @@ class CoverageResolutionStats:
     associations_reused: int = 0
     associations_deactivated: int = 0
     source_snapshots_reused: int = 0
-    source_downloads_requested: int = 0
 
     def to_dict(self) -> dict[str, int | str]:
         return asdict(self)
@@ -215,6 +215,9 @@ def refresh_coverage_set(
     elif snapshot.status != "complete":
         coverage.status = "degraded_source"
         coverage.coverage_version = coverage_version(snapshot, target)
+    elif snapshot_is_stale(snapshot, resolved_at):
+        coverage.status = "stale_source"
+        coverage.coverage_version = coverage_version(snapshot, target)
     elif directive_count == 0:
         coverage.status = "pending_applicability"
         coverage.coverage_version = coverage_version(snapshot, target)
@@ -280,6 +283,21 @@ def coverage_version(snapshot: ADSourceSnapshot, target: ApplicabilityTarget) ->
         f"{snapshot.content_hash}|{target.normalized_key}".encode("utf-8")
     ).hexdigest()
     return digest[:24]
+
+
+def snapshot_is_stale(
+    snapshot: ADSourceSnapshot,
+    reference_time: datetime | None = None,
+) -> bool:
+    captured_at = snapshot.captured_at
+    if captured_at.tzinfo is None:
+        captured_at = captured_at.replace(tzinfo=timezone.utc)
+    now = reference_time or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return now - captured_at > timedelta(
+        days=get_settings().drs_max_snapshot_age_days
+    )
 
 
 def active_identity_components(aircraft: Aircraft) -> list[InstalledComponent]:
@@ -366,6 +384,120 @@ def summarize_ad_costs(db: Session) -> dict:
             serialize_coverage_summary(coverage)
             for coverage in coverages
         ],
+    }
+
+
+def summarize_aircraft_coverage_status(db: Session, aircraft_id: str) -> dict:
+    aircraft = db.scalar(
+        select(Aircraft)
+        .where(Aircraft.id == aircraft_id)
+        .options(selectinload(Aircraft.installed_components))
+    )
+    subscriptions = db.scalars(
+        select(ADCoverageSubscription)
+        .where(
+            ADCoverageSubscription.aircraft_id == aircraft_id,
+            ADCoverageSubscription.status == "active",
+        )
+        .options(
+            selectinload(ADCoverageSubscription.coverage_set).selectinload(
+                ADCoverageSet.target
+            ),
+            selectinload(ADCoverageSubscription.coverage_set).selectinload(
+                ADCoverageSet.current_source_snapshot
+            ),
+        )
+        .order_by(ADCoverageSubscription.created_at)
+    ).all()
+    if aircraft is None:
+        return {
+            "coverageStatus": "not_resolved",
+            "coverageWarnings": ["Aircraft coverage could not be resolved."],
+            "coverageTargets": [],
+        }
+    if not subscriptions:
+        return {
+            "coverageStatus": "not_resolved",
+            "coverageWarnings": [
+                "AD/DRS coverage has not been resolved for this aircraft."
+            ],
+            "coverageTargets": [],
+        }
+
+    targets = [
+        {
+            "productType": subscription.coverage_set.target.product_type,
+            "make": subscription.coverage_set.target.make,
+            "model": subscription.coverage_set.target.model,
+            "status": subscription.coverage_set.status,
+        }
+        for subscription in subscriptions
+    ]
+    warnings: list[str] = []
+    active_components = active_identity_components(aircraft)
+    actual_target_keys = {
+        (
+            target["productType"].strip().lower(),
+            (target["make"] or "").strip().lower(),
+            (target["model"] or "").strip().lower(),
+        )
+        for target in targets
+    }
+    for component in active_components:
+        label = component.role.replace("_", " ")
+        if not component.make or not component.model:
+            warnings.append(
+                f"{label}: component make and model identity must be completed before AD coverage can be verified."
+            )
+            continue
+        expected_key = (
+            product_type_for_component(component).lower(),
+            component.make.strip().lower(),
+            component.model.strip().lower(),
+        )
+        if expected_key not in actual_target_keys:
+            warnings.append(
+                f"{label}: no active AD coverage subscription matches the installed component identity."
+            )
+    for target in targets:
+        label = " ".join(
+            value
+            for value in [
+                target["productType"],
+                target["make"],
+                target["model"],
+            ]
+            if value
+        )
+        if target["status"] == "awaiting_source_snapshot":
+            warnings.append(
+                f"{label}: DRS source snapshot is unavailable; AD coverage is unverified."
+            )
+        elif target["status"] == "degraded_source":
+            warnings.append(
+                f"{label}: DRS source is degraded; historical and indexed AD coverage may be incomplete."
+            )
+        elif target["status"] == "stale_source":
+            warnings.append(
+                f"{label}: DRS source snapshot is stale; AD coverage must be refreshed before it is current."
+            )
+        elif target["status"] == "pending_applicability":
+            warnings.append(
+                f"{label}: applicability has not been fully materialized; AD coverage is incomplete."
+            )
+        elif target["status"] != "current":
+            warnings.append(
+                f"{label}: coverage status is {target['status'].replace('_', ' ')}."
+            )
+        if not target["make"] or not target["model"]:
+            warnings.append(
+                f"{label}: coverage target identity is incomplete."
+            )
+
+    return {
+        "coverageStatus": "current" if not warnings else "degraded",
+        "coverageWarnings": warnings,
+        "coverageTargets": targets,
     }
 
 

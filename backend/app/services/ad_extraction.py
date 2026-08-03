@@ -441,6 +441,15 @@ def validate_extraction_output(output: dict[str, Any]) -> None:
     for list_key in ["affectedProducts", "complianceActions", "complianceIntervals", "supersedesAdNumbers"]:
         if not isinstance(output[list_key], list):
             raise ValueError(f"AD extraction field {list_key} must be a list")
+    affected_products = [
+        str(item).strip()
+        for item in output["affectedProducts"]
+        if str(item).strip()
+    ]
+    if not affected_products:
+        raise ValueError(
+            "AD extraction field affectedProducts must contain at least one attributable product"
+        )
     if not isinstance(output["sourceUrls"], dict):
         raise ValueError("AD extraction field sourceUrls must be an object")
 

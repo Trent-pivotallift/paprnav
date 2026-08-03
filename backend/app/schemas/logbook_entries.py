@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -40,6 +40,8 @@ class LogbookEntryResponse(BaseModel):
     performerCredential: Optional[str]
     sourceType: str
     reviewStatus: str
+    reviewedByUserId: Optional[str]
+    reviewedAt: Optional[datetime]
     tachTime: Optional[float]
     hobbsTime: Optional[float]
     totalTime: Optional[float]

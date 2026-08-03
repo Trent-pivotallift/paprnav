@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models.core import (
@@ -114,6 +114,15 @@ def populate_applicability_from_extraction(db: Session, extraction: ADExtraction
         )
         return 0
 
+    db.execute(
+        update(ADTargetApplicability)
+        .where(
+            ADTargetApplicability.directive_id == extraction.directive_id,
+            ADTargetApplicability.applicability_basis == "extraction",
+            ADTargetApplicability.status == "current",
+        )
+        .values(status="superseded")
+    )
     count = 0
     for product in products:
         parsed = parse_product_text(product)
