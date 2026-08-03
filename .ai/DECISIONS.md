@@ -456,6 +456,58 @@ status and user-facing warnings. The default freshness window is seven days.
 A current matcher result must never suppress those warnings or imply complete
 historical/indexed AD coverage.
 
+### D025: Prove a retained DRS and Federal Register/GovInfo catalog locally before AWS deployment
+
+Status: accepted 2026-08-02
+
+Paprnav will solidify AD source ingestion, retention, extraction,
+reconciliation, and target coverage locally before deploying that workflow to
+AWS. DRS is the preferred bulk applicability index, but it is not accepted as
+a complete data set by itself. The Federal Register publication family is a
+mandatory second path: FederalRegister.gov supplies structured modern
+discovery and GovInfo supplies official artifacts plus the historical archive.
+These are complementary evidence channels, not silent fallbacks.
+
+The implementation extends the existing `backend/app` services and Postgres
+models; it must not create a parallel `src/ad_pipeline` application. Source
+documents are persisted before AD classification because one publication may
+yield zero, one, or several directive/correction/supersession records. Raw
+JSON, XML, HTML, PDFs, and DRS packages are retained through the storage
+abstraction under content-addressed keys, while Postgres stores hashes,
+locations, manifests, parser/provider versions, and reconciliation state.
+
+Modern Federal Register collection must paginate to exhaustion rather than
+filtering completeness through an `Airworthiness Directives` title prefix.
+FAA rules are retained before classification. GovInfo routing uses structured
+issue/document formats for 1995 and later and the historical full-issue path
+for 1994 and earlier. An arbitrary historical cutoff cannot support a complete
+coverage claim; staged backfill is permitted only while coverage remains
+explicitly degraded.
+
+Historical PDF extraction follows the approved PDF methodology: inspect and
+fingerprint, retain the original, use reliable native text first, render pages
+canonically when needed, and escalate only unreliable pages to Textract text
+detection and then Textract Layout. OCR recovers evidence; it does not prove
+catalog completeness or approve regulatory meaning. Versioned deterministic
+patterns extract AD boundaries and fields, and uncertain source boundaries,
+identifiers, serial ranges, conditions, intervals, or supersession statements
+route to platform review with page/span evidence.
+
+Completeness is proven only by exhaustive manifests and set reconciliation:
+declared-versus-retrieved counts, every requested page or issue accounted for,
+DRS/Federal Register unions and differences classified, and every failure
+visible. Random sampling may test field accuracy but cannot prove absence of
+missing publications. Coverage claims must name the exact source snapshots and
+capture dates and remain decision support, not regulatory attestation.
+
+The first target proof uses user-provided identity pending maintenance-record
+verification: N3671L, Cessna 172G airframe serial `17253840`, and Continental
+O-300-D engine serial `33608-D-5-D`. Airframe and engine catalogs remain
+separate. Propeller and other installed-equipment coverage stays incomplete
+until those identities are established. The frozen 22-page ingestion
+partition and 11-page ingestion/AD holdout remain unopened during this source
+proof.
+
 ## Proposed Decisions To Resolve Soon
 
 ### P001: Authentication provider

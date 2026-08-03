@@ -89,12 +89,14 @@ paprnav mapping notes:
 ### AWS Textract
 
 - Status: target production OCR provider
-- Date checked: 2026-07-07
+- Date checked: 2026-08-02
 - References:
   - https://docs.aws.amazon.com/textract/latest/APIReference/API_Block.html
   - https://docs.aws.amazon.com/textract/latest/APIReference/API_Geometry.html
   - https://docs.aws.amazon.com/textract/latest/APIReference/API_DetectDocumentText.html
   - https://docs.aws.amazon.com/textract/latest/APIReference/API_StartDocumentTextDetection.html
+  - https://docs.aws.amazon.com/textract/latest/dg/how-it-works-analyzing.html
+  - https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
 
 Verified fields and behaviors:
 
@@ -111,6 +113,9 @@ Verified fields and behaviors:
 - Synchronous operations have a smaller document-size limit than asynchronous operations; current docs list 10 MB for synchronous and 500 MB for asynchronous PDF processing.
 - `StartDocumentTextDetection` starts asynchronous text detection for JPEG, PNG, TIFF, and PDF documents stored in S3 and returns a `JobId`.
 - `StartDocumentTextDetection` supports idempotency through `ClientRequestToken`, optional `OutputConfig`, optional KMS key, and optional SNS notification channel.
+- Textract Layout can return titles, section headers, paragraphs/text, lists,
+  tables, figures, headers, footers, and page numbers with geometry and implied
+  reading order. Multipage PDF analysis uses asynchronous operations.
 
 paprnav mapping notes:
 
@@ -130,6 +135,14 @@ paprnav mapping notes:
 - Local MVP and CI still default to deterministic OCR. `PAPRNAV_OCR_PROVIDER=textract` is required to call Textract.
 - S3-backed upload storage is env-gated with `PAPRNAV_STORAGE_BACKEND=s3`; when enabled, upload objects are written with server-side encryption and the persisted upload cost tag set. Textract S3 references use `PAPRNAV_TEXTRACT_S3_BUCKET` when set, otherwise `PAPRNAV_S3_UPLOAD_BUCKET`.
 - Production PDF-heavy ingestion should move to S3-backed asynchronous `StartDocumentTextDetection` before broad volunteer ingestion, because multipage PDFs and larger uploads need the async path.
+- Historical Federal Register pages follow native-text-first routing.
+  Image-only, malformed, or boundary-uncertain pages may use Textract text
+  detection; Layout is a second escalation for multi-column reading order and
+  section/document boundaries. These public-source calls are allowed in the
+  local AD proof without deploying Paprnav to AWS.
+- OCR output must retain source issue, page, span geometry, provider/model/API
+  mode, parser-pattern version, and cost attribution. OCR accuracy does not
+  establish publication completeness.
 
 Future Textract adapter evaluation:
 
@@ -255,6 +268,44 @@ paprnav mapping notes:
 - Store source URLs and publication date directly on discovery records for review and audit.
 - Classify FAA rules as `ad_candidate`, `non_ad_rule`, or `rejected`; do not assume every FAA `RULE` from FAA is an AD.
 - Preserve govinfo `pdf_url` for official-source verification when present.
+
+### Federal Register And GovInfo Publication Coverage
+
+- Status: approved source-family design for the local AD catalog proof
+- Date checked: 2026-08-02
+- References:
+  - https://www.federalregister.gov/developers/documentation/api/v1
+  - https://www.govinfo.gov/help/fr
+  - https://www.govinfo.gov/developers
+  - https://www.govinfo.gov/help/url-structure
+
+Verified fields and behaviors:
+
+- FederalRegister.gov exposes public structured APIs without an API key and
+  links its informational renditions to official GovInfo artifacts.
+- GovInfo covers the Federal Register from 1936 to present. Volumes 60 (1995)
+  and later provide entire-issue PDF/XML plus smaller document renditions.
+  Volume 59 (1994) and older are digitized historical issues available as
+  full-issue PDFs; 1994 is a special case with section text.
+- GovInfo package and granule identifiers support predictable permanent
+  content URLs. The GovInfo API/search service requires an `api.data.gov` key,
+  while known predictable public content URLs can be fetched directly.
+
+paprnav mapping notes:
+
+- Treat FederalRegister.gov and GovInfo as two access paths within one Federal
+  Register publication family; DRS remains the separate FAA index/evidence
+  channel.
+- Route 1995 and later through structured Federal Register/GovInfo document
+  artifacts and 1994 or earlier through GovInfo historical issues.
+- Persist source documents before classifying or splitting them into ADs.
+  Do not require every source document to contain exactly one AD number.
+- Retain complete provider pages/issues and content hashes. Prefer XML for
+  extraction where available, retain the official PDF citation artifact, and
+  preserve page-level evidence for historical issue extraction.
+- Never use title filtering, a closed date window, or random samples as the
+  catalog-completeness gate. Exhaust provider pagination/manifests and classify
+  every DRS-only and Federal-Register-only difference.
 
 ## FAA DRS Bulk Data And Target Validation
 
