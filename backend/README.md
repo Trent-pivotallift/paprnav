@@ -336,6 +336,18 @@ coverage status. Superseded or plausibly applicable but identity-uncertain
 directives require adjudication. Logbook evidence changes invalidate the
 current match immediately; retained historical rows are not returned as
 current worklist results.
+
+Local retained-source proof commands:
+
+```bash
+python -m app.scripts.run_ad_source_proof --help
+python -m app.scripts.run_ad_publication_proof --help
+```
+
+The production backend image includes `mdbtools` for FAA Access imports and
+Poppler for canonical PDF inspection/rendering. GovInfo reconciliation uses
+`GOVINFO_API_KEY`; source artifacts are content-addressed and repeat runs are
+idempotent. See `.ai/AD_SOURCE_PROOF_2026-08-04.md` from the repository root.
 Aircraft identity changes and newly approved AD applicability also invalidate
 affected worklists, including prior zero-result runs. AD extraction approval
 requires at least one attributable affected product so subscription-based

@@ -173,9 +173,13 @@ def refresh_coverage_set(
     snapshot: ADSourceSnapshot | None,
     resolved_at: datetime,
 ) -> None:
+    compatible_target_ids = applicability_target_ids_for_coverage(
+        db,
+        target,
+    )
     directive_count = db.scalar(
         select(func.count(distinct(ADTargetApplicability.directive_id))).where(
-            ADTargetApplicability.target_id == target.id,
+            ADTargetApplicability.target_id.in_(compatible_target_ids),
             ADTargetApplicability.status == "current",
         )
     ) or 0
@@ -185,7 +189,7 @@ def refresh_coverage_set(
             ADTargetApplicability,
             ADTargetApplicability.source_publication_id == ADPublication.id,
         )
-        .where(ADTargetApplicability.target_id == target.id)
+        .where(ADTargetApplicability.target_id.in_(compatible_target_ids))
         .distinct()
     ).all()
     logical_storage_bytes = sum(
@@ -253,6 +257,38 @@ def refresh_coverage_set(
             "billingActive": False,
         },
     )
+
+
+def applicability_target_ids_for_coverage(
+    db: Session,
+    target: ApplicabilityTarget,
+) -> list[str]:
+    """Return exact and non-invented DRS-axis targets compatible with identity."""
+
+    ids = {target.id}
+    if target.model:
+        ids.update(
+            db.scalars(
+                select(ApplicabilityTarget.id).where(
+                    func.lower(ApplicabilityTarget.product_type)
+                    == target.product_type.lower(),
+                    ApplicabilityTarget.model == target.model,
+                    ApplicabilityTarget.make.is_(None),
+                )
+            ).all()
+        )
+    elif target.make:
+        ids.update(
+            db.scalars(
+                select(ApplicabilityTarget.id).where(
+                    func.lower(ApplicabilityTarget.product_type)
+                    == target.product_type.lower(),
+                    ApplicabilityTarget.make == target.make,
+                    ApplicabilityTarget.model.is_(None),
+                )
+            ).all()
+        )
+    return sorted(ids)
 
 
 def latest_reusable_drs_snapshot(db: Session) -> ADSourceSnapshot | None:

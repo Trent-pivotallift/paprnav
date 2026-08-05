@@ -79,6 +79,8 @@ class Settings:
     openai_base_url: str
     openai_ad_extraction_model: str
     ad_extraction_timeout_seconds: float
+    govinfo_api_key: Optional[str]
+    govinfo_base_url: str
     drs_max_snapshot_age_days: int = 7
 
 
@@ -163,6 +165,8 @@ def get_settings() -> Settings:
         openai_base_url=os.getenv("PAPRNAV_OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
         openai_ad_extraction_model=os.getenv("PAPRNAV_AD_EXTRACTION_MODEL", "gpt-5.5"),
         ad_extraction_timeout_seconds=float(os.getenv("PAPRNAV_AD_EXTRACTION_TIMEOUT_SECONDS", "30")),
+        govinfo_api_key=os.getenv("GOVINFO_API_KEY") or None,
+        govinfo_base_url=os.getenv("PAPRNAV_GOVINFO_BASE_URL", "https://api.govinfo.gov").rstrip("/"),
         drs_max_snapshot_age_days=int(
             os.getenv("PAPRNAV_DRS_MAX_SNAPSHOT_AGE_DAYS", "7")
         ),

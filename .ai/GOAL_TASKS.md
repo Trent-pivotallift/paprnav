@@ -2120,7 +2120,7 @@ Evidence:
 
 ### T077: Prove the retained dual-source AD catalog locally
 
-Status: ready 2026-08-02
+Status: complete 2026-08-04
 
 Goal: Before deploying AD ingestion to AWS or opening either frozen logbook
 partition, prove that Paprnav can retain, extract, reconcile, and refresh the
@@ -2169,3 +2169,12 @@ Planned verification stages:
 5. N3671L airframe/engine catalog and exhaustive reconciliation.
 6. Focused AD safety regression, full backend regression, Alembic one-head
    check, frontend lint, and frontend build.
+
+Completion evidence:
+
+- `.ai/AD_SOURCE_PROOF_2026-08-04.md`
+- DRS target proof: 11/11, repeated manifest byte-identical.
+- Federal Register/GovInfo proof: 5/5, repeated manifest byte-identical.
+- Backend regression: 131/131; frozen partition invariant: 1/1.
+- Historical publication gaps remain explicit `needs_adjudication`, which is a
+  valid completed catalog outcome under the approved loop rule.

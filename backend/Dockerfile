@@ -5,6 +5,10 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install --no-install-recommends --yes mdbtools poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN python -m pip install --upgrade pip
 
 COPY requirements.txt .

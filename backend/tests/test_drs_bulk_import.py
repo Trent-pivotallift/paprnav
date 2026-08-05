@@ -52,7 +52,7 @@ def test_import_drs_bulk_rows_creates_pre_1994_directive_and_applicability(db_se
     snapshot = db_session.scalar(select(ADSourceSnapshot).where(ADSourceSnapshot.source_system == "drs"))
     assert snapshot is not None
     assert snapshot.parser_name == "drs_bulk_importer"
-    assert snapshot.parser_version == "0.2.0"
+    assert snapshot.parser_version == "0.3.0"
 
     directive = db_session.scalar(select(AirworthinessDirective).where(AirworthinessDirective.ad_number == "1993-01-01"))
     assert directive is not None
@@ -181,3 +181,45 @@ def test_import_drs_bulk_zip_uses_mdbtools_exported_access_rows(
     assert publication.source_snapshot_id == snapshot.id
     assert publication.metadata_json["sourceAccessTable"] == "ADTable"
     assert db_session.scalar(select(ADTargetApplicability).where(ADTargetApplicability.directive_id == directive.id)) is not None
+
+
+def test_real_drs_column_names_and_multi_axis_values_do_not_create_false_pairs(
+    db_session: Session,
+) -> None:
+    stats = import_drs_bulk_rows(
+        db_session,
+        [
+            {
+                "AD Number": "94-05-05 R1",
+                "Subject": "Continental engine applicability",
+                "Product Type": "Engine",
+                "Make": "Continental Motors | Rolls-Royce",
+                "Model": "O-300-D | O-200-A",
+                "Status": "Current",
+                "Publish Date": "02/13/1996",
+                "guid": "fixture-guid",
+            }
+        ],
+    )
+
+    assert stats["directives_upserted"] == 1
+    directive = db_session.scalar(
+        select(AirworthinessDirective).where(
+            AirworthinessDirective.ad_number == "1994-05-05"
+        )
+    )
+    assert directive is not None
+    publication = db_session.scalar(
+        select(ADPublication).where(ADPublication.directive_id == directive.id)
+    )
+    assert publication is not None
+    assert publication.publication_date.isoformat() == "1996-02-13"
+    targets = db_session.scalars(select(ApplicabilityTarget)).all()
+    identities = {(item.make, item.model) for item in targets}
+    assert identities == {
+        ("Continental Motors", None),
+        ("Rolls-Royce", None),
+        (None, "O-300-D"),
+        (None, "O-200-A"),
+    }
+    assert ("Rolls-Royce", "O-300-D") not in identities

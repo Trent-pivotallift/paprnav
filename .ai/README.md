@@ -25,6 +25,10 @@ The current codebase is an early local MVP build:
   artifacts, and exhaustive source reconciliation before any completeness
   claim. This local source proof precedes AWS deployment; see D025 and T077.
 - DRS bulk fixture import, Federal Register enrichment/matching, AD persistence, deterministic structured extraction, AD extraction review, component-aware AD-to-logbook matching, HITL match adjudication, compliance worklist, reconciliation, and human product observability are implemented locally.
+- The retained Cessna 172G/O-300-D source proof is documented in
+  `.ai/AD_SOURCE_PROOF_2026-08-04.md`: 40 DRS-indexed 172G entries, 11 O-300-D
+  engine entries, exact pagination-gap classification, repeatable manifests,
+  and conservative historical publication adjudication.
 - Reusable AD coverage now links normalized airframe/component targets to one retained DRS source snapshot. Later clients reuse existing coverage without duplicate downloads. A platform-admin view reports physical source storage, estimated logical coverage storage, benefiting clients/aircraft, actual cost, and separate inactive future allocation. See `.ai/AD_COVERAGE_ATTRIBUTION_REFINEMENT_2026-07-26.md`.
 
 ## Important Paths
