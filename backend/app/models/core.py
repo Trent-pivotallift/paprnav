@@ -483,6 +483,44 @@ class ADSourceSnapshot(TimestampMixin, Base):
     reconciliation_issues = relationship("ADReconciliationIssue", back_populates="source_snapshot")
     coverage_sets = relationship("ADCoverageSet", back_populates="current_source_snapshot")
     cost_entries = relationship("ADCostLedgerEntry", back_populates="source_snapshot")
+    source_documents = relationship("ADSourceDocument", back_populates="source_snapshot")
+
+
+class ADSourceDocument(TimestampMixin, Base):
+    __tablename__ = "ad_source_documents"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_system",
+            "source_type",
+            "source_identifier",
+            "content_hash",
+            name="uq_ad_source_document_version",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("asd"))
+    source_snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_source_snapshots.id"), nullable=True, index=True
+    )
+    source_system: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_identifier: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    parent_source_identifier: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
+    source_url: Mapped[str] = mapped_column(String(1024), nullable=True)
+    storage_backend: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(1024), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(255), nullable=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    storage_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    captured_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    publication_date: Mapped[Date] = mapped_column(Date, nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="retained", index=True)
+    parser_name: Mapped[str] = mapped_column(String(128), nullable=True)
+    parser_version: Mapped[str] = mapped_column(String(64), nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    source_snapshot = relationship("ADSourceSnapshot", back_populates="source_documents")
+    publications = relationship("ADPublication", back_populates="source_document")
 
 
 class AirworthinessDirective(TimestampMixin, Base):
@@ -582,6 +620,7 @@ class ADPublication(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("pub"))
     directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
     source_snapshot_id: Mapped[str] = mapped_column(ForeignKey("ad_source_snapshots.id"), nullable=True, index=True)
+    source_document_id: Mapped[str] = mapped_column(ForeignKey("ad_source_documents.id"), nullable=True, index=True)
     source_system: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     source_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     source_identifier: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
@@ -596,6 +635,7 @@ class ADPublication(TimestampMixin, Base):
 
     directive = relationship("AirworthinessDirective", back_populates="publications")
     source_snapshot = relationship("ADSourceSnapshot", back_populates="publications")
+    source_document = relationship("ADSourceDocument", back_populates="publications")
 
 
 class ADTargetApplicability(TimestampMixin, Base):

@@ -22,7 +22,7 @@ from app.services.ad_coverage import refresh_coverage_sets_for_snapshot
 from app.services.ad_identity import AD_NUMBER_PATTERN, normalize_ad_number
 
 PARSER_NAME = "drs_bulk_importer"
-PARSER_VERSION = "0.2.0"
+PARSER_VERSION = "0.3.0"
 MDB_TABLES = "mdb-tables"
 MDB_EXPORT = "mdb-export"
 
@@ -55,7 +55,17 @@ def import_drs_rows_into_snapshot(db: Session, rows: list[dict[str, Any]], snaps
     stats = {"rows_seen": 0, "directives_upserted": 0, "publications_upserted": 0, "applicabilities_upserted": 0, "issues": 0}
     for row in rows:
         stats["rows_seen"] += 1
-        ad_number = normalize_ad_number(first_value(row, "adNumber", "ADNumber", "ad_number", "AD No.", "AD"))
+        ad_number = normalize_ad_number(
+            first_value(
+                row,
+                "adNumber",
+                "ADNumber",
+                "AD Number",
+                "ad_number",
+                "AD No.",
+                "AD",
+            )
+        )
         if ad_number is None:
             ensure_issue(db, directive=None, issue_type="drs_row_missing_ad_number", severity="high", payload={"row": row})
             stats["issues"] += 1
@@ -150,6 +160,19 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
             parsed_stats = import_drs_rows_into_snapshot(db, table_parse["rows"], snapshot)
             for key, value in parsed_stats.items():
                 stats[key] += value
+            if table_parse["unparsed_rows"]:
+                ensure_snapshot_issue(
+                    db,
+                    snapshot=snapshot,
+                    issue_type="drs_access_rows_unparseable",
+                    severity="medium",
+                    payload={
+                        "filename": path.name,
+                        "count": len(table_parse["unparsed_rows"]),
+                        "rows": table_parse["unparsed_rows"][:25],
+                    },
+                )
+                stats["issues"] += 1
             if table_parse["errors"]:
                 ensure_snapshot_issue(
                     db,
@@ -217,9 +240,16 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
 
 def parse_access_members_with_mdbtools(archive: zipfile.ZipFile, accdb_members: list[str]) -> dict[str, Any]:
     if not shutil.which(MDB_TABLES) or not shutil.which(MDB_EXPORT):
-        return {"rows": [], "tables": {}, "errors": [], "fallback_reason": "mdbtools_unavailable"}
+        return {
+            "rows": [],
+            "unparsed_rows": [],
+            "tables": {},
+            "errors": [],
+            "fallback_reason": "mdbtools_unavailable",
+        }
 
     rows: list[dict[str, Any]] = []
+    unparsed_rows: list[dict[str, Any]] = []
     tables: dict[str, Any] = {}
     errors: list[dict[str, str]] = []
     with tempfile.TemporaryDirectory(prefix="paprnav-drs-") as tmpdir:
@@ -233,14 +263,52 @@ def parse_access_members_with_mdbtools(archive: zipfile.ZipFile, accdb_members: 
                 exported_rows = export_access_table(accdb_path, member, table_name, errors)
                 tables[member]["rowCounts"][table_name] = len(exported_rows)
                 tables[member]["columns"][table_name] = sorted(exported_rows[0].keys()) if exported_rows else []
+                table_parsed = 0
+                table_unparsed: list[dict[str, Any]] = []
                 for row in exported_rows:
-                    if normalize_ad_number(first_value(row, "adNumber", "ADNumber", "ad_number", "AD No.", "AD")):
+                    if normalize_ad_number(
+                        first_value(
+                            row,
+                            "adNumber",
+                            "ADNumber",
+                            "AD Number",
+                            "ad_number",
+                            "AD No.",
+                            "AD",
+                        )
+                    ):
                         normalized = dict(row)
                         normalized.setdefault("sourceAccessDatabase", member)
                         normalized.setdefault("sourceAccessTable", table_name)
                         rows.append(normalized)
+                        table_parsed += 1
+                    else:
+                        table_unparsed.append(
+                            {
+                                "sourceAccessDatabase": member,
+                                "sourceAccessTable": table_name,
+                                "guid": first_value(row, "guid", "Guid", "GUID"),
+                                "subject": first_value(row, "Subject"),
+                                "status": first_value(row, "Status"),
+                                "rawAdNumber": first_value(
+                                    row,
+                                    "AD Number",
+                                    "ADNumber",
+                                    "adNumber",
+                                ),
+                                "reason": "missing_or_unparseable_ad_number",
+                            }
+                        )
+                if table_parsed:
+                    unparsed_rows.extend(table_unparsed)
     reason = "no_parseable_access_rows" if not rows else "not_needed"
-    return {"rows": rows, "tables": tables, "errors": errors, "fallback_reason": reason}
+    return {
+        "rows": rows,
+        "unparsed_rows": unparsed_rows,
+        "tables": tables,
+        "errors": errors,
+        "fallback_reason": reason,
+    }
 
 
 def list_access_tables(accdb_path: Path, member: str, errors: list[dict[str, str]]) -> list[str]:
@@ -408,7 +476,17 @@ def upsert_publication(db: Session, directive: AirworthinessDirective, snapshot:
         db.add(publication)
     publication.source_snapshot_id = snapshot.id
     publication.title = directive.title
-    publication.publication_date = parse_date(first_value(row, "publicationDate", "PublicationDate", "PostedDate", "IssueDate"))
+    publication.publication_date = parse_date(
+        first_value(
+            row,
+            "publicationDate",
+            "PublicationDate",
+            "Publish Date",
+            "PostedDate",
+            "IssueDate",
+            "Issue Date",
+        )
+    )
     publication.effective_date = parse_date(first_value(row, "effectiveDate", "EffectiveDate"))
     publication.html_url = first_value(row, "htmlUrl", "HtmlUrl", "DocumentUrl", "URL")
     publication.pdf_url = first_value(row, "pdfUrl", "PdfUrl")
@@ -430,10 +508,51 @@ def target_rows_from_row(row: dict[str, Any]) -> list[dict[str, str | None]]:
         makes = [None]
     if not models:
         models = [None]
+    # The DRS Access export stores makes and models as independent pipe-delimited
+    # axes. When both axes contain multiple values, their positional relationship
+    # is not available; a Cartesian product would invent applicability pairs.
+    # Preserve the exact axis evidence instead and let a known component model
+    # match the model-only target. Pairing remains safe when either axis is
+    # singular.
+    if len(makes) == 1:
+        return [
+            {
+                "product_type": product_type,
+                "product_subtype": product_subtype,
+                "make": makes[0],
+                "model": model,
+            }
+            for model in models
+        ]
+    if len(models) == 1:
+        return [
+            {
+                "product_type": product_type,
+                "product_subtype": product_subtype,
+                "make": make,
+                "model": models[0],
+            }
+            for make in makes
+        ]
     return [
-        {"product_type": product_type, "product_subtype": product_subtype, "make": make, "model": model}
-        for make in makes
-        for model in models
+        *[
+            {
+                "product_type": product_type,
+                "product_subtype": product_subtype,
+                "make": make,
+                "model": None,
+            }
+            for make in makes
+        ],
+        *[
+            {
+                "product_type": product_type,
+                "product_subtype": product_subtype,
+                "make": None,
+                "model": model,
+            }
+            for model in models
+        ],
     ]
 
 

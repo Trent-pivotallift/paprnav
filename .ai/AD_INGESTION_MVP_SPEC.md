@@ -1,8 +1,10 @@
 # paprnav AD Ingestion MVP Spec
 
-Last updated: 2026-06-27
+Last updated: 2026-08-02
 
-> Supersession note: D017 in `.ai/DECISIONS.md` changes the source ordering for the revised AD ingestion build. This file remains useful for the local Federal Register prototype and retention/review guidance, but its Federal Register-primary sections are superseded. The revised build should ingest the FAA DRS bulk ZIP/Access database first, then compare/enrich those ADs with Federal Register publications.
+> Current decision chain: D017 keeps DRS bulk first for applicability indexing;
+> D025 requires exhaustive Federal Register/GovInfo ingestion and
+> reconciliation before any source coverage can be described as complete.
 
 This spec replaces the legacy AWS-first AD ingestion draft for MVP implementation planning. It uses the legacy `ad-ingestion-spec.md` for domain context and `.ai/AD_INGESTION_REVIEW.md` for current architecture guidance.
 
@@ -10,7 +12,9 @@ The MVP architecture is local/service-first: FastAPI plus Python workers, Postgr
 
 ## Goals
 
-- Discover FAA Airworthiness Directive candidates by importing the DRS bulk ZIP/Access database, then compare/enrich them with Federal Register records when available.
+- Discover FAA Airworthiness Directive candidates from both the DRS bulk
+  ZIP/Access database and the complete available Federal Register publication
+  family, then reconcile their union and differences.
 - Classify FAA `Rule` documents from Federal Register delta/reconciliation flows so non-AD rules do not enter the AD corpus as authoritative ADs.
 - Persist source metadata, raw/source snapshots, extracted structured AD data, confidence, supersession, and review status.
 - Retain AD data after ingestion for audit, deterministic matching, cache reuse, and future algorithm replay.
@@ -31,7 +35,10 @@ The MVP architecture is local/service-first: FastAPI plus Python workers, Postgr
 
 ## Source Ordering
 
-Revised decision D017: use FAA DRS bulk ZIP/Access database ingestion as the primary AD corpus and applicability path, then compare/enrich discovered ADs with Federal Register records.
+Revised decisions D017/D025: use FAA DRS bulk ZIP/Access ingestion first for
+applicability indexing, but require Federal Register/GovInfo collection as an
+independent publication catalog. Neither source may silently replace the other
+or independently establish completeness.
 
 The existing Federal Register API prototype remains useful for publication matching, XML/body enrichment, corrections/supersession, and delta monitoring:
 
@@ -42,6 +49,44 @@ https://www.federalregister.gov/api/v1/documents.json?conditions[agencies][]=fed
 Important constraint:
 
 - FAA `Rule` documents include ADs and non-AD rules. The ingester must classify/filter for Airworthiness Directives instead of trusting agency/type filters alone.
+- Discovery must retain every FAA rule in the requested enumeration before
+  classification. A title prefix is a useful classification signal, not a
+  completeness filter.
+
+Federal Register publication routing:
+
+- FederalRegister.gov provides structured JSON plus linked XML/HTML/PDF for
+  modern discovery and requires no API key.
+- GovInfo is the official artifact/archive path. Volumes 60 (1995) and later
+  provide issue/document renditions; Volume 59 (1994) and earlier use the
+  historical full-issue path.
+- Direct predictable GovInfo content URLs are distinct from the GovInfo API;
+  API enumeration requires an `api.data.gov` key.
+- A provider-neutral source-document record exists before AD-number parsing.
+  One source document may yield zero, one, or several directive, correction,
+  or supersession records.
+- Retain raw JSON/XML/HTML/PDF content through the storage abstraction using a
+  content-addressed key. Postgres retains source identifiers, dates, URLs,
+  hashes, parser/provider versions, manifests, and storage locations.
+- Pagination follows `next_page_url` or the provider cursor until the declared
+  result set is exhausted. Watermarks advance only after every source record
+  and artifact is durably recorded.
+- Standard tests use retained fixtures. Explicit live integration tests are
+  manually gated, rate-limited, retryable, and excluded from ordinary CI.
+
+Historical PDF routing:
+
+1. Retain, inspect, and fingerprint the original issue.
+2. Account for every page in a page-routing manifest.
+3. Use native text only when reliability gates pass.
+4. Canonically render unreliable pages and use Textract text detection.
+5. Escalate column/heading/boundary uncertainty to Textract Layout.
+6. Normalize provider output into page/line/word spans with geometry.
+7. Apply versioned era-aware AD boundary and field patterns.
+8. Send uncertain boundaries or structured fields to evidence-backed review.
+
+OCR accuracy does not establish completeness. Completeness requires exhaustive
+source/page manifests and DRS-versus-Federal-Register set reconciliation.
 
 FAA DRS requirements:
 
@@ -67,7 +112,9 @@ flowchart LR
   DRS["FAA DRS bulk ZIP / Access DB"] --> Importer["DRS bulk import worker"]
   Importer --> DB["Postgres"]
   Importer --> Obj["Object storage abstraction"]
-  FR["Federal Register API"] --> Enrich["FR comparison / enrichment worker"]
+  FR["FederalRegister.gov modern source"] --> Catalog["Provider-neutral source catalog"]
+  GI["GovInfo official and historical source"] --> Catalog
+  Catalog --> Enrich["Publication extraction / reconciliation worker"]
   Enrich --> DB
   Enrich --> Obj
   DB --> Extract["AD extraction worker"]
@@ -96,11 +143,13 @@ AWS production later:
 
 The database model and API behavior should not depend on which orchestration layer runs the job.
 
-## Discovery Flow
+## Modern Federal Register Discovery Flow
 
 1. Worker loads the last successful discovery watermark.
 2. Worker queries Federal Register FAA `Rule` documents, newest first or by publication date.
-3. Worker paginates until it reaches already-seen documents.
+3. Worker paginates to the provider-declared end, even when some documents were
+   seen previously; idempotency skips unchanged content without truncating the
+   completeness manifest.
 4. For each document, worker stores a discovery record with:
    - Federal Register document number
    - title
@@ -115,7 +164,10 @@ The database model and API behavior should not depend on which orchestration lay
    - initial candidate classification
 5. Worker updates the watermark only after records are safely persisted.
 
-Discovery records should be idempotent by Federal Register document number.
+Modern discovery records should be idempotent by source system plus Federal
+Register document number and content hash. Historical GovInfo issues use
+package/granule identifiers where available and content-derived identifiers
+otherwise.
 
 ## AD Classification
 
@@ -399,7 +451,8 @@ Do not introduce AWS resources until infrastructure is explicitly modeled and re
 
 ## Open Questions
 
-- How far back should historical AD backfill go for the first demo and MVP?
+- How should staged historical backfill be scheduled while keeping coverage
+  explicitly degraded until the complete available target history is proven?
 - What confidence threshold sends AD extraction to review?
 - Should normalized AD text snapshots be stored indefinitely even if raw PDFs move to colder storage?
 - Which concrete LLM provider/model should implement the LLM-assisted portion first?

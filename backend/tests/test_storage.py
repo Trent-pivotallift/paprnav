@@ -109,6 +109,8 @@ def test_store_upload_file_requires_bucket_for_s3_backend() -> None:
         openai_base_url="https://api.openai.com/v1",
         openai_ad_extraction_model="gpt-5.5",
         ad_extraction_timeout_seconds=30,
+        govinfo_api_key=None,
+        govinfo_base_url="https://api.govinfo.gov",
     )
 
     with pytest.raises(ValueError, match="PAPRNAV_S3_UPLOAD_BUCKET"):

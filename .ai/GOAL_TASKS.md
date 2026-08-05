@@ -2117,3 +2117,64 @@ Evidence:
   empty-applicability edge was rejected at approval and its edge closure review
   reported 0 blockers.
 - Alembic reports one head at `20260730_0017`.
+
+### T077: Prove the retained dual-source AD catalog locally
+
+Status: complete 2026-08-04
+
+Goal: Before deploying AD ingestion to AWS or opening either frozen logbook
+partition, prove that Paprnav can retain, extract, reconcile, and refresh the
+complete available DRS and Federal Register/GovInfo catalog for a verified
+aircraft/component target.
+
+Acceptance:
+
+- Extend the existing `backend/app` implementation; do not create a parallel
+  `src/ad_pipeline` project.
+- Add provider-neutral source-document persistence and adapters for DRS,
+  FederalRegister.gov, and GovInfo.
+- Package `mdbtools` in the backend runtime and prove real Access-table import,
+  idempotent reimport, manifest retention, and explicit degraded fallback.
+- Exhaust modern Federal Register pagination and retain every FAA rule before
+  AD classification.
+- Retain official GovInfo artifacts and implement evidence-backed historical
+  issue extraction without an arbitrary cutoff that could support a false
+  completeness claim.
+- Use reliable native text first. Escalate only unreliable pages to Textract
+  text detection and then Textract Layout when reading order or document
+  boundaries remain uncertain.
+- Store content-addressed raw artifacts, source/page manifests, hashes,
+  provider/parser versions, extraction evidence, retry state, and attributable
+  but non-billable cost.
+- Prove completeness with declared-versus-retrieved counts and exhaustive
+  DRS/Federal Register set reconciliation. Random sampling may test accuracy
+  but cannot serve as the completeness gate.
+- Build separate coverage for N3671L's Cessna 172G airframe serial `17253840`
+  and Continental O-300-D engine serial `33608-D-5-D`, with identities marked
+  user-provided pending maintenance-record verification.
+- Keep propeller/appliance coverage unresolved until installed identities are
+  known.
+- Report **X passed out of Y** after every stage plus source counts,
+  native/Textract routing, DRS-only/FR-only differences, applicable/
+  non-applicable/unresolved directives, retained bytes, and cost.
+- Keep the frozen 22-page full-ingestion partition and 11-page ingestion/AD
+  holdout unopened.
+
+Planned verification stages:
+
+1. Provider-neutral source and retention fixtures.
+2. Real retained DRS Access import and idempotent rerun.
+3. Exhaustive modern Federal Register enumeration.
+4. GovInfo modern/historical artifact and PDF routing fixtures.
+5. N3671L airframe/engine catalog and exhaustive reconciliation.
+6. Focused AD safety regression, full backend regression, Alembic one-head
+   check, frontend lint, and frontend build.
+
+Completion evidence:
+
+- `.ai/AD_SOURCE_PROOF_2026-08-04.md`
+- DRS target proof: 11/11, repeated manifest byte-identical.
+- Federal Register/GovInfo proof: 5/5, repeated manifest byte-identical.
+- Backend regression: 131/131; frozen partition invariant: 1/1.
+- Historical publication gaps remain explicit `needs_adjudication`, which is a
+  valid completed catalog outcome under the approved loop rule.

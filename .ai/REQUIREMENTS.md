@@ -1,6 +1,6 @@
 # paprnav Requirements
 
-Last updated: 2026-07-27
+Last updated: 2026-08-02
 
 These requirements describe the intended product direction and the current known implementation gaps. They should be refined as the project gains real backend behavior and customer validation.
 
@@ -46,7 +46,12 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
   add entries to that log.
 - Users can open individual logbook entry details.
 - Users can manage profile/account details.
-- The system ingests FAA Airworthiness Directives from the FAA DRS bulk ZIP/Access database first, then compares and enriches those ADs with Federal Register publication records.
+- The system ingests FAA Airworthiness Directives from both the FAA DRS bulk
+  ZIP/Access database and the Federal Register publication family. Modern
+  structured publications use FederalRegister.gov; GovInfo supplies official
+  artifacts and the historical full-issue archive. DRS remains the first
+  applicability index, but no single source may be treated as the complete AD
+  universe.
 - The system matches AD requirements against structured logbook entries and creates HITL adjudication tasks when judgment is required.
 
 ## Compliance And Aviation Domain Requirements
@@ -70,6 +75,17 @@ paprnav helps aircraft owners and maintenance providers turn scanned aircraft lo
 - If DRS bulk ingestion fails, users must see a degraded-coverage warning rather than a false complete worklist; the warning should mention that historical and DRS-indexed AD coverage is unverified or may be incomplete.
 - Pre-1994 ADs are supported when present in DRS bulk data, but the product must not claim complete historical coverage until validation against DRS Web UI samples and historical FAA/index sources proves completeness. The 2026-06-21 T071 validation result is conditional and does not prove complete historical coverage.
 - DRS collection failures must create admin-visible repair or reconciliation work items.
+- Federal Register/GovInfo collection must exhaust the declared pages or issue
+  manifest, retain content-addressed raw artifacts, and create visible
+  reconciliation work for every failed, missing, or uncertain source document.
+- Historical Federal Register PDFs use reliable native text when available.
+  Image-only, malformed, or layout-uncertain pages may escalate to Textract
+  text detection and then Textract Layout. Every extracted field must retain
+  source-document, page, text-span, geometry, provider, parser-version, and
+  review provenance.
+- Completeness is an exhaustive set-reconciliation property. Random or sampled
+  review may measure extraction accuracy, but it cannot establish that every
+  applicable publication was collected.
 - HITL adjudications must be documented for software/admin review and future rule/model improvements.
 - Auditability matters: future changes to maintenance records should retain history rather than silently overwrite.
 
@@ -109,7 +125,13 @@ Code review on 2026-06-20 confirms the earlier gap list was stale. The local MVP
 Remaining known gaps:
 
 - OCR is still deterministic fixture-backed for the local MVP slice; real OCR provider integration, rendered page/image artifacts, and production Textract/Tesseract behavior remain future work.
-- AD ingestion is DRS-bulk-first with Federal Register comparison/enrichment. Fixture-backed Access parsing, DRS provenance storage, applicability targets, publications, reusable target coverage, client/aircraft coverage associations, and cost attribution are implemented. Full Federal Register XML/body artifact persistence and durable Federal Register delta monitoring remain incomplete.
+- AD ingestion is DRS-bulk-first with mandatory Federal Register/GovInfo
+  catalog reconciliation. Fixture-backed Access parsing, DRS provenance
+  storage, applicability targets, publications, reusable target coverage,
+  client/aircraft coverage associations, and cost attribution are implemented.
+  Provider-neutral source-document persistence, exhaustive Federal Register
+  pagination, GovInfo historical issue extraction, complete raw-artifact
+  retention, and durable delta monitoring remain incomplete.
 - AD applicability is modeled with first-class `applicability_targets`, `installed_components`, `ad_publications`, `ad_target_applicability`, `ad_coverage_sets`, and `ad_coverage_subscriptions`. Matching retains approved extraction JSON for audit/replay while using structured component applicability when available.
 - Aircraft component identity supports active installed-component rows and airframe/engine/propeller roles. Rich installation history, serial-range evaluation, appliances, twin-engine cases, and rotorcraft/drivetrain cases still require broader fixtures and refinement.
 - AD extraction is shallow and deterministic. Full applicability/compliance extraction, source-section citations, structured compliance intervals, provider-backed LLM extraction, cache behavior, and richer review reconciliation remain incomplete.
