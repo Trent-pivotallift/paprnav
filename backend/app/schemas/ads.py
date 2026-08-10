@@ -131,6 +131,19 @@ class ADMatchApplicabilityResponse(BaseModel):
     snapshot: Optional[dict[str, Any]]
 
 
+class ADDueStateResponse(BaseModel):
+    id: str
+    requirementId: str
+    status: str
+    dueDate: Optional[date]
+    dueMetric: Optional[str]
+    dueValue: Optional[str]
+    triggerStates: list[dict[str, Any]]
+    unresolvedReasons: list[str]
+    algorithmVersion: str
+    inputHash: str
+
+
 class ADMatchResultResponse(BaseModel):
     id: str
     aircraftId: str
@@ -142,6 +155,7 @@ class ADMatchResultResponse(BaseModel):
     rationale: str
     unresolvedReasons: list[str]
     applicability: Optional[ADMatchApplicabilityResponse]
+    dueState: Optional[ADDueStateResponse]
     algorithmName: str
     algorithmVersion: str
     inputHash: str

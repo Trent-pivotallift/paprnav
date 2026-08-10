@@ -10,6 +10,7 @@ from app.models.core import (
     ADCoverageSet,
     ADCoverageSubscription,
     ADSourceSnapshot,
+    ApplicabilityTarget,
 )
 from app.services.ad_costs import record_ad_cost_entry
 from app.services.ad_coverage import (
@@ -152,6 +153,57 @@ def test_incomplete_component_identity_prevents_current_coverage(
         "identity must be completed" in warning
         for warning in summary["coverageWarnings"]
     )
+
+
+def test_model_coverage_includes_drs_manufacturer_successor_variants(
+    db_session: Session,
+    demo_data: dict[str, object],
+) -> None:
+    aircraft = demo_data["aircraft"]
+    aircraft.make = "Cessna"
+    aircraft.model = "172G"
+    airframe = next(
+        component
+        for component in aircraft.installed_components
+        if component.role == "airframe"
+    )
+    airframe.make = "Cessna"
+    airframe.model = "172G"
+    import_drs_bulk_rows(
+        db_session,
+        [
+            {
+                "AD Number": "2026-03-01",
+                "Product Type": "Aircraft",
+                "Make": "Cessna Aircraft Company",
+                "Model": "172G",
+                "Status": "Current",
+                "guid": "cessna-legacy",
+            },
+            {
+                "AD Number": "2026-03-02",
+                "Product Type": "Aircraft",
+                "Make": "Textron Aviation Inc.",
+                "Model": "172G",
+                "Status": "Current",
+                "guid": "cessna-successor",
+            },
+        ],
+        content_hash="f" * 64,
+    )
+
+    resolve_aircraft_ad_coverage(db_session, aircraft.id)
+
+    coverage = db_session.scalar(
+        select(ADCoverageSet)
+        .join(ApplicabilityTarget, ApplicabilityTarget.id == ADCoverageSet.target_id)
+        .where(
+            ApplicabilityTarget.product_type == "Aircraft",
+            ApplicabilityTarget.model == "172G",
+        )
+    )
+    assert coverage is not None
+    assert coverage.directive_count == 2
 
 
 def test_stale_snapshot_prevents_current_coverage(

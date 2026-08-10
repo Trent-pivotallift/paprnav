@@ -342,16 +342,41 @@ Local retained-source proof commands:
 ```bash
 python -m app.scripts.run_ad_source_proof --help
 python -m app.scripts.run_ad_publication_proof --help
+python -m app.scripts.apply_ad_publication_proof --help
 ```
 
 The production backend image includes `mdbtools` for FAA Access imports and
 Poppler for canonical PDF inspection/rendering. GovInfo reconciliation uses
 `GOVINFO_API_KEY`; source artifacts are content-addressed and repeat runs are
-idempotent. See `.ai/AD_SOURCE_PROOF_2026-08-04.md` from the repository root.
+idempotent. Publication manifests retain Federal Register search/document
+payloads, individual rule PDFs, GovInfo package summaries, and complete issue
+PDFs. Applying a manifest requires the matching artifact root; every path,
+byte count, hash, and PDF signature is checked before an `ad_source_documents`
+row is created and the publication is linked to its primary retained PDF. See
+`.ai/AD_SOURCE_PROOF_2026-08-04.md` from the repository root.
 Aircraft identity changes and newly approved AD applicability also invalidate
 affected worklists, including prior zero-result runs. AD extraction approval
 requires at least one attributable affected product so subscription-based
 invalidation cannot be bypassed by empty applicability.
+
+Approved AD extraction output is also materialized into normalized compliance
+requirements and individual calendar, tach, Hobbs, total-time, or cycle
+triggers. Maintenance-verified logbook entries may create attributable
+compliance events, while verified entry measurements provide replayable
+aircraft time-state observations. The matcher calculates a versioned current,
+due-soon, overdue, terminated, or unknown due state and returns it with the
+aircraft AD worklist. Missing measurements, unparsed intervals, unsupported
+conditions, and uncertain terminating actions remain adjudication cases.
+Repeated calculation reuses identical requirement, event, time-state, and due-
+state identities while retaining superseded replay history for audit.
+
+DRS ZIP import may be limited to explicit onboarding target scopes while the
+source snapshot still records the complete Access row inventory. Re-importing
+the same source and scopes updates the existing directive/publication/target
+rows without duplicating them. Historical applicability remains retained but
+is not counted as current coverage. Same-model manufacturer variants are
+included only when the installed identity has a compatible make anchor;
+Appliance targets are never subscribed from an airframe identity alone.
 
 The admin cost response separates physical shared-source storage, estimated
 logical coverage storage, and aircraft-specific comparison usage. Actual and

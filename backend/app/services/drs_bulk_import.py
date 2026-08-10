@@ -12,7 +12,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.core import ADPublication, ADReconciliationIssue, ADSourceSnapshot, AirworthinessDirective
@@ -108,7 +108,13 @@ def import_drs_rows_into_snapshot(db: Session, rows: list[dict[str, Any]], snaps
     return stats
 
 
-def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | None = None) -> dict[str, int]:
+def import_drs_bulk_zip(
+    db: Session,
+    zip_path: str | Path,
+    *,
+    source_url: str | None = None,
+    target_scopes: list[dict[str, Any]] | None = None,
+) -> dict[str, int]:
     path = Path(zip_path)
     content = path.read_bytes()
     content_hash = hashlib.sha256(content).hexdigest()
@@ -149,6 +155,14 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
             "accessTables": table_parse["tables"],
         }
         if table_parse["rows"]:
+            selected_rows = select_target_scope_rows(
+                table_parse["rows"],
+                target_scopes,
+            )
+            combined_scopes = merge_normalized_target_scopes(
+                (snapshot.metadata_json or {}).get("targetScopes") or [],
+                normalized_target_scopes(target_scopes),
+            )
             snapshot.source_type = "bulk_access"
             snapshot.status = "complete"
             snapshot.row_count = len(table_parse["rows"])
@@ -156,10 +170,25 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
                 "accessParsing": "mdbtools",
                 "parserCommands": [MDB_TABLES, MDB_EXPORT],
                 "parseErrors": table_parse["errors"],
+                "sourceRowCount": len(table_parse["rows"]),
+                "selectedRowCount": len(selected_rows),
+                "targetScopes": combined_scopes,
             }
-            parsed_stats = import_drs_rows_into_snapshot(db, table_parse["rows"], snapshot)
+            parsed_stats = import_drs_rows_into_snapshot(db, selected_rows, snapshot)
             for key, value in parsed_stats.items():
                 stats[key] += value
+            snapshot.metadata_json = {
+                **(snapshot.metadata_json or {}),
+                "materializedPublicationCount": db.scalar(
+                    select(func.count())
+                    .select_from(ADPublication)
+                    .where(
+                        ADPublication.source_snapshot_id == snapshot.id,
+                        ADPublication.source_system == "drs",
+                    )
+                )
+                or 0,
+            }
             if table_parse["unparsed_rows"]:
                 ensure_snapshot_issue(
                     db,
@@ -236,6 +265,87 @@ def import_drs_bulk_zip(db: Session, zip_path: str | Path, *, source_url: str | 
             stats["issues"] += 1
     db.flush()
     return stats
+
+
+def select_target_scope_rows(
+    rows: list[dict[str, Any]],
+    target_scopes: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    if not target_scopes:
+        return rows
+    selected: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for row in rows:
+        if not any(row_matches_target_scope(row, scope) for scope in target_scopes):
+            continue
+        identity = (
+            normalize_ad_number(first_value(row, "AD Number", "ADNumber", "adNumber")) or "",
+            first_value(row, "guid", "Guid", "GUID", "Identifier") or "",
+            first_value(row, "sourceAccessTable") or "",
+        )
+        if identity in seen:
+            continue
+        seen.add(identity)
+        selected.append(row)
+    return selected
+
+
+def row_matches_target_scope(row: dict[str, Any], scope: dict[str, Any]) -> bool:
+    requested_model = str(scope.get("model") or "").strip().casefold()
+    requested_product_type = str(scope.get("product_type") or "").strip().casefold()
+    requested_statuses = {
+        str(value).strip().casefold()
+        for value in scope.get("statuses") or []
+        if str(value).strip()
+    }
+    models = {
+        str(value).strip().casefold()
+        for value in split_values(first_value(row, "model", "Model", "Models"))
+        if value
+    }
+    product_type = (
+        first_value(row, "productType", "ProductType", "Product Type", "Category")
+        or ""
+    ).casefold()
+    status = (first_value(row, "status", "Status", "ADStatus") or "").casefold()
+    return (
+        (not requested_model or requested_model in models)
+        and (not requested_product_type or requested_product_type == product_type)
+        and (not requested_statuses or status in requested_statuses)
+    )
+
+
+def normalized_target_scopes(
+    target_scopes: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    return sorted(
+        [
+            {
+                "model": str(scope.get("model") or "").strip() or None,
+                "productType": str(scope.get("product_type") or "").strip() or None,
+                "statuses": sorted(
+                    {
+                        str(value).strip()
+                        for value in scope.get("statuses") or []
+                        if str(value).strip()
+                    }
+                ),
+            }
+            for scope in target_scopes or []
+        ],
+        key=lambda item: json.dumps(item, sort_keys=True),
+    )
+
+
+def merge_normalized_target_scopes(
+    existing: list[dict[str, Any]],
+    requested: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    scopes = {
+        json.dumps(scope, sort_keys=True, separators=(",", ":")): scope
+        for scope in [*existing, *requested]
+    }
+    return [scopes[key] for key in sorted(scopes)]
 
 
 def parse_access_members_with_mdbtools(archive: zipfile.ZipFile, accdb_members: list[str]) -> dict[str, Any]:
@@ -376,7 +486,7 @@ def upsert_snapshot(
     else:
         snapshot.row_count = row_count
         snapshot.table_inventory = table_inventory
-        snapshot.metadata_json = metadata
+        snapshot.metadata_json = {**(snapshot.metadata_json or {}), **metadata}
         snapshot.status = status
         snapshot.parser_name = PARSER_NAME
         snapshot.parser_version = PARSER_VERSION

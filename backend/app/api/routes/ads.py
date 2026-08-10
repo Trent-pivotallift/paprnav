@@ -43,6 +43,7 @@ from app.schemas.ads import (
     ADMatchResultResponse,
     ADMatchPublicationResponse,
     ADMatchTargetResponse,
+    ADDueStateResponse,
     ADReviewDecisionRequest,
     ADReviewDecisionResponse,
     AirworthinessDirectiveResponse,
@@ -56,6 +57,8 @@ from app.services.ad_matching import (
     ALGORITHM_VERSION,
     invalidate_aircraft_match_results,
 )
+from app.services.ad_recurrence import materialize_requirements_from_extraction
+from app.services.ad_recurrence import due_state_payload
 from app.services.installed_components import component_display_name
 from app.services.observability import record_product_event, record_workflow_status
 
@@ -126,6 +129,7 @@ def list_aircraft_matches(
             selectinload(ADMatchResult.installed_component),
             selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.target),
             selectinload(ADMatchResult.target_applicability).selectinload(ADTargetApplicability.source_publication),
+            selectinload(ADMatchResult.due_state),
             selectinload(ADMatchResult.evidence_links).selectinload(ADMatchEvidence.logbook_entry).selectinload(LogbookEntry.logbook_section),
             selectinload(ADMatchResult.adjudication),
         )
@@ -323,6 +327,7 @@ def decide_extraction_review(
         review.extraction.directive.review_status = "approved"
         review.extraction.directive.approved_at = datetime.now(timezone.utc)
         populate_applicability_from_extraction(db, review.extraction)
+        materialize_requirements_from_extraction(db, review.extraction)
         db.flush()
         target_ids = db.scalars(
             select(ADTargetApplicability.target_id)
@@ -477,6 +482,11 @@ def serialize_match_result(match: ADMatchResult) -> ADMatchResultResponse:
         rationale=match.rationale,
         unresolvedReasons=match.unresolved_reasons or [],
         applicability=serialize_match_applicability(match),
+        dueState=(
+            ADDueStateResponse(**due_state_payload(match.due_state))
+            if match.due_state
+            else None
+        ),
         algorithmName=match.algorithm_name,
         algorithmVersion=match.algorithm_version,
         inputHash=match.input_hash,

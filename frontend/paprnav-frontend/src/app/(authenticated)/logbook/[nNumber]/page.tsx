@@ -373,6 +373,18 @@ export default function AircraftLogbookPage() {
                         </a>
                       ))}
                   </div>
+                  {match.dueState ? (
+                    <p className="mt-2 text-xs">
+                      <span className="font-medium">Recurring status: </span>
+                      <span className="text-muted-foreground">
+                        {match.dueState.status.replaceAll("_", " ")}
+                        {match.dueState.dueDate ? ` · due ${match.dueState.dueDate}` : ""}
+                        {match.dueState.dueValue && match.dueState.dueMetric
+                          ? ` · due at ${match.dueState.dueValue} ${match.dueState.dueMetric.replaceAll("_", " ")}`
+                          : ""}
+                      </span>
+                    </p>
+                  ) : null}
                   {sourceWarning(match) || match.unresolvedReasons.length ? (
                     <p className="mt-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
                       <FileWarning className="h-4 w-4" />

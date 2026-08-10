@@ -137,8 +137,8 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     stats = match_aircraft_ads(db_session, aircraft.id)
 
     assert stats["directives_seen"] == 3
-    assert stats["matched"] == 1
-    assert stats["unresolved"] == 2
+    assert stats["matched"] == 2
+    assert stats["unresolved"] == 1
     entry_count = len(
         db_session.scalars(
             select(LogbookEntry).where(
@@ -157,11 +157,15 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
 
     recurring_match = db_session.scalar(select(ADMatchResult).where(ADMatchResult.match_type == "simple_recurring"))
     assert recurring_match is not None
-    assert recurring_match.status == "needs_adjudication"
-    assert "recurring_due_status_unknown" in recurring_match.unresolved_reasons
+    assert recurring_match.status == "candidate_satisfied"
+    assert "recurring_due_status_unknown" not in recurring_match.unresolved_reasons
+    assert recurring_match.due_state is not None
+    assert recurring_match.due_state.status == "current"
+    assert recurring_match.due_state.due_metric == "tach_hours"
+    assert recurring_match.due_state.due_value == 1220
 
     adjudication_count = len(db_session.scalars(select(ADMatchAdjudication)).all())
-    assert adjudication_count == 2
+    assert adjudication_count == 1
 
     db_session.add(
         ADMatchResult(
@@ -189,6 +193,9 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     assert match_payload["reprocessingRequired"] is False
     matches = match_payload["matches"]
     assert len(matches) == 3
+    recurring_payload = next(match for match in matches if match["matchType"] == "simple_recurring")
+    assert recurring_payload["dueState"]["status"] == "current"
+    assert recurring_payload["dueState"]["dueMetric"] == "tach_hours"
     candidate = next(match for match in matches if match["status"] == "candidate_satisfied")
     assert candidate["evidence"][0]["logbookEntryId"]
     assert "logbook evidence" in candidate["rationale"]

@@ -2178,3 +2178,85 @@ Completion evidence:
 - Backend regression: 131/131; frozen partition invariant: 1/1.
 - Historical publication gaps remain explicit `needs_adjudication`, which is a
   valid completed catalog outcome under the approved loop rule.
+
+### T078: Materialize and replay the N3671L AD catalog locally
+
+Status: complete 2026-08-06
+
+Goal: Persist the retained source proof into the Paprnav relational schema,
+associate it with N3671L's airframe and engine identities, persist API-derived
+publication augmentation, and prove replay idempotency.
+
+Completion evidence:
+
+- Pre-migration local PostgreSQL backup retained under
+  `backend/.data/backups/`.
+- Alembic head: `20260806_0019`.
+- Full DRS inventory retained; 51 scoped 172G/O-300-D rows materialized.
+- N3671L coverage: 28 current/30 retained airframe and 7 current/11 retained
+  engine publications; zero Appliance subscriptions.
+- Federal Register/GovInfo proof snapshot persisted with 16 exact-matched
+  directives, 27 GovInfo-linked directives, and 24 adjudication cases.
+- Identical DRS and publication-proof replays produced unchanged logical
+  counts.
+- Focused AD/source regression: 23/23.
+- Full backend regression in repository context: 137/137.
+- Operational persistence checklist: 20/20.
+
+### T079: Persist Federal Register and GovInfo source artifacts
+
+Status: complete 2026-08-09
+
+Goal: Close the metadata-only publication gap by retaining remote Federal
+Register/GovInfo payloads and PDFs in `ad_source_documents`, link publication
+rows to primary PDF evidence, and prove replay idempotency.
+
+Completion evidence:
+
+- Remote capture proof: 7/7.
+- Retained 51 Federal Register search payloads, 37 exact-document payload
+  references, 37 exact-document PDF references, 27 GovInfo summaries, and 27
+  complete issue PDFs.
+- Persisted 176 unique content-addressed source documents and linked 64
+  publication rows to retained PDFs.
+- Both database applications returned identical counts; unique document,
+  publication-link, and cost-ledger totals were unchanged after replay.
+- All retained files matched their SHA-256; all 61 unique PDFs passed Poppler
+  inspection and representative rule/issue pages rendered correctly.
+- Focused AD/source regression: 20/20; full backend regression: 141/141.
+- The 24 historical publication gaps remain `needs_adjudication`; frozen
+  logbook partitions remain unopened.
+
+### T080: Normalize recurring AD requirements and aircraft due state
+
+Status: complete 2026-08-09
+
+Goal: Turn retained AD compliance intervals into aircraft/component
+relationships that can safely calculate recurring due state without treating
+missing measurements or uncertain regulatory language as compliance.
+
+Completion evidence:
+
+- Added Alembic `20260809_0020` with normalized compliance requirements,
+  individual triggers, verified compliance events, aircraft time-state
+  observations, and replayable aircraft AD due states.
+- Aircraft AD matches now retain and return their due-state relationship.
+- Calendar, tach/usage, whichever-first, terminating-action, missing-current-
+  state, API relationship, and repeated-run idempotency behavior are covered.
+- Focused AD/recurrence regression: 29/29.
+- Full backend regression excluding the repository-bound manifest test:
+  147/147, plus the frozen OCR invariant 1/1 in an isolated container, for
+  148/148 total.
+- PostgreSQL migration verification passed complete upgrade, downgrade to
+  `20260806_0019`, and re-upgrade to head in an isolated database.
+- The local proof database was backed up to
+  `backend/.data/backups/paprnav-before-ad-recurrence-20260809.dump` and
+  migrated to head `20260809_0020`.
+- N3671L inspection found 45 current 172G/O-300-D directives: 23 have retained
+  full-text publication evidence and 22 remain historical-source adjudication
+  cases. None yet has an approved compliance extraction, so no production
+  recurrence row was fabricated from title/index data.
+- Full-text compliance extraction and review for the 23 retained publications
+  is the final local data-population gate before AWS. Production worker scheduling must
+  recompute due state after verified evidence, component identity,
+  applicability, source, or algorithm changes.

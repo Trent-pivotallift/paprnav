@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -183,14 +184,16 @@ def refresh_coverage_set(
             ADTargetApplicability.status == "current",
         )
     ) or 0
-    publication_rows = db.scalars(
-        select(ADPublication)
-        .join(
-            ADTargetApplicability,
-            ADTargetApplicability.source_publication_id == ADPublication.id,
+    publication_ids = (
+        select(ADTargetApplicability.source_publication_id)
+        .where(
+            ADTargetApplicability.target_id.in_(compatible_target_ids),
+            ADTargetApplicability.source_publication_id.is_not(None),
         )
-        .where(ADTargetApplicability.target_id.in_(compatible_target_ids))
         .distinct()
+    )
+    publication_rows = db.scalars(
+        select(ADPublication).where(ADPublication.id.in_(publication_ids))
     ).all()
     logical_storage_bytes = sum(
         len(
@@ -267,15 +270,31 @@ def applicability_target_ids_for_coverage(
 
     ids = {target.id}
     if target.model:
+        model_targets = db.scalars(
+            select(ApplicabilityTarget)
+            .join(
+                ADTargetApplicability,
+                ADTargetApplicability.target_id == ApplicabilityTarget.id,
+            )
+            .where(
+                func.lower(ApplicabilityTarget.product_type)
+                == target.product_type.lower(),
+                func.lower(ApplicabilityTarget.model) == target.model.lower(),
+            )
+            .distinct()
+        ).all()
+        has_make_anchor = bool(
+            target.make
+            and any(
+                manufacturer_names_are_compatible(target.make, item.make)
+                for item in model_targets
+                if item.make
+            )
+        )
         ids.update(
-            db.scalars(
-                select(ApplicabilityTarget.id).where(
-                    func.lower(ApplicabilityTarget.product_type)
-                    == target.product_type.lower(),
-                    ApplicabilityTarget.model == target.model,
-                    ApplicabilityTarget.make.is_(None),
-                )
-            ).all()
+            item.id
+            for item in model_targets
+            if item.make is None or has_make_anchor
         )
     elif target.make:
         ids.update(
@@ -289,6 +308,23 @@ def applicability_target_ids_for_coverage(
             ).all()
         )
     return sorted(ids)
+
+
+def manufacturer_names_are_compatible(left: str, right: str) -> bool:
+    def normalized(value: str) -> str:
+        return " ".join(re.findall(r"[a-z0-9]+", value.lower()))
+
+    left_value = normalized(left)
+    right_value = normalized(right)
+    return bool(
+        left_value
+        and right_value
+        and (
+            left_value == right_value
+            or left_value in right_value
+            or right_value in left_value
+        )
+    )
 
 
 def latest_reusable_drs_snapshot(db: Session) -> ADSourceSnapshot | None:

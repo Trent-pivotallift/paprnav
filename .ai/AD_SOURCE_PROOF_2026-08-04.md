@@ -89,3 +89,120 @@ Textract only for relevant image-only or uncertain pages. It must not infer
 publication dates from effective dates. Propeller and installed-appliance
 coverage remain incomplete until their identities are verified from aircraft
 records.
+
+## Operational persistence follow-up - 2026-08-06
+
+The retained proof was materialized into the local Paprnav PostgreSQL schema
+after a recoverable pre-migration backup. The database is at Alembic revision
+`20260806_0019`.
+
+The source snapshot retains the complete Access inventory of 20,390 normalized
+rows and the nine separately inventoried rows without usable AD identifiers.
+Operational materialization is scoped to the aircraft/component identities
+requested by onboarding, rather than eagerly creating every FAA target:
+
+- selected DRS source rows: 51;
+- Cessna 172G model index: 40 (30 Aircraft and 10 Appliance);
+- Continental O-300-D Engine index: 11;
+- DRS publications persisted: 51;
+- applicability targets persisted from the non-invented DRS axes: 4,663;
+- AD-target applicability rows persisted: 8,123.
+
+N3671L is configured locally as Cessna 172G airframe serial `17253840` with a
+Continental Motors O-300-D engine serial `33608-D-5-D`. Its reusable coverage
+subscriptions resolve to:
+
+- airframe: 28 current directives and 30 retained DRS publications;
+- engine: 7 current directives and 11 retained DRS publications;
+- appliance: zero automatic subscriptions.
+
+The two historical 172G airframe rows and four historical O-300-D engine rows
+remain retained as history/evidence rather than being counted as current
+coverage. Manufacturer-name variants in DRS are included only after a
+same-product, same-model make anchor is established; this captures Cessna /
+Textron and Continental legacy/successor names without collapsing Appliance
+targets into the airframe.
+
+The provider-neutral publication proof was persisted as a separate
+content-hashed source snapshot:
+
+- proof snapshot SHA-256:
+  `cabedd2e89fe41c8eacdc4c5dd090a280c59ea78b16bea45fd28034add219cb7`;
+- exact Federal Register links: 37 publications across 16 directives;
+- GovInfo issue links: 27 publications across 27 directives;
+- historical publication adjudication issues: 24;
+- missing target directives: 0.
+
+Federal Register/GovInfo rows augment the DRS-derived directive and
+applicability catalog; they do not replace it. The 2026-08-09 retained-artifact
+closure below supersedes the former metadata-only limitation.
+
+An identical scoped ZIP replay and identical publication-proof replay left all
+logical counts unchanged: one DRS snapshot, 51 DRS publications, 4,663
+targets, 8,123 applicability rows, two coverage sets, two aircraft
+subscriptions, and five non-billable cost-ledger rows. Full repository-context
+backend regression: **137 passed out of 137**.
+
+Operational persistence verification: **20 passed out of 20**. The loop found
+and corrected three defects before closure: insufficient DRS subtype width,
+PostgreSQL JSON `DISTINCT` usage, and manufacturer-variant coverage under-link.
+
+## Remote artifact persistence closure - 2026-08-09
+
+The same 51-directive Cessna 172G/O-300-D target set was reconciled again and
+the remote evidence was retained before database materialization:
+
+- 51 Federal Register search-response payloads;
+- 37 exact Federal Register document payload references;
+- 37 exact Federal Register document-PDF references representing 34 unique
+  PDFs because three source documents were reused;
+- 27 GovInfo package-summary payloads;
+- 27 complete GovInfo Federal Register issue PDFs;
+- 176 unique content-addressed `ad_source_documents` totaling approximately
+  585 MiB in durable local storage;
+- 64 `ad_publications.source_document_id` links, each pointing to the retained
+  PDF used as primary publication evidence;
+- 24 historical `needs_adjudication` cases preserved unchanged.
+
+The capture manifest SHA-256 is
+`8f8fb6ce17127113fcaf07b7958ed5eb280a65ea04e01a329d8a494a25b697f4`
+and reports **7 passed out of 7**. All 61 unique PDFs passed Poppler structural
+inspection; representative individual-rule and complete-issue pages rendered
+legibly. Every persisted local object matched its declared SHA-256 and
+content-addressed path. No GovInfo API-key query parameter remains in retained
+provenance.
+
+The identical database replay produced the same operation counts on both
+runs: 51 records, 37 Federal Register publications, 27 GovInfo publications,
+179 artifact references, 64 publication/PDF links, zero missing directives,
+and 24 adjudication cases. Unique table counts remained 176 source documents,
+64 linked publications, and 181 cost-ledger rows (the five earlier rows plus
+one non-billable physical-storage row per unique source document).
+
+Verification after closure:
+
+- retained-source persistence regression: **20 passed out of 20**;
+- full backend regression: **141 passed out of 141**;
+- frozen logbook partitions remained unopened.
+
+One GovInfo 502 response exposed the configured API key in transient local
+command output before sanitized exception handling was added. The key was not
+written into retained artifacts, but it must be rotated as a precaution before
+the AWS implementation/deployment stage. Rotation was intentionally postponed
+during the local proof and recurrence implementation.
+
+## Recurrence Readiness Follow-up — 2026-08-09
+
+The source/applicability catalog is relationally complete for the proven
+N3671L scope, but catalog completeness is separate from approved compliance
+meaning. The current database contains 45 current 172G/O-300-D directives; 23
+have retained full-text publication evidence and 22 remain valid
+historical-source adjudication cases. None of the 45 yet has an approved
+compliance extraction, so the normalized recurrence tables remain empty after
+migration rather than inferring intervals from DRS titles or indexes.
+
+Alembic `20260809_0020` adds normalized requirements, triggers, verified
+compliance events, time-state observations, and replayable due states. The
+next local gate is evidence-backed extraction and platform review of the 23
+retained publications. AWS deployment follows that gate; it does not replace
+it.

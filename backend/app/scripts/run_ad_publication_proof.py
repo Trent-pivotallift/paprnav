@@ -25,6 +25,8 @@ def main() -> None:
     write_proof_manifest(manifest, args.output)
     verification = manifest["verification"]
     print(f"{verification['passed']} passed out of {verification['total']}")
+    if verification["passed"] != verification["total"]:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

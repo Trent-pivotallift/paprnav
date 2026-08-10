@@ -402,6 +402,19 @@ export interface ADMatchApplicability {
   snapshot: Record<string, unknown> | null;
 }
 
+export interface ADDueState {
+  id: string;
+  requirementId: string;
+  status: string;
+  dueDate: string | null;
+  dueMetric: string | null;
+  dueValue: string | null;
+  triggerStates: Record<string, unknown>[];
+  unresolvedReasons: string[];
+  algorithmVersion: string;
+  inputHash: string;
+}
+
 export interface ADMatchResult {
   id: string;
   aircraftId: string;
@@ -413,6 +426,7 @@ export interface ADMatchResult {
   rationale: string;
   unresolvedReasons: string[];
   applicability: ADMatchApplicability | null;
+  dueState: ADDueState | null;
   algorithmName: string;
   algorithmVersion: string;
   inputHash: string;

@@ -26,6 +26,13 @@ from app.services.ad_applicability import infer_component_role
 from app.services.ad_costs import record_ad_cost_entry
 from app.services.ad_coverage import resolve_aircraft_ad_coverage
 from app.services.ad_identity import normalize_ad_number
+from app.services.ad_recurrence import (
+    compute_due_state,
+    evidence_supports_terminating_action,
+    requirement_for_applicability,
+    sync_verified_time_states,
+    upsert_verified_compliance_event,
+)
 from app.services.maintenance_extraction import extract_structured_maintenance_data
 from app.services.observability import record_product_event, record_workflow_status
 
@@ -74,6 +81,7 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
         entry.id: extract_entry_structure(entry)
         for entry in entries
     }
+    sync_verified_time_states(db, aircraft_id=aircraft.id, entries=entries)
     stats = {"directives_seen": 0, "matched": 0, "unresolved": 0, "review_tasks": 0, "skipped_not_applicable": 0}
     for extraction in extractions:
         stats["directives_seen"] += 1
@@ -206,6 +214,54 @@ def upsert_match_result(
         }:
             unresolved_reasons.append("explicit_compliance_claim_missing")
         unresolved_reasons = sorted(set(unresolved_reasons))
+    due_state = None
+    if match_type == "simple_recurring":
+        requirement = requirement_for_applicability(
+            db,
+            extraction=extraction,
+            applicability=target_applicability,
+        )
+        strongest_evidence = evidence[0] if evidence else None
+        if requirement is None:
+            unresolved_reasons.append("recurrence_requirement_missing")
+        else:
+            if (
+                strongest_evidence
+                and strongest_evidence.explicit_ad_reference
+                and strongest_evidence.disposition_candidate in {"complied", "inspected"}
+            ):
+                upsert_verified_compliance_event(
+                    db,
+                    requirement=requirement,
+                    aircraft_id=aircraft.id,
+                    component=installed_component,
+                    entry=strongest_evidence.entry,
+                    action_text=strongest_evidence.matched_text,
+                    is_terminating_action=evidence_supports_terminating_action(
+                        requirement,
+                        strongest_evidence.matched_text,
+                    ),
+                )
+            due_state = compute_due_state(
+                db,
+                aircraft_id=aircraft.id,
+                requirement=requirement,
+                component=installed_component,
+            )
+            unresolved_reasons = [
+                reason
+                for reason in unresolved_reasons
+                if reason != "recurring_due_status_unknown"
+            ]
+            if due_state.status == "unknown":
+                unresolved_reasons.extend(
+                    ["recurring_due_status_unknown", *(due_state.unresolved_reasons or [])]
+                )
+            elif due_state.status == "due_soon":
+                unresolved_reasons.append("recurring_compliance_due_soon")
+            elif due_state.status == "overdue":
+                unresolved_reasons.append("recurring_compliance_overdue")
+        unresolved_reasons = sorted(set(unresolved_reasons))
     if unresolved_reasons:
         confidence = min(confidence, 0.68)
     applicability_snapshot = build_applicability_snapshot(installed_component, target_applicability)
@@ -218,7 +274,14 @@ def upsert_match_result(
         confidence = min(confidence, 0.72)
     status = "candidate_satisfied" if evidence and not unresolved_reasons else "needs_adjudication"
     rationale = build_rationale(output, evidence, unresolved_reasons)
-    input_hash = build_input_hash(aircraft, entries, extraction, installed_component, target_applicability)
+    input_hash = build_input_hash(
+        aircraft,
+        entries,
+        extraction,
+        installed_component,
+        target_applicability,
+        due_state_input_hash=due_state.input_hash if due_state else None,
+    )
 
     existing = db.scalar(
         select(ADMatchResult).where(
@@ -234,6 +297,7 @@ def upsert_match_result(
         result.extraction_id = extraction.id
         result.installed_component_id = installed_component.id if installed_component else None
         result.target_applicability_id = target_applicability.id if target_applicability else None
+        result.due_state_id = due_state.id if due_state else None
         result.status = status
         result.match_type = match_type
         result.confidence = confidence
@@ -250,6 +314,7 @@ def upsert_match_result(
             extraction_id=extraction.id,
             installed_component_id=installed_component.id if installed_component else None,
             target_applicability_id=target_applicability.id if target_applicability else None,
+            due_state_id=due_state.id if due_state else None,
             status=status,
             match_type=match_type,
             confidence=confidence,
@@ -637,6 +702,7 @@ def build_input_hash(
     extraction: ADExtraction,
     installed_component: InstalledComponent | None = None,
     target_applicability: ADTargetApplicability | None = None,
+    due_state_input_hash: str | None = None,
 ) -> str:
     payload = {
         "aircraft": {
@@ -665,6 +731,7 @@ def build_input_hash(
             "componentId": installed_component.id if installed_component else None,
             "targetApplicabilityId": target_applicability.id if target_applicability else None,
         },
+        "dueStateInputHash": due_state_input_hash,
         "extraction": {
             "id": extraction.id,
             "inputContentHash": extraction.input_content_hash,
@@ -677,6 +744,9 @@ def build_input_hash(
                 "description": entry.description,
                 "rawText": entry.raw_text,
                 "reviewStatus": entry.review_status,
+                "tachTime": entry.tach_time,
+                "hobbsTime": entry.hobbs_time,
+                "totalTime": entry.total_time,
             }
             for entry in entries
         ],

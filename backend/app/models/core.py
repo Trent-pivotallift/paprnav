@@ -108,6 +108,9 @@ class Aircraft(TimestampMixin, Base):
     installed_components = relationship("InstalledComponent", back_populates="aircraft")
     ad_coverage_subscriptions = relationship("ADCoverageSubscription", back_populates="aircraft")
     ad_cost_entries = relationship("ADCostLedgerEntry", back_populates="aircraft")
+    ad_compliance_events = relationship("ADComplianceEvent", back_populates="aircraft")
+    ad_time_states = relationship("AircraftTimeState", back_populates="aircraft")
+    ad_due_states = relationship("AircraftADDueState", back_populates="aircraft")
 
 
 class InstalledComponent(TimestampMixin, Base):
@@ -138,6 +141,9 @@ class InstalledComponent(TimestampMixin, Base):
 
     aircraft = relationship("Aircraft", back_populates="installed_components")
     match_results = relationship("ADMatchResult", back_populates="installed_component")
+    ad_compliance_events = relationship("ADComplianceEvent", back_populates="installed_component")
+    ad_time_states = relationship("AircraftTimeState", back_populates="installed_component")
+    ad_due_states = relationship("AircraftADDueState", back_populates="installed_component")
 
 
 class AircraftAssignment(TimestampMixin, Base):
@@ -198,6 +204,8 @@ class LogbookEntry(TimestampMixin, Base):
     created_by_user = relationship("User", foreign_keys=[created_by_user_id])
     reviewed_by_user = relationship("User", foreign_keys=[reviewed_by_user_id])
     evidence_links = relationship("LogbookEntryEvidence", back_populates="logbook_entry")
+    ad_compliance_events = relationship("ADComplianceEvent", back_populates="logbook_entry")
+    ad_time_states = relationship("AircraftTimeState", back_populates="source_logbook_entry")
 
 
 class Upload(TimestampMixin, Base):
@@ -546,6 +554,7 @@ class AirworthinessDirective(TimestampMixin, Base):
     match_results = relationship("ADMatchResult", back_populates="directive")
     publications = relationship("ADPublication", back_populates="directive")
     target_applicabilities = relationship("ADTargetApplicability", back_populates="directive")
+    compliance_requirements = relationship("ADComplianceRequirement", back_populates="directive")
     supersedes_edges = relationship(
         "ADSupersession",
         foreign_keys="ADSupersession.superseding_ad_id",
@@ -597,7 +606,7 @@ class ApplicabilityTarget(TimestampMixin, Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("tgt"))
     product_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    product_subtype: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    product_subtype: Mapped[str] = mapped_column(String(512), nullable=True, index=True)
     make: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
     model: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
     normalized_key: Mapped[str] = mapped_column(String(512), nullable=False, unique=True, index=True)
@@ -667,6 +676,155 @@ class ADTargetApplicability(TimestampMixin, Base):
     target = relationship("ApplicabilityTarget", back_populates="applicabilities")
     source_publication = relationship("ADPublication")
     match_results = relationship("ADMatchResult", back_populates="target_applicability")
+    compliance_requirements = relationship("ADComplianceRequirement", back_populates="target_applicability")
+
+
+class ADComplianceRequirement(TimestampMixin, Base):
+    __tablename__ = "ad_compliance_requirements"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("acr"))
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    target_applicability_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_target_applicability.id"), nullable=False, index=True
+    )
+    source_extraction_id: Mapped[str] = mapped_column(ForeignKey("ad_extractions.id"), nullable=False, index=True)
+    requirement_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    requirement_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    combination_logic: Mapped[str] = mapped_column(String(32), nullable=False, default="all")
+    action_text: Mapped[str] = mapped_column(Text, nullable=False)
+    terminating_action_text: Mapped[str] = mapped_column(Text, nullable=True)
+    effective_date: Mapped[PythonDate] = mapped_column(Date, nullable=True)
+    review_status: Mapped[str] = mapped_column(String(64), nullable=False, default="needs_adjudication", index=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    citations: Mapped[list] = mapped_column(JSON, nullable=True)
+    source_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="current", index=True)
+
+    directive = relationship("AirworthinessDirective", back_populates="compliance_requirements")
+    target_applicability = relationship("ADTargetApplicability", back_populates="compliance_requirements")
+    source_extraction = relationship("ADExtraction", back_populates="compliance_requirements")
+    triggers = relationship("ADComplianceTrigger", back_populates="requirement")
+    compliance_events = relationship("ADComplianceEvent", back_populates="requirement")
+    due_states = relationship("AircraftADDueState", back_populates="requirement")
+
+
+class ADComplianceTrigger(TimestampMixin, Base):
+    __tablename__ = "ad_compliance_triggers"
+    __table_args__ = (
+        UniqueConstraint(
+            "requirement_id",
+            "sequence",
+            name="uq_ad_compliance_trigger_sequence",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("act"))
+    requirement_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_compliance_requirements.id"), nullable=False, index=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    metric: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    interval_value: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    interval_unit: Mapped[str] = mapped_column(String(32), nullable=False)
+    anchor_kind: Mapped[str] = mapped_column(String(64), nullable=False, default="last_compliance")
+    source_text: Mapped[str] = mapped_column(Text, nullable=True)
+
+    requirement = relationship("ADComplianceRequirement", back_populates="triggers")
+
+
+class ADComplianceEvent(TimestampMixin, Base):
+    __tablename__ = "ad_compliance_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ace"))
+    evidence_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    requirement_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_compliance_requirements.id"), nullable=False, index=True
+    )
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
+    installed_component_id: Mapped[str] = mapped_column(
+        ForeignKey("installed_components.id"), nullable=True, index=True
+    )
+    logbook_entry_id: Mapped[str] = mapped_column(ForeignKey("logbook_entries.id"), nullable=False, index=True)
+    occurred_on: Mapped[PythonDate] = mapped_column(Date, nullable=False, index=True)
+    action_text: Mapped[str] = mapped_column(Text, nullable=False)
+    tach_hours: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=True)
+    hobbs_hours: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=True)
+    total_time_hours: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=True)
+    cycle_count: Mapped[int] = mapped_column(Integer, nullable=True)
+    is_terminating_action: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    verification_status: Mapped[str] = mapped_column(String(64), nullable=False, default="verified_logbook", index=True)
+
+    requirement = relationship("ADComplianceRequirement", back_populates="compliance_events")
+    aircraft = relationship("Aircraft", back_populates="ad_compliance_events")
+    installed_component = relationship("InstalledComponent", back_populates="ad_compliance_events")
+    logbook_entry = relationship("LogbookEntry", back_populates="ad_compliance_events")
+    due_states = relationship("AircraftADDueState", back_populates="last_compliance_event")
+
+
+class AircraftTimeState(TimestampMixin, Base):
+    __tablename__ = "aircraft_time_states"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ats"))
+    state_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
+    installed_component_id: Mapped[str] = mapped_column(
+        ForeignKey("installed_components.id"), nullable=True, index=True
+    )
+    source_logbook_entry_id: Mapped[str] = mapped_column(
+        ForeignKey("logbook_entries.id"), nullable=True, index=True
+    )
+    observed_on: Mapped[PythonDate] = mapped_column(Date, nullable=False, index=True)
+    tach_hours: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=True)
+    hobbs_hours: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=True)
+    total_time_hours: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=True)
+    cycle_count: Mapped[int] = mapped_column(Integer, nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(64), nullable=False, default="verified_logbook", index=True)
+
+    aircraft = relationship("Aircraft", back_populates="ad_time_states")
+    installed_component = relationship("InstalledComponent", back_populates="ad_time_states")
+    source_logbook_entry = relationship("LogbookEntry", back_populates="ad_time_states")
+
+
+class AircraftADDueState(TimestampMixin, Base):
+    __tablename__ = "aircraft_ad_due_states"
+    __table_args__ = (
+        UniqueConstraint(
+            "aircraft_id",
+            "requirement_id",
+            "installed_component_id",
+            "algorithm_version",
+            "input_hash",
+            name="uq_aircraft_ad_due_state_replay",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("adu"))
+    aircraft_id: Mapped[str] = mapped_column(ForeignKey("aircraft.id"), nullable=False, index=True)
+    requirement_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_compliance_requirements.id"), nullable=False, index=True
+    )
+    installed_component_id: Mapped[str] = mapped_column(
+        ForeignKey("installed_components.id"), nullable=True, index=True
+    )
+    last_compliance_event_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_compliance_events.id"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    due_date: Mapped[PythonDate] = mapped_column(Date, nullable=True, index=True)
+    due_metric: Mapped[str] = mapped_column(String(64), nullable=True)
+    due_value: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=True)
+    trigger_states: Mapped[list] = mapped_column(JSON, nullable=True)
+    unresolved_reasons: Mapped[list] = mapped_column(JSON, nullable=True)
+    algorithm_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    computed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    aircraft = relationship("Aircraft", back_populates="ad_due_states")
+    requirement = relationship("ADComplianceRequirement", back_populates="due_states")
+    installed_component = relationship("InstalledComponent", back_populates="ad_due_states")
+    last_compliance_event = relationship("ADComplianceEvent", back_populates="due_states")
+    match_results = relationship("ADMatchResult", back_populates="due_state")
 
 
 class ADCoverageSet(TimestampMixin, Base):
@@ -809,6 +967,7 @@ class ADExtraction(TimestampMixin, Base):
     directive = relationship("AirworthinessDirective", back_populates="extractions")
     reviews = relationship("ADExtractionReview", back_populates="extraction")
     match_results = relationship("ADMatchResult", back_populates="extraction")
+    compliance_requirements = relationship("ADComplianceRequirement", back_populates="source_extraction")
 
 
 class ADExtractionReview(TimestampMixin, Base):
@@ -847,6 +1006,7 @@ class ADMatchResult(TimestampMixin, Base):
     extraction_id: Mapped[str] = mapped_column(ForeignKey("ad_extractions.id"), nullable=False, index=True)
     installed_component_id: Mapped[str] = mapped_column(ForeignKey("installed_components.id"), nullable=True, index=True)
     target_applicability_id: Mapped[str] = mapped_column(ForeignKey("ad_target_applicability.id"), nullable=True, index=True)
+    due_state_id: Mapped[str] = mapped_column(ForeignKey("aircraft_ad_due_states.id"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     match_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
@@ -866,6 +1026,7 @@ class ADMatchResult(TimestampMixin, Base):
     extraction = relationship("ADExtraction", back_populates="match_results")
     installed_component = relationship("InstalledComponent", back_populates="match_results")
     target_applicability = relationship("ADTargetApplicability", back_populates="match_results")
+    due_state = relationship("AircraftADDueState", back_populates="match_results")
     evidence_links = relationship("ADMatchEvidence", back_populates="match_result")
     adjudication = relationship("ADMatchAdjudication", back_populates="match_result", uselist=False)
 

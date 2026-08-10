@@ -508,6 +508,77 @@ until those identities are established. The frozen 22-page ingestion
 partition and 11-page ingestion/AD holdout remain unopened during this source
 proof.
 
+### D026: Materialize AD coverage by onboarding target from a shared source snapshot
+
+Status: accepted 2026-08-06
+
+Paprnav retains and fingerprints the complete DRS bulk source inventory, but
+materializes relational directive/applicability rows for explicit onboarding
+aircraft and installed-component scopes. Later aircraft reuse the shared
+target coverage and source snapshot. Adding a new make/model expands the
+materialized catalog from the retained or refreshed source; it does not create
+a client-owned duplicate or require downloading the same source for every
+aircraft.
+
+Historical and current source rows are both retained. Only current
+applicability contributes to the current coverage count; historical,
+superseded, and unresolved rows remain available for logbook-history evidence
+and adjudication. A same-product, same-model manufacturer family may be
+expanded when at least one DRS make name is compatible with the installed make.
+Product type remains a hard boundary, so model-indexed Appliance rows cannot
+become airframe coverage without an installed-appliance identity.
+
+Federal Register and GovInfo publication evidence augments the DRS directive;
+it does not replace DRS applicability. Proof metadata can be persisted as a
+content-hashed reconciliation snapshot, but regulatory source-file retention
+is complete only after the corresponding API payload/PDF is stored through
+`ad_source_documents`.
+
+### D027: Retain publication payloads and PDFs before linking publication evidence
+
+Status: accepted 2026-08-09
+
+Federal Register search payloads, exact document payloads, individual rule
+PDFs, GovInfo package summaries, and complete Federal Register issue PDFs are
+content-addressed through the common storage abstraction before an
+`ad_publications.source_document_id` link is considered complete. The primary
+publication link points to the retained PDF; companion structured payloads
+remain separate `ad_source_documents` under the same source snapshot.
+
+Manifest paths, byte counts, SHA-256 values, and PDF signatures are validated
+before storage. Remote transient failures use bounded retries with sanitized
+provenance URLs, and a partial artifact set cannot satisfy the proof gate.
+Repeated capture may reuse a single verified immutable official PDF, and
+repeated database application must leave unique source-document, publication,
+and cost-ledger counts unchanged.
+
+### D028: Calculate recurring AD state only from approved requirements and verified evidence
+
+Status: accepted 2026-08-09
+
+Recurring AD intervals are first-class relational requirements rather than a
+worklist-only JSON convention. Each approved requirement retains its source
+extraction, target applicability, actions, citations, review state, and one or
+more normalized calendar, usage-hour, or cycle triggers. Combined triggers
+explicitly record whether all thresholds apply or the earliest threshold
+controls.
+
+Aircraft compliance events require a dated, maintenance-verified logbook
+entry and remain linked to the applicable AD requirement and installed
+component. Aircraft time-state observations likewise come only from verified
+entries. A versioned, replayable due-state calculation may report `current`,
+`due_soon`, `overdue`, `terminated`, or `unknown`. Missing current time,
+unstructured intervals, unsupported conditions, and uncertain terminating
+actions must return `unknown` or require adjudication; they must never imply
+compliance.
+
+The aircraft worklist returns the due-state relationship with its trigger
+evidence and input hash. Identical inputs reuse the same replay record, while
+changed evidence, time, applicability, or algorithm versions create auditable
+history. AWS scheduling must recompute affected aircraft when verified
+logbook evidence, aircraft/component identity, approved applicability, source
+snapshots, or the recurrence algorithm changes.
+
 ## Proposed Decisions To Resolve Soon
 
 ### P001: Authentication provider

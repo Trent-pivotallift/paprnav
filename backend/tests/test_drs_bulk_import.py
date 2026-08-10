@@ -14,6 +14,10 @@ from app.models.core import (
 )
 from app.services import drs_bulk_import
 from app.services.drs_bulk_import import import_drs_bulk_rows, import_drs_bulk_zip
+from app.services.drs_bulk_import import (
+    merge_normalized_target_scopes,
+    select_target_scope_rows,
+)
 from app.services.ad_reconciliation import run_ad_reconciliation
 
 
@@ -223,3 +227,70 @@ def test_real_drs_column_names_and_multi_axis_values_do_not_create_false_pairs(
         (None, "O-200-A"),
     }
     assert ("Rolls-Royce", "O-300-D") not in identities
+
+
+def test_import_preserves_long_drs_product_subtype_axis(db_session: Session) -> None:
+    product_subtype = (
+        "Airship | Balloon | Glider | Large Airplane | Rotorcraft | "
+        "Large Multi-Engine | Single-Engine | Small Airplane | "
+        "Small/Large Airplane | Small Multi-Engine"
+    )
+
+    stats = import_drs_bulk_rows(
+        db_session,
+        [
+            {
+                "AD Number": "2026-01-02",
+                "Subject": "Appliance applicability across aircraft categories",
+                "Product Type": "Appliance",
+                "Product Subtype": product_subtype,
+                "Make": "N/A",
+                "Model": "N/A",
+                "Status": "Current",
+                "guid": "long-product-subtype-fixture",
+            }
+        ],
+    )
+
+    assert stats["applicabilities_upserted"] == 1
+    target = db_session.scalar(select(ApplicabilityTarget))
+    assert target is not None
+    assert target.product_subtype == product_subtype
+
+
+def test_target_scope_selects_complete_model_and_engine_catalogs() -> None:
+    rows = [
+        {"AD Number": "2026-01-01", "Model": "172G", "Product Type": "Aircraft", "Status": "Current", "guid": "a"},
+        {"AD Number": "2026-01-02", "Model": "172G | 172H", "Product Type": "Appliance", "Status": "Historical", "guid": "b"},
+        {"AD Number": "2026-01-03", "Model": "O-300-D", "Product Type": "Engine", "Status": "Current", "guid": "c"},
+        {"AD Number": "2026-01-04", "Model": "O-300-D", "Product Type": "Appliance", "Status": "Current", "guid": "d"},
+        {"AD Number": "2026-01-05", "Model": "172G", "Product Type": "Aircraft", "Status": "Cancelled", "guid": "e"},
+    ]
+
+    selected = select_target_scope_rows(
+        rows,
+        [
+            {"model": "172G", "statuses": ["Historical", "Current"]},
+            {"model": "O-300-D", "product_type": "Engine", "statuses": ["Historical", "Current"]},
+        ],
+    )
+
+    assert [row["guid"] for row in selected] == ["a", "b", "c"]
+
+
+def test_target_scope_manifest_accumulates_without_duplicates() -> None:
+    airframe = {
+        "model": "172G",
+        "productType": None,
+        "statuses": ["Current", "Historical"],
+    }
+    engine = {
+        "model": "O-300-D",
+        "productType": "Engine",
+        "statuses": ["Current", "Historical"],
+    }
+
+    assert merge_normalized_target_scopes(
+        [airframe],
+        [airframe, engine],
+    ) == [airframe, engine]
