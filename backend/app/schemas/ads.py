@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ADDiscoveryRecordResponse(BaseModel):
@@ -18,10 +18,21 @@ class ADDiscoveryRecordResponse(BaseModel):
     contentHash: str
 
 
+class ADDirectiveApplicabilityTargetResponse(BaseModel):
+    groupKey: Optional[str]
+    productType: str
+    productSubtype: Optional[str]
+    manufacturer: Optional[str]
+    model: Optional[str]
+    sourceManufacturer: Optional[str]
+    sourceModel: Optional[str]
+
+
 class AirworthinessDirectiveResponse(BaseModel):
     id: str
     discoveryRecordId: Optional[str]
     adNumber: Optional[str]
+    officialAdNumber: Optional[str]
     title: str
     status: str
     extractionStatus: str
@@ -30,6 +41,7 @@ class AirworthinessDirectiveResponse(BaseModel):
     publicationDate: Optional[date]
     htmlUrl: Optional[str]
     pdfUrl: Optional[str]
+    applicabilityTargets: list[ADDirectiveApplicabilityTargetResponse] = []
 
 
 class ADExtractionResponse(BaseModel):
@@ -45,6 +57,90 @@ class ADExtractionResponse(BaseModel):
     citations: list[dict[str, Any]]
 
 
+class ADSourceDocumentResponse(BaseModel):
+    id: str
+    sourceSystem: str
+    sourceType: str
+    sourceIdentifier: str
+    parentSourceIdentifier: Optional[str]
+    sourceUrl: Optional[str]
+    contentUrl: str
+    mediaType: Optional[str]
+    contentHash: str
+    storageBytes: int
+    capturedAt: datetime
+    publicationDate: Optional[date]
+    parserName: Optional[str]
+    parserVersion: Optional[str]
+    relevantPageStart: Optional[int] = None
+    relevantPageEnd: Optional[int] = None
+    relevantPageNumbers: list[int] = Field(default_factory=list)
+    relevantPagesContiguous: bool = False
+    navigationUrl: str
+
+
+class ADSourcePageEvidenceResponse(BaseModel):
+    sourceDocumentId: str
+    directiveId: str
+    sourceContentHash: str
+    pageNumber: int
+    pageTextVersionId: str
+    pageTextHash: str
+    pageText: str
+    renditionId: str
+    renditionHash: str
+    renditionMediaType: str
+    renditionWidthPx: int
+    renditionHeightPx: int
+
+
+class ADSourcePageMaterializeRequest(BaseModel):
+    directiveId: str
+    expectedSourceContentHash: str = Field(min_length=64, max_length=64)
+
+
+class ADEvidenceFragmentCreateRequest(BaseModel):
+    directiveId: str
+    pageNumber: int = Field(ge=1)
+    expectedSourceContentHash: str = Field(min_length=64, max_length=64)
+    expectedPageTextHash: str = Field(min_length=64, max_length=64)
+    characterStart: int = Field(ge=0)
+    characterEnd: int = Field(gt=0)
+    reason: str = Field(min_length=1, max_length=2000)
+    paragraphLocator: Optional[str] = Field(default=None, max_length=255)
+    tableLocator: Optional[str] = Field(default=None, max_length=255)
+    rowLocator: Optional[str] = Field(default=None, max_length=255)
+    noteLocator: Optional[str] = Field(default=None, max_length=255)
+
+
+class ADEvidenceFragmentResponse(BaseModel):
+    id: str
+    directiveId: str
+    sourceDocumentId: str
+    sourceContentHash: str
+    pageTextVersionId: str
+    pageStart: int
+    pageEnd: int
+    characterStart: int
+    characterEnd: int
+    paragraphLocator: Optional[str]
+    tableLocator: Optional[str]
+    rowLocator: Optional[str]
+    noteLocator: Optional[str]
+    exactText: str
+    fragmentHash: str
+    createdByUserId: str
+    createdAt: datetime
+    created: bool
+
+
+class ADProposalProvenanceResponse(BaseModel):
+    stagingDecisionId: str
+    actorUserId: Optional[str]
+    stagedAt: datetime
+    stagingMode: str
+
+
 class ADExtractionReviewResponse(BaseModel):
     id: str
     status: str
@@ -55,10 +151,26 @@ class ADExtractionReviewResponse(BaseModel):
     extraction: ADExtractionResponse
     directive: AirworthinessDirectiveResponse
     sourceText: str
+    sourcePages: list[dict[str, Any]]
+    sourceDocuments: list[ADSourceDocumentResponse]
+    requirementCount: int
+    unresolvedRequirementCount: int
+    evidenceStatus: str
+    evidenceMessage: str
+    canApprove: bool
+    approvalBlockers: list[str]
+    proposalProvenance: Optional[ADProposalProvenanceResponse]
 
 
 class ADExtractionReviewListResponse(BaseModel):
     reviews: list[ADExtractionReviewResponse]
+    currentOffset: int
+    totalCount: int
+    pendingCount: int
+    reviewedCount: int
+    verifiedCount: int
+    quarantinedCount: int
+    approvalReadyCount: int
 
 
 class ADReviewDecisionRequest(BaseModel):
@@ -156,6 +268,7 @@ class ADMatchResultResponse(BaseModel):
     unresolvedReasons: list[str]
     applicability: Optional[ADMatchApplicabilityResponse]
     dueState: Optional[ADDueStateResponse]
+    dueStates: list[ADDueStateResponse]
     algorithmName: str
     algorithmVersion: str
     inputHash: str

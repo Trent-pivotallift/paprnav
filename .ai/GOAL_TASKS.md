@@ -2260,3 +2260,186 @@ Completion evidence:
   is the final local data-population gate before AWS. Production worker scheduling must
   recompute due state after verified evidence, component identity,
   applicability, source, or algorithm changes.
+
+### T081: Extract and review full-text AD compliance requirements
+
+Status: in progress 2026-08-12
+
+Goal: Read retained primary Federal Register/GovInfo PDFs, extract separate
+evidence-backed compliance requirements, and give platform administrators a
+page-cited review workflow before normalized recurrence data can affect an
+aircraft due state.
+
+Acceptance:
+
+- Extraction input uses retained content-addressed PDFs, reliable native text
+  first, and preserves source-document, page, parser, schema, and content-hash
+  identity. An unreadable or incomplete artifact cannot silently fall back to
+  title/index metadata as full-text evidence.
+- Schema `ad_extraction_v3` represents source-faithful applicability groups and
+  separate one-time, recurring, alternative, and conditional requirements.
+  Manufacturer, model, serial scope, installed-equipment conditions, and
+  requirement-to-group linkage are explicit. Each requirement separates its
+  action, initial thresholds, recurring triggers, trigger-combination logic,
+  conditions, terminating action, confidence, uncertainty, and page citations.
+- Every actionable requirement has at least one citation containing retained
+  source-document ID, one-based page number, and supporting text.
+- Initial thresholds remain distinct from recurrence. `whichever_first`,
+  `whichever_later`, alternative actions, unsupported conditions, and uncertain
+  terminating-action language cannot be flattened into an approved interval.
+- Existing v1/v2 extraction records remain readable; only v3 outputs may
+  satisfy the full-text population gate.
+- Paprnav platform admins can access the unpublished extraction review
+  workflow. Maintenance shops access only the released catalog and
+  aircraft-specific applicability views. The admin workflow shows retained text by page, editable structured JSON,
+  requirement/unresolved counts, and reviewed-versus-total progress.
+- Approve/edit validates the v3 shape, persists the reviewer, timestamp, notes,
+  and decision output, materializes one normalized relationship per approved
+  requirement/applicability pair, and invalidates affected coverage, matches,
+  and due states. Reject preserves the proposed extraction and audit record.
+- The retained target corpus has 23 full-text directives. The controlled
+  N3671L review scope reports X reviewed out of 17: the airframe/engine
+  publications linked through current or retained historical applicability.
+  Six appliance publications remain excluded until installed appliance
+  identity is verified. The report also includes approved, rejected,
+  unresolved, and materialized-requirement counts. The 22 historical source
+  gaps stay unresolved and both frozen logbook partitions stay unopened.
+
+Suggested checks:
+
+```bash
+cd backend
+.venv/bin/python -m pytest -q tests/test_ad_ingestion.py tests/test_ad_recurrence.py tests/test_ad_publication_persistence.py
+cd ../frontend/paprnav-frontend
+npm run lint
+npm run build
+```
+
+Implementation checkpoint 2026-08-14:
+
+- Added the dry-run-by-default `prepare_ad_compliance_reviews` runner scoped to
+  retained full-text coverage for an aircraft. It reports every stage as
+  **X passed out of X** and requires an explicit `--commit` before queued review
+  rows persist.
+- Deterministic extraction fingerprints and exposes retained PDFs but can no
+  longer auto-approve their regulatory meaning; every retained full-text
+  extraction enters platform review.
+- Individual rule PDFs are preferred. Complete Federal Register issues are
+  bounded by AD identity, then conservative title matching. An issue whose
+  directive boundary remains unresolved stays in review with no fabricated
+  source text.
+- PostgreSQL client permission is resolved. Dry-run reconciliation established
+  that 17—not 23—publications belong to N3671L's airframe/engine review scope;
+  the other six are appliance publications and remain intentionally excluded.
+  GovInfo key rotation remains deferred until the pre-AWS gate.
+- Review access is restricted to Paprnav platform administrators. Maintenance
+  shops use released AD research and aircraft-specific compliance views; raw
+  downloaded/extracted proposals remain unpublished until admin approval.
+- Controlled preparation verification passed **5 passed out of 5** and the
+  identical committed run passed **5 passed out of 5**. Seventeen v2 review
+  tasks are persisted: 16 have bounded native-text evidence and AD 1994-14-12
+  remains an explicit source-boundary adjudication case. No compliance
+  requirement has been approved or materialized yet.
+- First GUI proof-loop checkpoint 2026-08-15: maintenance-shop authentication
+  and the evidence-backed API route passed, and AD 2024-14-03 was selected as
+  the representative two-requirement review. The queue now requests one review
+  at a time with stable total/pending/reviewed counts. The GUI decision was
+  intentionally stopped because reconstructing even one legacy issue-backed
+  review took up to 93 seconds. Retained page text must be persisted or cached
+  during preparation before the reviewer loop can be considered operational.
+  All 17 v2 reviews remain pending and zero requirements remain materialized.
+- Follow-up 2026-08-15: bounded native-text pages are now persisted in the v2
+  extraction envelope during preparation and accepted at review time only when
+  their source-document IDs and content hashes still match retained documents.
+  The live backfill passed **5 passed out of 5** and stored 86 bounded pages
+  across all 17 tasks (16 readable, one explicitly empty/unresolved). A
+  maintenance-shop negative-path decision with an out-of-corpus citation was
+  blocked with HTTP 422 and left the review pending. The reviewer UI now labels
+  approval as materializing/replaying work rather than presenting edit as a
+  draft-only save.
+- AD 2024-14-03 is staged for human review with two pending, page-5-cited
+  requirements: the paragraph (g) one-time software update and paragraph (h)
+  installation prohibition. Rollback validation and committed staging each
+  passed **4 passed out of 4**. The extraction remains `needs_review`, the
+  review remains `pending`, and normalized requirements remain empty. The
+  production frontend is running as the `com.paprnav.frontend` macOS user
+  service at `http://localhost:3000`; an authenticated maintenance-shop check
+  returned the staged proposal with two requirements and five source pages.
+- Full-corpus evidence audit 2026-08-16: **14 passed out of 33** queued reviews
+  have a bounded source section with a formal matching AD designation. Nineteen
+  are source-quarantined: 17 have no retained source section and two contain
+  text whose target identity cannot be established. Formal target headings now
+  win over earlier cross-references when a retained publication set contains
+  an original directive plus later superseding/correcting documents.
+- The stricter publication gate reports **1 approval-ready out of 33**. Thirteen
+  additional source-verified v2 proposals remain incomplete because they have
+  no page-cited compliance requirement. The one legacy decided review that
+  fails current source/schema validation is excluded from the released catalog.
+  Incomplete verified proposals remain editable by platform admins, but the
+  server rejects publication until source identity, v2 schema, directive ID,
+  non-empty requirements, and retained-page citations all pass.
+- Reviewer evidence attribution now names the retained source system, artifact
+  type and identifier, capture time, parser, byte size, and SHA-256 hash. The
+  reviewer PDF control opens the authenticated retained artifact used for the
+  extraction instead of a GovInfo API URL that requires a browser API key.
+  Inline schema guidance identifies `requirements` as a list of objects and
+  provides a citation-complete starter shape. `complianceActions` is derived
+  from requirement `actionText` values during normalization so the legacy
+  summary cannot silently diverge from the v2 requirement structure.
+- A five-record human calibration packet now lives in
+  `.ai/ad-calibration/README.md`. It links the exact retained PDF, source ID and
+  hash, editable requirement-array JSON, and a stable `reviewId` GUI URL for
+  one-time/prohibition, recurring/whichever-first, conditional branching,
+  alternative/rework, and mixed IFR/reporting examples. The local API mounts
+  `backend/.data` so retained-content links resolve inside Docker rather than
+  depending on publisher API credentials.
+- Workflow correction checkpoint 2026-08-15: `/logbook/ads` is now the
+  released AD currency/search landing page with a structured query form and an
+  aircraft-context handoff. The raw comparison editor moved to
+  `/logbook/ads/reviews` as an admin-only branch. Complete Federal Register
+  issues are sliced from the target Part 39 heading through that rule's FR Doc
+  footer instead of returning neighboring pages. Missing evidence, title-only
+  identity, and numbers appearing only as references are quarantined with
+  disabled approve/edit controls. AVCON now shows only pages 9–10 and remains
+  blocked because the retained text does not state AD `74-06-02`; AD
+  `94-14-12` remains blocked with zero source pages; AD `95-21-15` is shown with
+  its official two-digit designation and a scoped page 17–20 source section.
+  GUI testing also discovered and blocked a mismatched source section where
+  stored `2000-06-01` appeared only as a Brazilian reference inside FAA AD
+  `2005-05-09`.
+- Applicability-schema checkpoint 2026-08-22: reviewer and database tracing
+  proved that v2 `affectedProducts: string[]` produced inconsistent relational
+  targets by guessing the first word as manufacturer. `ad_extraction_v3` now
+  makes applicability groups authoritative, separates source and normalized
+  manufacturer/model identity, preserves model and serial scope plus installed-
+  equipment conditions, and requires every compliance requirement to name its
+  governing group keys. Alembic `20260822_0021` adds group/source evidence to
+  relational applicability rows. Catalog product type, manufacturer, and model
+  filters query indexed targets. The reviewer includes a v3 field guide and
+  source-faithful examples. Source admission is verified per retained document,
+  so a foreign rule that merely references the target AD cannot be hidden by a
+  correct PDF attached to the same directive. Backend verification passed
+  **165 passed out of 165** and the production frontend build passed. The
+  requested independent Claude review was attempted but remains outstanding
+  because the configured Claude API key returned HTTP 401.
+- Claude-before-human closure checkpoint 2026-08-22: the configured Claude
+  connection succeeded and Opus completed two bounded read-only audits. The
+  first audit failed on three concrete blockers: empty compliance actions could
+  materialize an approved placeholder, legacy replays could supersede reviewed
+  AMOC rows, and migration `0022` restored the wrong downgrade constraint. All
+  three were corrected and regression-covered. The closure audit returned
+  `READINESS: PASS` with no blocking findings. Its two highest-value hardening
+  recommendations were also applied: approved extraction output is hash-bound
+  to the signed reviewer decision and any mismatch reopens review, while
+  deterministic replay can widen toward adjudication but cannot silently
+  promote a blocked requirement. Trigger combination semantics now preserve
+  `all`, `whichever_first`, `whichever_later`, and fail-closed `alternative`.
+  Migration `0023` backfilled the required v3 AMOC envelope: extraction output
+  verification passed **17 passed out of 17**, proposed-review output passed
+  **17 passed out of 17**, and decided-or-pending review output passed **17
+  passed out of 17**. Focused verification passed **40 passed
+  out of 40**; full backend verification passed **176 passed out of 176**;
+  frontend lint has **0 errors**, the production build passed, PostgreSQL is at
+  `20260823_0024 (head)`, API health passed, and the AD landing page returns
+  HTTP 200 at `localhost:3000`. Human approval was not performed during this
+  loop; the five-record calibration packet remains the next controlled step.

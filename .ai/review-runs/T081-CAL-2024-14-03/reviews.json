@@ -1,0 +1,62 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/t081_cal_2024_design",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-24T02:45:27+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "1eb8e183e487c41211910bafba381d2412e7839f9b6f34678d69465fa7a802ee",
+    "artifact": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-design.md",
+    "artifactSha256": "2e838ffe443d6251e17a2819b65bbc71406772d472763cac0864db2d7c0fa7a5"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t081_cal_2024_design",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-24T02:48:28+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "1eb8e183e487c41211910bafba381d2412e7839f9b6f34678d69465fa7a802ee",
+    "artifact": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-design-closure-1.md",
+    "artifactSha256": "7f67ec675f2a783354f29d9a57dbbf157b0ee7f2c12f196d6201a4ce6418a218"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t081_cal_2024_design",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-24T02:50:43+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "1eb8e183e487c41211910bafba381d2412e7839f9b6f34678d69465fa7a802ee",
+    "artifact": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-design-closure-2.md",
+    "artifactSha256": "9be2c98c9953d8cae87516198945e1143272bec41c5f6caba37287cc6460e40c"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t081_implementation_final",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-24T12:07:45+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "b6b44d14b7dbd92bdafddd76c32acdca3002edb5789b3ad50057ec2f3f7ed55b",
+    "artifact": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-implementation-closure-1.md",
+    "artifactSha256": "177e4df27e773cea1a2fede55c127d53a7188adb792b9cc3f4ca89b82aa90bd5"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/t081_closure_final",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-24T12:11:44+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "b6b44d14b7dbd92bdafddd76c32acdca3002edb5789b3ad50057ec2f3f7ed55b",
+    "artifact": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-closure.md",
+    "artifactSha256": "b0d8315e0be114fb45d24a737ad87085fb6102d13f8b8a4877547158cc573a15"
+  }
+]

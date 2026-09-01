@@ -1,0 +1,110 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "codex-adversary-review_infrastructure_design",
+    "builder": "codex-primary",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-22T22:59:10+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "0414f1d6a0b712b031fc847657c8b934da129d5abd8210e19e3ed36297d918c2",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-design.md",
+    "artifactSha256": "d2a529966d7a20d9399a9507141dac9956aa2364b328721263e514b4433b1069"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "codex-adversary-review_infrastructure_closure",
+    "builder": "codex-primary",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-22T23:02:00+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "0414f1d6a0b712b031fc847657c8b934da129d5abd8210e19e3ed36297d918c2",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-implementation-attempt-1.md",
+    "artifactSha256": "89b881464e1ec53768229353321cce9087bf35737af16b03262d5727bbc60a0a"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "codex-adversary-review_infrastructure_closure",
+    "builder": "codex-primary",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-22T23:04:50+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "e79f4ae6c668534e1fa586e3f8e3f940426fb402285ada23c22926e0934db55c",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-implementation.md",
+    "artifactSha256": "2ee2d8d1e8e065af16dc465b04b49f4466293b2c3fb80212aa4af3ca1896961b"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "codex-adversary-review_infrastructure_closure",
+    "builder": "codex-primary",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-22T23:06:17+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "7623176cfe8898aed08ea17724e276b37c9562d2c94538867af8a94dd046eebc",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-implementation-final.md",
+    "artifactSha256": "41e97a6e161303a46a734d9c6879dec1c4c812ec2ebd2db3fb16ccb9ff7a358c"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "codex-adversary-verify_claude_fixes",
+    "builder": "codex-primary",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-23T01:07:59+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "430d94198cbf68718cda25a5a6a32087ff4414dfd55fc43849f14b25c9f0fb15",
+    "artifact": ".ai/review-runs/review-infrastructure/claude-findings-implementation-closure.md",
+    "artifactSha256": "7fc7d1d5e49fe20ed26a2cf932eb57fad73da5707bbe3dacf252d7b8b50b1ea5"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "codex-adversary-final_review_infrastructure_closure",
+    "builder": "codex-primary",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-23T01:09:24+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "430d94198cbf68718cda25a5a6a32087ff4414dfd55fc43849f14b25c9f0fb15",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-1.md",
+    "artifactSha256": "1dc50fa398ff2dc3ffe4418567b3ca4b954dd4d4c4c20b73a8b5c9e39bdefad6"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "codex-adversary-final_review_infrastructure_closure",
+    "builder": "codex-primary",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-23T01:10:52+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "57b371d0b0cfdac374d0d22d69070bdb64059a617853c835957f00b4a93547a5",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-2.md",
+    "artifactSha256": "3b6353644ff87d133506d048a3d4f89f65c09bca89ea241cc2e46a082fe90135"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "codex-adversary-final_review_infrastructure_closure",
+    "builder": "codex-primary",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-23T01:12:22+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "d83002e9253ed6ba5047d3f6e66de9c29b48669ff10737cb6be26d507f8710f9",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-3.md",
+    "artifactSha256": "b8a530a804c9b31a1dcb3382e51dba42c04e00a0c7440cf9713a90d0b057a40e"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "codex-adversary-final_review_infrastructure_closure",
+    "builder": "codex-primary",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-23T01:13:30+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "90f5234bca5843a73bcbbf7a7cf5a6158910c607b994e30a427d8e7d71b7a37b",
+    "artifact": ".ai/review-runs/review-infrastructure/adversarial-closure-final.md",
+    "artifactSha256": "6a97e8e97fc509fd3a81caf3840a24c6af9906b6cab023661482f57bdb852ab4"
+  }
+]

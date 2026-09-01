@@ -19,12 +19,18 @@ uploads/
 storage/
 .data/
 backend/.data/
+backend/tmp/
 
 # Local Claude reviewer diagnostics
 .ai/reviews/*.debug.log
 .ai/reviews/*.events.jsonl
 .ai/reviews/*.partial.md
 .ai/reviews/latest
+.ai/review-runs/*/*.debug.log
+.ai/review-runs/*/*.events.jsonl
+.ai/review-runs/*/*.partial.md
+.ai/review-runs/*/review-packet.sha256
+.ai/review-runs/*/*.error.md
 
 # Terraform local state and provider cache
 .terraform/

@@ -1,173 +1,207 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ExternalLink, FileWarning, RefreshCw, XCircle } from "lucide-react";
+import { ClipboardCheck, FileSearch, Plane, Search, ShieldCheck } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { PageHeader } from "@/components/PageHeader";
+import { Input } from "@/components/ui/input";
 import {
-  ADExtractionReview,
-  decideAdExtractionReview,
+  AirworthinessDirective,
   listAdExtractionReviews,
+  listAirworthinessDirectives,
 } from "@/lib/api";
 
-function prettyJson(value: Record<string, unknown>) {
-  return JSON.stringify(value, null, 2);
-}
-
 export default function AirworthinessDirectivesPage() {
-  const [reviews, setReviews] = useState<ADExtractionReview[]>([]);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState<string | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.memberships.some((membership) => membership.role === "platform_admin") ?? false;
+  const [directives, setDirectives] = useState<AirworthinessDirective[]>([]);
+  const [keyword, setKeyword] = useState("");
+  const [adNumber, setAdNumber] = useState("");
+  const [status, setStatus] = useState("");
+  const [productType, setProductType] = useState("");
+  const [manufacturer, setManufacturer] = useState("");
+  const [model, setModel] = useState("");
+  const [query, setQuery] = useState({ keyword: "", adNumber: "", status: "", productType: "", manufacturer: "", model: "" });
+  const [reviewCounts, setReviewCounts] = useState({ pending: 0, reviewed: 0, verified: 0, quarantined: 0, approvalReady: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const pendingCount = useMemo(() => reviews.filter((review) => review.status === "pending").length, [reviews]);
-
-  const loadReviews = useCallback(async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
     setError(null);
     try {
-      const response = await listAdExtractionReviews();
-      setReviews(response.reviews);
-      setDrafts(
-        response.reviews.reduce<Record<string, string>>((current, review) => {
-          current[review.id] = prettyJson(review.decisionOutput ?? review.proposedOutput);
-          return current;
-        }, {}),
-      );
+      const catalog = await listAirworthinessDirectives({
+        q: query.keyword || undefined,
+        adNumber: query.adNumber || undefined,
+        status: query.status || undefined,
+        productType: query.productType || undefined,
+        manufacturer: query.manufacturer || undefined,
+        model: query.model || undefined,
+      });
+      setDirectives(catalog);
+      if (isAdmin) {
+        const reviews = await listAdExtractionReviews(0, 1);
+        setReviewCounts({ pending: reviews.pendingCount, reviewed: reviews.reviewedCount, verified: reviews.verifiedCount, quarantined: reviews.quarantinedCount, approvalReady: reviews.approvalReadyCount, total: reviews.totalCount });
+      }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to load AD extraction reviews.");
+      setError(caught instanceof Error ? caught.message : "Unable to load the AD catalog.");
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [isAdmin, query]);
 
   useEffect(() => {
-    void loadReviews();
-  }, [loadReviews]);
+    void load();
+  }, [load]);
 
-  async function submitDecision(review: ADExtractionReview, decision: "approved" | "edited" | "rejected") {
-    setIsSaving(true);
-    setError(null);
-    setMessage(null);
-    try {
-      let output: Record<string, unknown> | undefined;
-      if (decision !== "rejected") {
-        output = JSON.parse(drafts[review.id] || prettyJson(review.proposedOutput)) as Record<string, unknown>;
-      }
-      const response = await decideAdExtractionReview(review.id, {
-        decision,
-        output,
-        notes: notes[review.id] || null,
-      });
-      setMessage(`Review ${response.review.status}.`);
-      await loadReviews();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to save AD review decision.");
-    } finally {
-      setIsSaving(false);
-    }
+  const currentCount = useMemo(() => directives.filter((directive) => directive.status === "current").length, [directives]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setQuery({ keyword: keyword.trim(), adNumber: adNumber.trim(), status, productType, manufacturer: manufacturer.trim(), model: model.trim() });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function clear() {
+    setKeyword("");
+    setAdNumber("");
+    setStatus("");
+    setProductType("");
+    setManufacturer("");
+    setModel("");
+    setQuery({ keyword: "", adNumber: "", status: "", productType: "", manufacturer: "", model: "" });
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <PageHeader title="Airworthiness Directives" description={`${pendingCount} AD extraction review${pendingCount === 1 ? "" : "s"} pending`} />
+      <PageHeader
+        title="AD currency & research"
+        description="Search the released Airworthiness Directive catalog or start from an aircraft for an applicability-filtered view."
+      />
 
-      {error ? <p className="mt-6 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
-      {message ? (
-        <p className="mt-6 flex items-center gap-2 rounded-md border bg-card p-3 text-sm text-green-700 dark:text-green-400">
-          <CheckCircle2 className="h-4 w-4" />
-          {message}
-        </p>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="flex items-center gap-3 py-5">
+            <ShieldCheck className="h-8 w-8 text-primary" />
+            <div><p className="text-2xl font-semibold">{directives.length}</p><p className="text-sm text-muted-foreground">Released results</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 py-5">
+            <FileSearch className="h-8 w-8 text-primary" />
+            <div><p className="text-2xl font-semibold">{currentCount}</p><p className="text-sm text-muted-foreground">Current in these results</p></div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 py-5">
+            <Plane className="h-8 w-8 text-primary" />
+            <div><p className="font-medium">Need aircraft applicability?</p><Button asChild variant="link" className="h-auto p-0"><Link href="/logbook">Choose an aircraft</Link></Button></div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isAdmin ? (
+        <Card className="mt-6 border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <ClipboardCheck className="mt-0.5 h-6 w-6 text-primary" />
+              <div>
+                <p className="font-medium">Admin extraction review</p>
+                <p className="text-sm text-muted-foreground">
+                  {reviewCounts.verified} source-indexed out of {reviewCounts.total} · {reviewCounts.approvalReady} approval candidates · {reviewCounts.quarantined} source-quarantined · {reviewCounts.pending} decisions pending
+                </p>
+              </div>
+            </div>
+            <Button asChild><Link href="/logbook/ads/reviews">Open review queue</Link></Button>
+          </CardContent>
+        </Card>
       ) : null}
 
-      <div className="mt-8 space-y-6">
-        {reviews.length ? (
-          reviews.map((review) => (
-            <Card key={review.id}>
-              <CardHeader>
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{review.directive.title}</CardTitle>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      FR {review.directive.federalRegisterDocumentNumber} · confidence {(review.extraction.confidence * 100).toFixed(0)}% · {review.status}
-                    </p>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Build an AD query</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            This search is fleet-neutral. Only admin-reviewed directives are visible here; aircraft pages apply make, model, engine, propeller, and serial context automatically.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_11rem_1fr_1fr_11rem_auto] xl:items-end" onSubmit={submit}>
+            <label className="space-y-2 text-sm font-medium">
+              Keyword or title
+              <Input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="e.g. seat rail inspection" />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              AD number
+              <Input value={adNumber} onChange={(event) => setAdNumber(event.target.value)} placeholder="e.g. 95-21-15" />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              Product type
+              <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={productType} onChange={(event) => setProductType(event.target.value)}>
+                <option value="">All product types</option>
+                <option value="aircraft">Aircraft</option>
+                <option value="rotorcraft">Rotorcraft</option>
+                <option value="engine">Engine</option>
+                <option value="propeller">Propeller</option>
+                <option value="appliance">Appliance</option>
+                <option value="equipment">Equipment</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              Manufacturer
+              <Input value={manufacturer} onChange={(event) => setManufacturer(event.target.value)} placeholder="e.g. Textron Aviation" />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              Model
+              <Input value={model} onChange={(event) => setModel(event.target.value)} placeholder="e.g. 172D" />
+            </label>
+            <label className="space-y-2 text-sm font-medium">
+              Currency status
+              <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}>
+                <option value="">All statuses</option>
+                <option value="current">Current</option>
+                <option value="historical">Historical</option>
+                <option value="superseded">Superseded</option>
+              </select>
+            </label>
+            <div className="flex gap-2"><Button type="submit"><Search className="mr-2 h-4 w-4" />Search</Button><Button type="button" variant="outline" onClick={clear}>Clear</Button></div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {error ? <p className="mt-6 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
+
+      <section className="mt-8" aria-labelledby="catalog-results">
+        <div className="flex items-end justify-between gap-4">
+          <div><h2 id="catalog-results" className="text-xl font-semibold">Released directives</h2><p className="text-sm text-muted-foreground">{loading ? "Loading…" : `${directives.length} result${directives.length === 1 ? "" : "s"}`}</p></div>
+        </div>
+        <div className="mt-4 space-y-3">
+          {!loading && directives.length === 0 ? <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">No released ADs match this query.</CardContent></Card> : null}
+          {directives.map((directive) => (
+            <Card key={directive.id}>
+              <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">AD {directive.officialAdNumber ?? "Unnumbered"}</span>
+                    <span className="rounded-full border px-2.5 py-1 text-xs capitalize">{directive.status}</span>
                   </div>
-                  <div className="flex gap-2">
-                    {review.directive.htmlUrl ? (
-                      <Button asChild size="sm" variant="outline">
-                        <a href={review.directive.htmlUrl} target="_blank" rel="noreferrer">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          HTML
-                        </a>
-                      </Button>
-                    ) : null}
-                    {review.directive.pdfUrl ? (
-                      <Button asChild size="sm" variant="outline">
-                        <a href={review.directive.pdfUrl} target="_blank" rel="noreferrer">
-                          <FileWarning className="mr-2 h-4 w-4" />
-                          PDF
-                        </a>
-                      </Button>
-                    ) : null}
-                  </div>
+                  <h3 className="mt-2 font-semibold">{directive.title}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {directive.adNumber !== directive.officialAdNumber ? `Normalized ID ${directive.adNumber} · ` : ""}{directive.publicationDate ? `Published ${directive.publicationDate}` : "Publication date unavailable"}
+                  </p>
+                  {directive.applicabilityTargets.length ? <div className="mt-3 flex flex-wrap gap-2">{directive.applicabilityTargets.slice(0, 8).map((target, index) => <span key={`${target.groupKey ?? "target"}-${target.manufacturer ?? ""}-${target.model ?? ""}-${index}`} className="rounded-full border px-2 py-1 text-xs">{[target.productType, target.manufacturer, target.model].filter(Boolean).join(" · ")}</span>)}{directive.applicabilityTargets.length > 8 ? <span className="px-2 py-1 text-xs text-muted-foreground">+{directive.applicabilityTargets.length - 8} more</span> : null}</div> : null}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Source Text</p>
-                      <div className="max-h-80 overflow-auto rounded-md border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
-                        {review.sourceText || "No source text retained."}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Structured Extraction</p>
-                      <Textarea
-                        className="min-h-80 font-mono text-xs"
-                        value={drafts[review.id] ?? ""}
-                        onChange={(event) => setDrafts((current) => ({ ...current, [review.id]: event.target.value }))}
-                        disabled={review.status !== "pending"}
-                      />
-                    </div>
-                  </div>
-                  <Textarea
-                    placeholder="Review notes"
-                    value={notes[review.id] ?? ""}
-                    onChange={(event) => setNotes((current) => ({ ...current, [review.id]: event.target.value }))}
-                    disabled={review.status !== "pending"}
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" onClick={() => submitDecision(review, "approved")} disabled={isSaving || review.status !== "pending"}>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Approve
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => submitDecision(review, "edited")} disabled={isSaving || review.status !== "pending"}>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Save Edit
-                    </Button>
-                    <Button type="button" variant="destructive" onClick={() => submitDecision(review, "rejected")} disabled={isSaving || review.status !== "pending"}>
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Reject
-                    </Button>
-                  </div>
-                </form>
+                <div className="flex gap-2">
+                  {directive.htmlUrl ? <Button asChild size="sm" variant="outline"><a href={directive.htmlUrl} target="_blank" rel="noreferrer">Source HTML</a></Button> : null}
+                  {directive.pdfUrl ? <Button asChild size="sm" variant="outline"><a href={directive.pdfUrl} target="_blank" rel="noreferrer">Source PDF</a></Button> : null}
+                </div>
               </CardContent>
             </Card>
-          ))
-        ) : (
-          <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              No AD extraction reviews are queued.
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

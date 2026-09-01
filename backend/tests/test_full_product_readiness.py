@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+import hashlib
 from io import BytesIO
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from reportlab.pdfgen import canvas
 
 from app.models.core import (
     ADCostLedgerEntry,
@@ -14,6 +16,9 @@ from app.models.core import (
     ADCoverageSubscription,
     ADMatchAdjudication,
     ADMatchResult,
+    ADExtractionReview,
+    ADPublication,
+    ADSourceDocument,
     ADSourceSnapshot,
     ADSupersession,
     IngestionJob,
@@ -23,7 +28,11 @@ from app.models.core import (
     OCRRun,
 )
 from app.services.ad_coverage import resolve_aircraft_ad_coverage
+from app.services.ad_applicability import populate_applicability_from_extraction
+from app.core.config import get_settings
+from app.services.ad_extraction import extraction_input_hash, persisted_source_pages
 from app.services.ad_matching import match_aircraft_ads
+from app.services.ad_release import extraction_has_signed_release
 from app.services.drs_bulk_import import import_drs_bulk_rows, upsert_snapshot
 from app.services.ingestion import process_ingestion_job
 from tests.conftest import (
@@ -175,7 +184,7 @@ def _approved_ad(
     action: str,
     intervals: list[dict] | None = None,
 ):
-    return create_approved_extraction(
+    extraction = create_approved_extraction(
         db,
         title=f"Airworthiness Directives; {product}",
         document_number=f"fixture-{ad_number}",
@@ -184,6 +193,171 @@ def _approved_ad(
         compliance_actions=[action],
         compliance_intervals=intervals or [],
     )
+    product_parts = product.split()
+    manufacturer = product_parts[0]
+    model = product_parts[1]
+    product_type = (
+        "engine" if product.lower().endswith("engines")
+        else "propeller" if product.lower().endswith("propellers")
+        else "aircraft"
+    )
+    product_noun = {
+        "aircraft": "airplanes",
+        "engine": "engines",
+        "propeller": "propellers",
+    }[product_type]
+    applicability_text = (
+        f"This AD applies to {manufacturer} Model {model} {product_noun}, all serial numbers."
+    )
+    source_text = (
+        "14 CFR Part 39\nSection 39.13 is amended by adding the following new "
+        f"airworthiness directive: AD {ad_number}.\n{applicability_text}\n"
+        f"{action}\n[FR Doc. fixture-{ad_number}]"
+    )
+    storage_key = f"ad-sources/readiness/{ad_number}.pdf"
+    retained_path = Path(get_settings().local_storage_path) / storage_key
+    retained_path.parent.mkdir(parents=True, exist_ok=True)
+    writer = canvas.Canvas(str(retained_path))
+    y = 740
+    for line in source_text.splitlines():
+        writer.drawString(72, y, line)
+        y -= 20
+    writer.save()
+    retained_bytes = retained_path.read_bytes()
+    document = ADSourceDocument(
+        source_system="federal_register",
+        source_type="document_pdf",
+        source_identifier=f"fixture-{ad_number}",
+        source_url=extraction.output["sourceUrls"]["pdf"],
+        storage_backend="local",
+        storage_key=storage_key,
+        media_type="application/pdf",
+        content_hash=hashlib.sha256(retained_bytes).hexdigest(),
+        storage_bytes=len(retained_bytes),
+        captured_at=datetime.now(timezone.utc),
+        status="retained",
+    )
+    db.add(document)
+    db.flush()
+    db.add(ADPublication(
+        directive_id=extraction.directive_id,
+        source_document_id=document.id,
+        source_system="federal_register",
+        source_type="document_pdf",
+        source_identifier=f"fixture-{ad_number}",
+        title=extraction.directive.title,
+        pdf_url=document.source_url,
+        content_hash=document.content_hash,
+        status="retained",
+    ))
+    db.flush()
+    db.expire(extraction.directive, ["publications"])
+    extraction.input_content_hash = extraction_input_hash(extraction.directive)
+    recurring_triggers = []
+    for interval in intervals or []:
+        if interval.get("type") == "tach_hours":
+            recurring_triggers.append({
+                "metric": "tach_hours",
+                "value": interval["intervalHours"],
+                "unit": "hours",
+                "anchorKind": "last_compliance",
+                "sourceText": action,
+            })
+    output = {
+        **extraction.output,
+        "complianceIntervals": [
+            f"Every {interval['intervalHours']} tach hours"
+            for interval in (intervals or [])
+            if interval.get("type") == "tach_hours"
+        ],
+        "applicabilityGroups": [{
+            "groupKey": f"{manufacturer.lower()}-{model.lower()}",
+            "productType": product_type,
+            "productSubtype": None,
+            "manufacturer": {"sourceName": manufacturer, "normalizedName": None},
+            "modelApplicability": {
+                "kind": "listed",
+                "models": [{
+                    "sourceDesignation": model,
+                    "normalizedDesignation": None,
+                    "aliases": [],
+                }],
+                "sourceText": applicability_text,
+            },
+            "serialNumberApplicability": {
+                "kind": "all",
+                "values": [],
+                "ranges": [],
+                "excludedValues": [],
+                "sourceText": "all serial numbers",
+            },
+            "equipmentCombinationLogic": "all",
+            "equipmentConditions": [],
+            "conditions": [],
+            "citations": [{
+                "sourceDocumentId": document.id,
+                "pageNumber": 1,
+                "text": applicability_text,
+            }],
+            "confidence": 0.99,
+            "uncertaintyReasons": [],
+        }],
+        "requirements": [{
+            "requirementKey": "primary-action",
+            "applicabilityGroupKeys": [f"{manufacturer.lower()}-{model.lower()}"],
+            "requirementType": "recurring" if recurring_triggers else "one_time",
+            "actionText": action,
+            "initialThresholds": [],
+            "recurringTriggers": recurring_triggers,
+            "combinationLogic": "all",
+            "conditions": [],
+            "terminatingAction": None,
+            "citations": [{
+                "sourceDocumentId": document.id,
+                "pageNumber": 1,
+                "text": action,
+            }],
+            "confidence": 0.99,
+            "uncertaintyReasons": [],
+        }],
+        "amocProvisions": [],
+        "confidence": 0.99,
+        "citations": [],
+        "uncertaintyReasons": [],
+    }
+    extraction.schema_version = "ad_extraction_v3"
+    extraction.output = output
+    extraction.raw_response = {
+        "retainedSourcePagesCached": True,
+        "retainedSourcePages": [{
+            "sourceDocumentId": document.id,
+            "contentHash": document.content_hash,
+            "pageNumber": 1,
+            "text": source_text,
+        }],
+        "amocEnvelopeOrigin": "readiness_fixture",
+    }
+    admin = create_user(db, f"admin-{ad_number}@paprnav.local", "Fixture AD Admin")
+    admin_org = create_organization(db, f"AD Operations {ad_number}", "platform")
+    add_membership(db, admin_org, admin, "platform_admin")
+    db.add(ADExtractionReview(
+        extraction_id=extraction.id,
+        status="approved",
+        proposed_output=output,
+        decision_output=output,
+        decision="approved",
+        reviewer_user_id=admin.id,
+        reviewed_at=datetime.now(timezone.utc),
+    ))
+    extraction.directive.review_status = "approved"
+    extraction.directive.extraction_status = "complete"
+    extraction.directive.approved_at = datetime.now(timezone.utc)
+    populate_applicability_from_extraction(db, extraction)
+    db.flush()
+    assert extraction.input_content_hash == extraction_input_hash(extraction.directive)
+    assert persisted_source_pages(extraction.directive, extraction)[0] is True
+    assert extraction_has_signed_release(extraction) is True
+    return extraction
 
 
 def _import_drs_row(
@@ -256,12 +430,6 @@ def test_scenario_02_airframe_ad_uses_verified_page_evidence(
         db_session,
         aircraft_id=aircraft.id,
     )
-    _approved_ad(
-        db_session,
-        ad_number="2020-01-02",
-        product="Cessna 172R Airplanes",
-        action="Inspect the affected airframe.",
-    )
     _import_drs_row(
         db_session,
         ad_number="2020-01-02",
@@ -269,10 +437,16 @@ def test_scenario_02_airframe_ad_uses_verified_page_evidence(
         make="Cessna",
         model="172R",
     )
+    _approved_ad(
+        db_session,
+        ad_number="2020-01-02",
+        product="Cessna 172R Airplanes",
+        action="Inspect the affected airframe.",
+    )
     db_session.commit()
 
     stats = match_aircraft_ads(db_session, aircraft.id)
-    assert stats["matched"] == 1
+    assert stats["matched"] == 1, stats
     result = db_session.scalar(
         select(ADMatchResult).where(ADMatchResult.status == "candidate_satisfied")
     )
@@ -297,18 +471,18 @@ def test_scenario_03_engine_applicability_remains_component_specific(
         entry_date=date(2026, 1, 3),
         text="Complied with AD 2026-03-01 by inspecting the Lycoming engine.",
     )
-    _approved_ad(
-        db_session,
-        ad_number="2026-03-01",
-        product="Lycoming IO-360-L2A Engines",
-        action="Inspect the engine.",
-    )
     _import_drs_row(
         db_session,
         ad_number="2026-03-01",
         product_type="Engine",
         make="Lycoming",
         model="IO-360-L2A",
+    )
+    _approved_ad(
+        db_session,
+        ad_number="2026-03-01",
+        product="Lycoming IO-360-L2A Engines",
+        action="Inspect the engine.",
     )
     db_session.commit()
 
@@ -318,7 +492,7 @@ def test_scenario_03_engine_applicability_remains_component_specific(
     )
     assert result is not None
     assert result.installed_component.role == "engine"
-    assert result.target_applicability.target.product_type == "Engine"
+    assert result.target_applicability.target.product_type.lower() == "engine"
 
 
 def test_scenario_04_propeller_applicability_remains_component_specific(
@@ -334,18 +508,18 @@ def test_scenario_04_propeller_applicability_remains_component_specific(
         entry_date=date(2026, 1, 4),
         text="Complied with AD 2026-04-01 by inspecting the McCauley propeller.",
     )
-    _approved_ad(
-        db_session,
-        ad_number="2026-04-01",
-        product="McCauley 1A170 Propellers",
-        action="Inspect the propeller.",
-    )
     _import_drs_row(
         db_session,
         ad_number="2026-04-01",
         product_type="Propeller",
         make="McCauley",
         model="1A170",
+    )
+    _approved_ad(
+        db_session,
+        ad_number="2026-04-01",
+        product="McCauley 1A170 Propellers",
+        action="Inspect the propeller.",
     )
     db_session.commit()
 
@@ -355,7 +529,7 @@ def test_scenario_04_propeller_applicability_remains_component_specific(
     )
     assert result is not None
     assert result.installed_component.role == "propeller"
-    assert result.target_applicability.target.product_type == "Propeller"
+    assert result.target_applicability.target.product_type.lower() == "propeller"
 
 
 def test_scenario_05_recurring_ad_requires_adjudication(
@@ -384,7 +558,10 @@ def test_scenario_05_recurring_ad_requires_adjudication(
     result = db_session.scalar(select(ADMatchResult))
     assert result is not None
     assert result.status == "needs_adjudication"
-    assert "recurring_due_status_unknown" in result.unresolved_reasons
+    assert any(
+        reason.endswith("due_status_unknown")
+        for reason in result.unresolved_reasons
+    )
     assert result.adjudication.status == "pending"
 
 

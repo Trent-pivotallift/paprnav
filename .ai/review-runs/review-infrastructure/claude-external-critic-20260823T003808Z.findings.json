@@ -1,0 +1,47 @@
+[
+  {
+    "id": "review-infrastructure-CC-001",
+    "severity": "high",
+    "invariant": "Every run requires an independent closure-stage review of the final state.",
+    "summary": "Bootstrap runs could validate without a closure-stage attestation.",
+    "evidence": ["validate-review-run.py accepted implementation review as closure", "state.json remained implementation_reviewed while validation passed"],
+    "impact": "A run could claim closure without its mandatory final review.",
+    "requiredClosure": "Require a passed closure review and closed phase for every run."
+  },
+  {
+    "id": "review-infrastructure-CC-002",
+    "severity": "high",
+    "invariant": "Every phase transition is reproducible through audited tooling.",
+    "summary": "Bootstrap phase progression had no script path and required manual state editing.",
+    "evidence": ["create-review-run initialized a null exception", "record-review skipped design transitions when an exception existed", "advance-review-run only accepted design_reviewed to implementation"],
+    "impact": "Legitimate and illegitimate manual phase assertions were indistinguishable.",
+    "requiredClosure": "Add an explicit bootstrap transition requiring a passed design review and recorded reason."
+  },
+  {
+    "id": "review-infrastructure-CC-003",
+    "severity": "high",
+    "invariant": "Following the documented workflow can produce a valid closed run.",
+    "summary": "Documentation omitted the review-recording and phase-advance commands.",
+    "evidence": ["record-review.py and advance-review-run.py were absent from durable workflow documentation"],
+    "impact": "A coordinator following the skill would create a permanently unclosable run.",
+    "requiredClosure": "Document exact design, implementation, transition, and closure commands."
+  },
+  {
+    "id": "review-infrastructure-CC-004",
+    "severity": "high",
+    "invariant": "Every Claude finding is structurally validated and reconciled.",
+    "summary": "Free-form Markdown regex matching could silently miss Claude findings.",
+    "evidence": ["validation depended on H3 headings and exact ID strings requested only by prompt"],
+    "impact": "A formatting deviation could allow a real blocker to bypass the ledger.",
+    "requiredClosure": "Require and validate a structured JSON finding artifact."
+  },
+  {
+    "id": "review-infrastructure-CC-005",
+    "severity": "medium",
+    "invariant": "The audit trail distinguishes failed and successful Claude runs accurately.",
+    "summary": "A failed Claude artifact looked like a review and closure incorrectly said Claude was never invoked.",
+    "evidence": ["the failed Markdown contained only an ENOTFOUND API error", "closure.md stated Claude was not invoked"],
+    "impact": "Future readers could misinterpret invocation history and review completeness.",
+    "requiredClosure": "Rename or tag failed outputs distinctly and correct the closure record."
+  }
+]

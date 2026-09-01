@@ -99,6 +99,21 @@ Seeded demo users use the local-only password `demo-password`.
 
 The API container uses `DATABASE_URL=postgresql+psycopg://paprnav_user:paprnav_password@db:5432/paprnav_db` so it connects to the compose database service rather than `localhost`.
 
+Compose stores retained AD source bytes in the persistent
+`backend_ad_source_data` volume; rebuilding or replacing the API container does
+not remove that evidence. To initialize an empty volume from the host-side
+`.data` archive, start the API and run:
+
+```bash
+docker cp .data/. backend-api-1:/app/.data
+```
+
+Verify the review queue after every import or container rebuild with
+`python -m app.scripts.audit_ad_review_evidence`. Back up the volume before a
+Docker volume prune or host migration by copying `/app/.data` out of a stopped
+API container; keep the host archive until the hash audit reports **X passed
+out of X**. Database records alone are not a source-evidence backup.
+
 ## Environment
 
 The backend currently works without required environment variables.
@@ -293,8 +308,9 @@ Seeded demo users:
 
 - `owner.demo@paprnav.local`
 - `shop.demo@paprnav.local`
+- `admin.demo@paprnav.local`
 
-Both use the local-only password `demo-password`.
+All three use the local-only password `demo-password`.
 
 ## Implemented API Pieces
 
@@ -343,7 +359,45 @@ Local retained-source proof commands:
 python -m app.scripts.run_ad_source_proof --help
 python -m app.scripts.run_ad_publication_proof --help
 python -m app.scripts.apply_ad_publication_proof --help
+python -m app.scripts.prepare_ad_compliance_reviews --help
+python -m app.scripts.audit_ad_review_evidence
+python -m app.scripts.stage_ad_review_proposal --help
+python -m app.scripts.correct_approved_ad_review --help
 ```
+
+`prepare_ad_compliance_reviews` scopes retained full-text publications through
+an aircraft's active coverage subscriptions and queues `ad_extraction_v3`
+platform reviews. It is a dry run by default and rolls back all rows; pass
+`--commit` only after its **X passed out of X** verification succeeds. The
+deterministic provider may fingerprint and expose retained PDF text but cannot
+approve regulatory compliance meaning. Individual Federal Register rule PDFs
+are preferred over complete issues; issue fallback is bounded to the AD-number
+page neighborhood and missing identifiers remain adjudication cases.
+For N3671L the expected review scope is 17 airframe/engine publications. The
+six additional full-text appliance publications in the retained target proof
+remain excluded until installed appliance identity is verified.
+`audit_ad_review_evidence` reads every queued review and reports both source
+identity verification and full approval readiness as **X passed out of X**.
+Approval, aircraft-match visibility, and released-catalog visibility fail closed unless the retained source
+identity, v3 output, AD number, non-empty typed applicability groups,
+non-empty compliance requirements, group-key references, and bounded page
+citations all validate and applicability/requirement uncertainty reasons are
+resolved.
+Requirement actions preserve the wording of their cited source passages;
+timing values, timing units, timing anchor clauses, terminating-action wording,
+and AMOC authority text are also evidence-bound to those passages. Normalized
+timing and branch semantics are stored separately. The proposal
+staging script accepts a complete v3 extraction object; requirements-only
+calibration drafts cannot publish until typed applicability groups are added.
+The proposal-staging and approved-correction scripts are dry-run by default and
+require an active platform-admin actor. They are privileged direct-database
+operational tools: shell and database access are their authentication boundary,
+while `--actor-user-id` supplies required audit attribution and is not proof of
+an interactive user session. Normal human review decisions must use the
+authenticated HTTP review workflow. The correction script stores the prior decision and reviewer
+attribution in correction history, revokes publication, and reopens the record
+for a new authenticated human decision. It never silently rewrites data under
+the former reviewer's signature.
 
 The production backend image includes `mdbtools` for FAA Access imports and
 Poppler for canonical PDF inspection/rendering. GovInfo reconciliation uses
@@ -356,12 +410,19 @@ row is created and the publication is linked to its primary retained PDF. See
 `.ai/AD_SOURCE_PROOF_2026-08-04.md` from the repository root.
 Aircraft identity changes and newly approved AD applicability also invalidate
 affected worklists, including prior zero-result runs. AD extraction approval
-requires at least one attributable affected product so subscription-based
-invalidation cannot be bypassed by empty applicability.
+requires at least one source-cited v3 applicability group. Approval expands
+each group into indexed relational product type, manufacturer, and model
+targets; `affectedProducts` is derived for compatibility and is never parsed
+back into authoritative rows. Requirements name the exact group keys they
+govern so obligations are not copied across unrelated products. See
+`.ai/AD_APPLICABILITY_SCHEMA_REVIEW.md` for the complete JSON-to-PostgreSQL
+mapping and reviewer rules.
 
 Approved AD extraction output is also materialized into normalized compliance
-requirements and individual calendar, tach, Hobbs, total-time, or cycle
-triggers. Maintenance-verified logbook entries may create attributable
+requirements, AMOC provisions, and individual initial or recurring calendar,
+tach, Hobbs, total-time, or cycle triggers. Trigger anchors remain distinct:
+effective date, last compliance, installation, manufacture, and unknown are not
+collapsed. Maintenance-verified logbook entries may create attributable
 compliance events, while verified entry measurements provide replayable
 aircraft time-state observations. The matcher calculates a versioned current,
 due-soon, overdue, terminated, or unknown due state and returns it with the

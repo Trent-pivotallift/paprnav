@@ -1,0 +1,355 @@
+{
+  "taskId": "review-infrastructure",
+  "stage": "closure",
+  "generatedAt": "2026-08-23T01:12:22+00:00",
+  "baseRef": "HEAD",
+  "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+  "scopePaths": [
+    "AGENTS.md",
+    ".agents",
+    ".ai/agents",
+    ".ai/review-templates",
+    ".ai/REVIEW_PROCESS.md",
+    ".ai/CLAUDE_REVIEWER.md",
+    ".gitignore",
+    "scripts/create-review-run.sh",
+    "scripts/build-review-packet.py",
+    "scripts/advance-review-run.py",
+    "scripts/record-review.py",
+    "scripts/validate-review-run.py",
+    "scripts/verify-review-packet.py",
+    "scripts/extract-claude-findings.py",
+    "scripts/claude-review.sh",
+    "scripts/claude-review.env.example"
+  ],
+  "scopeFingerprint": "90f5234bca5843a73bcbbf7a7cf5a6158910c607b994e30a427d8e7d71b7a37b",
+  "files": [
+    {
+      "path": ".agents/skills/adversarial-review/SKILL.md",
+      "status": "??",
+      "size": 3111,
+      "sha256": "f3d22abdadd7dcf24ac4bd152327257910bc84bf111ed73984a286a3af472048",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".agents/skills/adversarial-review/agents/openai.yaml",
+      "status": "??",
+      "size": 226,
+      "sha256": "533cb157d2a047af6d630ad3b1018ee5a0fe64d70fc60ae4ef0b097932f4568a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".agents/skills/adversarial-review/references/checklists.md",
+      "status": "??",
+      "size": 1201,
+      "sha256": "9d541c157c9a603e7c5e08b70a5af1b6b63d38d61eee0e820970cb0cdd964d2c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".agents/skills/adversarial-review/references/severity.md",
+      "status": "??",
+      "size": 815,
+      "sha256": "2aa99b4cbfa276b425022c0d4b03d17d47ba5d3a682f3ae5770b98a6b6290ff3",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/CLAUDE_REVIEWER.md",
+      "status": " M",
+      "size": 1396,
+      "sha256": "88e81861a8be90991ad4f02604ccd9bd4a26a341701da623522bbfd83325c7ee",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/REVIEW_PROCESS.md",
+      "status": "??",
+      "size": 5101,
+      "sha256": "f9e7b5875fa3eeb9ea7211a0709fc575ee5c8ae1d3a563fa5ac3ce5e893b73c2",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/ADVERSARIAL_REVIEWER.md",
+      "status": "??",
+      "size": 1184,
+      "sha256": "2af95ada3305a879630f8abb2938c46c5afeb95ac60b68f9c21c6bb44c583ffc",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/BUILDER.md",
+      "status": "??",
+      "size": 798,
+      "sha256": "fa050074b25531049c148b883f612d96401184ee1a4a6ee0a40ffb32272d9fe8",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/CLAUDE_CRITIC.md",
+      "status": "??",
+      "size": 689,
+      "sha256": "4cdd97dc7f3a6f9150d07420bc4b18ef22eafc9ab8ec78a137a9ad086f8a1c42",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/COORDINATOR.md",
+      "status": "??",
+      "size": 641,
+      "sha256": "187f4bf574aab3097e37d361bcc2eb88d60bee5ea6f9e9f8e6eb52a5e3e05af2",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-templates/CLOSURE_REPORT.md",
+      "status": "??",
+      "size": 205,
+      "sha256": "424db2c94c845505141b080d221940e552e2474dfd5d8627ef6312978177e7d3",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-templates/DECISION_PACKET.md",
+      "status": "??",
+      "size": 413,
+      "sha256": "35cac3ae79315c642a6fa21731cf934087ebf9199d79d298479bd2ec92821677",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-templates/FINDINGS.json.schema",
+      "status": "??",
+      "size": 1354,
+      "sha256": "f45ba4ae03d3a0b9592c16e29da271f6c9800899dc0d54f09c25fb3d61d4f033",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".gitignore",
+      "status": " M",
+      "size": 613,
+      "sha256": "9dd1e108e1665a824dbd044595bef0d3c86c4342b3c97e91d0d8da23e2b4f096",
+      "readStatus": "readable"
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "??",
+      "size": 1768,
+      "sha256": "1bd67ae08070dac1b0235b9a8eac37f361ec29a670740538d135286b37c6b5b5",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/advance-review-run.py",
+      "status": "??",
+      "size": 1499,
+      "sha256": "79812e2775c508d85471b71df624ceb0df77bd533e393f8457079c4e44c6c301",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/build-review-packet.py",
+      "status": "??",
+      "size": 6611,
+      "sha256": "e3c250fc3e7caba48b8c380f66b4d0281123c78703312726f6d340e046771394",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/claude-review.env.example",
+      "status": " M",
+      "size": 1310,
+      "sha256": "78485086320ace6cab94d505f3838f1c46f9f3fcec171517caa022fee9f00532",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/claude-review.sh",
+      "status": " M",
+      "size": 7418,
+      "sha256": "31cd1c57e58f9f76830f08ca16ee023950cc456c196518387c296a942931a883",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/create-review-run.sh",
+      "status": "??",
+      "size": 1056,
+      "sha256": "bdf8cd4f27538c050bb23f3dd1589da44e71e182d7decf574ffa32012175b631",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/extract-claude-findings.py",
+      "status": "??",
+      "size": 895,
+      "sha256": "496aee7459e5bd25c2227379fac6ebfbd79628ef9861e3cd59ad3efeebe01707",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/record-review.py",
+      "status": "??",
+      "size": 3817,
+      "sha256": "e6e71ea75efd76e09b5d1459604927a0fea321ba472ff922cbe92c2c4f921e18",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/validate-review-run.py",
+      "status": "??",
+      "size": 13262,
+      "sha256": "0140dd027181d292b28d58effb72329db13ef499773205200f2d775d19697ca8",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/verify-review-packet.py",
+      "status": "??",
+      "size": 3517,
+      "sha256": "85628d0df430addcee5c67cb4cd5cc1ebfb39c4488c4dff8838de81fa87a7a14",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [
+    {
+      "path": ".ai/AD_APPLICABILITY_SCHEMA_REVIEW.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/AD_SOURCE_PROOF_2026-08-04.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/API_CONTRACT.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/DATA_MODEL.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/GOAL_TASKS.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/LOCAL_MVP_DEMO.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/PROVIDER_REFERENCES.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/ad-calibration/1998-17-11.requirements.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/ad-calibration/2002-13-04.requirements.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/ad-calibration/2008-26-10.requirements.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/ad-calibration/2011-10-09.requirements.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/ad-calibration/2024-14-03.requirements.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/ad-calibration/README.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/reviews/claude-t081-remediation-closure-20260822.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/reviews/claude-t081-reviewer-calibration-20260822.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/reviews/claude-t081-schema-data-20260822.md",
+      "status": "A "
+    },
+    {
+      "path": "backend/README.md",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0021_add_ad_applicability_v3.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0022_harden_ad_review_materialization.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0023_backfill_ad_v3_amoc_envelope.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/scripts/audit_ad_review_evidence.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/scripts/correct_approved_ad_review.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/scripts/prepare_ad_compliance_reviews.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/scripts/seed_dev.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/scripts/stage_ad_review_proposal.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/services/ad_applicability.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/services/ad_compliance_population.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/services/ad_extraction.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/services/ad_recurrence.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/docker-compose.yml",
+      "status": "M "
+    },
+    {
+      "path": "backend/tests/test_ad_ingestion.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/tests/test_ad_matching.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/tests/test_ad_recurrence.py",
+      "status": "M "
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/ads/page.tsx",
+      "status": "M "
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/ads/reviews/page.tsx",
+      "status": "A "
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/lib/api.ts",
+      "status": "M "
+    }
+  ],
+  "outOfScopeReason": "Pre-existing AD applicability work and historical review artifacts are unrelated to the review-infrastructure task."
+}

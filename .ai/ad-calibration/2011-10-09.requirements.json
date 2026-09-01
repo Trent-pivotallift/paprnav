@@ -1,0 +1,79 @@
+[
+  {
+    "requirementKey": "g-recurring-seat-system-inspection",
+    "requirementType": "recurring",
+    "actionText": "For all airplanes, to address the unsafe condition described in paragraph (e) of this AD, you must do the following actions on the seat rails; seat rollers, washers, and axle bolts or bushings; seat roller housings and the tangs; and lock pin springs, unless already done, initially within the next 100 hours time-in-service (TIS) after the last inspection done following AD 87-20-03 R2 or within the next 12 calendar months after the effective date of this AD, whichever occurs first. Repetitively thereafter do the actions at intervals not to exceed every 100 hours TIS or every 12 months, whichever occurs first:",
+    "initialThresholds": [
+      {
+        "metric": "total_time_hours",
+        "value": 100,
+        "unit": "hours",
+        "anchorKind": "last_compliance",
+        "sourceText": "Initially within the next 100 hours time-in-service after the last inspection done following AD 87-20-03 R2"
+      },
+      {
+        "metric": "calendar",
+        "value": 12,
+        "unit": "months",
+        "anchorKind": "effective_date",
+        "sourceText": "or within the next 12 calendar months after the effective date of this AD, whichever occurs first"
+      }
+    ],
+    "recurringTriggers": [
+      {
+        "metric": "total_time_hours",
+        "value": 100,
+        "unit": "hours",
+        "anchorKind": "last_compliance",
+        "sourceText": "at intervals not to exceed every 100 hours TIS"
+      },
+      {
+        "metric": "calendar",
+        "value": 12,
+        "unit": "months",
+        "anchorKind": "last_compliance",
+        "sourceText": "or every 12 months, whichever occurs first"
+      }
+    ],
+    "combinationLogic": "whichever_first",
+    "conditions": [],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_dca1a807cdab483bbb876bfac5af99b7",
+        "pageNumber": 5,
+        "text": "For all airplanes, to address the unsafe condition described in paragraph (e) of this AD, you must do the following actions on the seat rails; seat rollers, washers, and axle bolts or bushings; seat roller housings and the tangs; and lock pin springs, unless already done, initially within the next 100 hours time-in-service (TIS) after the last inspection done following AD 87-20-03 R2 or within the next 12 calendar months after the effective date of this AD, whichever occurs first. Repetitively thereafter do the actions at intervals not to exceed every 100 hours TIS or every 12 months, whichever occurs first:"
+      }
+    ],
+    "confidence": 0.9,
+    "uncertaintyReasons": [
+      "Confirm whether each paragraph (g)(1) through (g)(10) corrective branch should materialize as a separate conditional requirement."
+    ]
+  },
+  {
+    "requirementKey": "g-10-locking-pin-correction",
+    "requirementType": "conditional",
+    "actionText": "If engagement of any of the seat locking pins measures less than 0.15 of an inch, before further flight, replace or repair any seat components necessary to achieve a seat pin engagement of a minimum of 0.15 of an inch. Repair or replacement of necessary seat components does not terminate the repetitive actions required in paragraph (g) of this AD.",
+    "initialThresholds": [],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [
+      "Any seat locking pin engagement measures less than 0.15 inch."
+    ],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_dca1a807cdab483bbb876bfac5af99b7",
+        "pageNumber": 8,
+        "text": "If engagement of any of the seat locking pins measures less than 0.15 of an inch, before further flight, replace or repair any seat components necessary to achieve a seat pin engagement of a minimum of 0.15 of an inch."
+      },
+      {
+        "sourceDocumentId": "asd_dca1a807cdab483bbb876bfac5af99b7",
+        "pageNumber": 8,
+        "text": "Repair or replacement of necessary seat components does not terminate the repetitive actions required in paragraph (g) of this AD."
+      }
+    ],
+    "confidence": 0.94,
+    "uncertaintyReasons": []
+  }
+]

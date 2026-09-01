@@ -1,0 +1,4 @@
+{
+  "phase": "closed",
+  "bootstrapException": "The review tooling had to exist before its own design gate could be recorded; the existing passed design attestation is the prerequisite."
+}

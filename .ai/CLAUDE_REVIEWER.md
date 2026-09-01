@@ -1,79 +1,32 @@
-# Claude Code Reviewer
+# Claude external critic
 
-Side-fork conclusion:
+Claude is an independent critic inside the Codex-led adversarial review process.
+It is not the primary reviewer, decision owner, or closure authority. Read
+`.ai/REVIEW_PROCESS.md` for the complete workflow.
 
-- Claude Code is installed and authenticated in the user's interactive terminal.
-- `antigravity` is not on `PATH`.
-- Claude's valid permission modes include `plan`.
-- Codex can see the `claude` executable, but this execution context does not share the user's Claude login.
+## Infrastructure
 
-Current auth state in Codex:
+- `scripts/build-review-packet.py` mechanically assembles scope and context.
+- `scripts/claude-review.sh` invokes Claude Code in read-only plan mode.
+- `scripts/claude-review-stream.py` preserves streamed output and diagnostics.
+- `.ai/review-runs/<task-id>/` stores the decision, manifest, ledger, review,
+  and closure artifacts.
+- `.env.claude-review` optionally bridges an API key into ignored local state.
 
-- `claude -p` from Codex returns `Not logged in`.
-- `claude doctor` from Codex reports Claude Code `2.1.206` and notes that macOS Keychain is not writable in this execution context.
-
-Operational decision:
-
-- The reviewer automation is `scripts/claude-review.sh`.
-- The script can be run by Codex when Claude auth is available in this process.
-- If Codex lacks Claude login, the script supports an ignored `.env.claude-review` bridge that sets `ANTHROPIC_API_KEY` for Claude `--bare` mode.
-- Review output is written to `.ai/reviews/` so findings can be brought back into the main Codex thread for triage.
-- The script uses Claude `--permission-mode plan` and asks Claude not to edit files.
-- The script defaults `CLAUDE_REVIEW_MODEL=sonnet`. Use Sonnet for normal high-stakes review; choose a higher model only when the work is unusually critical, ambiguous, or architecture-heavy.
-- The wrapper uses Claude's `stream-json` output so model/session/status events and
-  final-text deltas remain visible during long reviews.
-- Each run preserves final Markdown, raw JSONL events, a Claude debug log, and
-  partial text. An interrupted run is not reported as successful and retains
-  enough diagnostics to distinguish interruption from authentication or API
-  failure.
-
-When to use Claude:
-
-- Use Claude after Codex has looped or self-reviewed at least twice on high-stakes work.
-- Use Claude for complex or critical logic, security decisions, privacy/data-retention decisions, AWS/IAM/Terraform changes, cost/billing decisions, migrations, and other changes where a missed issue could be expensive or unsafe.
-- Do not one-shot critical app portions. Implement, self-review, verify, revise if needed, then run Claude review.
-- Do not run Claude for low-level tasks with clear existing patterns unless those tasks touch one of the high-stakes areas above.
-- Treat Claude output as review input, not automatic truth. Codex triages findings into fix-now, document/accept-risk, or defer with rationale.
-
-Run:
+## Run
 
 ```bash
-scripts/claude-review.sh
+scripts/create-review-run.sh T123
+python3 scripts/build-review-packet.py --task T123 --base HEAD --stage external-critic
+scripts/claude-review.sh --task T123 --stage external-critic --base HEAD
 ```
 
-Optional model override:
+The wrapper refuses to run without a review packet, manifest, and finding
+ledger. Claude must inspect direct repository context, state scope limitations,
+and return stable finding IDs. Codex validates and dispositions every finding.
 
-```bash
-CLAUDE_REVIEW_MODEL=opus scripts/claude-review.sh
-```
+Use Sonnet by default. Override `CLAUDE_REVIEW_MODEL` only for unusually
+critical or architecture-heavy work. Raw events, debug logs, and partial output
+remain ignored; interrupted runs are not successful reviews.
 
-Target a critical slice, including untracked files:
-
-```bash
-CLAUDE_REVIEW_FOCUS="OCR metering and AD matching correctness" \
-CLAUDE_REVIEW_PATHS="backend/app/services/ocr_provider.py backend/app/services/ad_matching.py" \
-scripts/claude-review.sh HEAD
-```
-
-Optional base ref:
-
-```bash
-scripts/claude-review.sh origin/main
-scripts/claude-review.sh HEAD
-```
-
-After it finishes, paste the findings or point Codex at the generated `.ai/reviews/claude-review-*.md` file.
-
-Codex-auth bridge:
-
-```bash
-cp scripts/claude-review.env.example .env.claude-review
-chmod 600 .env.claude-review
-$EDITOR .env.claude-review
-```
-
-Set `ANTHROPIC_API_KEY` in that ignored local file. Do not paste the value into chat and do not commit it. Once present, Codex can run:
-
-```bash
-scripts/claude-review.sh
-```
+Do not paste credentials into chat or commit `.env.claude-review`.

@@ -1,0 +1,526 @@
+{
+  "taskId": "T081-CAL-2024-14-03",
+  "stage": "closure",
+  "generatedAt": "2026-08-24T12:12:10+00:00",
+  "baseRef": "HEAD",
+  "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+  "scopePaths": [
+    ".ai/ad-calibration",
+    "backend/app/scripts/stage_ad_review_proposal.py",
+    "backend/app/scripts/verify_ad_staging_concurrency.py",
+    "backend/app/services/ad_extraction.py",
+    "backend/app/api/routes/ads.py",
+    "backend/app/schemas/ads.py",
+    "backend/tests/test_ad_ingestion.py",
+    "backend/tests/test_full_product_readiness.py",
+    "scripts/verify-t081-postgres-migrations.sh",
+    "frontend/paprnav-frontend/src/app/(authenticated)/logbook/ads/reviews/page.tsx",
+    "frontend/paprnav-frontend/src/lib/api.ts",
+    ".ai/review-runs/T081-CAL-2024-14-03"
+  ],
+  "scopeFingerprint": "b6b44d14b7dbd92bdafddd76c32acdca3002edb5789b3ad50057ec2f3f7ed55b",
+  "files": [
+    {
+      "path": ".ai/ad-calibration/1998-17-11.requirements.json",
+      "status": "A ",
+      "size": 4467,
+      "sha256": "6380048e8728390feb8be612ec44909fee3ccab8e39989f653d6032cfc91088d",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2002-13-04.requirements.json",
+      "status": "A ",
+      "size": 3269,
+      "sha256": "86c747eb7fc1e40e5d49bf67f234363823d94e5a746c30b0b737ef6390a7acac",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2008-26-10.requirements.json",
+      "status": "A ",
+      "size": 9386,
+      "sha256": "9f94f62789ab120da20b295b063deca1f996424c8802547abfdefe021f089a32",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2011-10-09.requirements.json",
+      "status": "A ",
+      "size": 4190,
+      "sha256": "7b6ae8b5b897b633c8feb728b5cd64a3647717c4235e30e4b7dce973d5111928",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2024-14-03.requirements.json",
+      "status": "A ",
+      "size": 2199,
+      "sha256": "bcc539a3016ded3f07797068eae7fa553949db9dc4182453b3e6e037c9d2fad5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2024-14-03.v3.proposal.json",
+      "status": "??",
+      "size": 43270,
+      "sha256": "25a7cd3f7a7d16da76323ec5e2850c9f8d0aee370007647cd2d4800662cd2022",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/README.md",
+      "status": "AM",
+      "size": 7901,
+      "sha256": "16723a1915b4f89d9d66c4ff326bad7b0730402aaff464f7b3b1ebdc5bdbd9a5",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": "MM",
+      "size": 47125,
+      "sha256": "3d4d3d93acefb0280d1feec7250b350899a83e8b2b6274bc5d5f752da76962dd",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": "MM",
+      "size": 6088,
+      "sha256": "db193642fdbde4ab58c1adef4ccb45200f4b145103e33a9b397db37038c4b1d1",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/stage_ad_review_proposal.py",
+      "status": "AM",
+      "size": 16052,
+      "sha256": "b968fdd0cdb2148cbd0d7dd3e1cf24b69f2739d8ba38df8b19254ed161de2e72",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/verify_ad_staging_concurrency.py",
+      "status": "??",
+      "size": 9866,
+      "sha256": "2a4671f770b46b7b705b9001903f7bbfb075f95e47764749655f20ced4a7087e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_extraction.py",
+      "status": "MM",
+      "size": 92165,
+      "sha256": "cf735b132056f01efba87ebaed39e8508d0c832778b75fdd09e3b6b86cfd5fcf",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_ingestion.py",
+      "status": "MM",
+      "size": 73391,
+      "sha256": "813ffd03aa333590eec54e4e00a0702d28591053bd3da97c7e83f68404dddd56",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_full_product_readiness.py",
+      "status": "MM",
+      "size": 26489,
+      "sha256": "c7f226d2b0e906159867af25a6e533f73488a0d05223acbfd51df80b64a48f14",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/ads/reviews/page.tsx",
+      "status": "AM",
+      "size": 18068,
+      "sha256": "05016ef809630e8f478172a8ad8f915203d6020cc87bb4ad2aff1b84730fbf9b",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/lib/api.ts",
+      "status": "MM",
+      "size": 23365,
+      "sha256": "fb7bacef2623756502737cdba9ebb756c3dc3e48ad5d54eec9869bee9dcad232",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/verify-t081-postgres-migrations.sh",
+      "status": "AM",
+      "size": 11505,
+      "sha256": "62529d44970ec8232c143e3d6e82a6f35e38a3842146716a05fa5843b730973a",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [
+    {
+      "path": ".agents/skills/adversarial-review/SKILL.md",
+      "status": "A "
+    },
+    {
+      "path": ".agents/skills/adversarial-review/agents/openai.yaml",
+      "status": "A "
+    },
+    {
+      "path": ".agents/skills/adversarial-review/references/checklists.md",
+      "status": "A "
+    },
+    {
+      "path": ".agents/skills/adversarial-review/references/severity.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/AD_APPLICABILITY_SCHEMA_REVIEW.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/AD_SOURCE_PROOF_2026-08-04.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/API_CONTRACT.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/CLAUDE_REVIEWER.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/DATA_MODEL.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/GOAL_TASKS.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/LOCAL_MVP_DEMO.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/PROVIDER_REFERENCES.md",
+      "status": "M "
+    },
+    {
+      "path": ".ai/REVIEW_PROCESS.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/agents/ADVERSARIAL_REVIEWER.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/agents/BUILDER.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/agents/CLAUDE_CRITIC.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/agents/COORDINATOR.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-closure-final.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-closure-staged.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-design-closure-1.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-design-final.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-design-initial.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-implementation-closure-1.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-implementation-final.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-implementation-initial.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/claude-external-critic-20260823T163719Z.findings.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/claude-external-critic-20260823T163719Z.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/closure.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/decision.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/findings.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/latest",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/manifest.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/review-packet.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/reviews.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/T081/state.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-1.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-2.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-3.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-final.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-design.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-implementation-attempt-1.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-implementation-final.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-implementation.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/claude-external-critic-20260823T003808Z.findings.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/claude-external-critic-20260823T003808Z.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/claude-findings-implementation-closure.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/closure.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/decision.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/findings.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/latest",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/manifest.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/review-packet.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/reviews.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/state.json",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-templates/CLOSURE_REPORT.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-templates/DECISION_PACKET.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/review-templates/FINDINGS.json.schema",
+      "status": "A "
+    },
+    {
+      "path": ".ai/reviews/claude-t081-remediation-closure-20260822.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/reviews/claude-t081-reviewer-calibration-20260822.md",
+      "status": "A "
+    },
+    {
+      "path": ".ai/reviews/claude-t081-schema-data-20260822.md",
+      "status": "A "
+    },
+    {
+      "path": ".gitignore",
+      "status": "M "
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "A "
+    },
+    {
+      "path": "backend/README.md",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0021_add_ad_applicability_v3.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0022_harden_ad_review_materialization.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0023_backfill_ad_v3_amoc_envelope.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260823_0024_bind_signed_ad_materialization.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/scripts/audit_ad_review_evidence.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/scripts/correct_approved_ad_review.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/scripts/prepare_ad_compliance_reviews.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/scripts/seed_dev.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/scripts/verify_ad_correction_workflow.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/scripts/verify_ad_review_concurrency.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/services/ad_applicability.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/services/ad_compliance_population.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/app/services/ad_coverage.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/services/ad_matching.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/services/ad_recurrence.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/app/services/ad_release.py",
+      "status": "A "
+    },
+    {
+      "path": "backend/docker-compose.yml",
+      "status": "M "
+    },
+    {
+      "path": "backend/tests/test_ad_coverage.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/tests/test_ad_matching.py",
+      "status": "M "
+    },
+    {
+      "path": "backend/tests/test_ad_recurrence.py",
+      "status": "M "
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/[nNumber]/page.tsx",
+      "status": "M "
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/ads/page.tsx",
+      "status": "M "
+    },
+    {
+      "path": "scripts/advance-review-run.py",
+      "status": "A "
+    },
+    {
+      "path": "scripts/build-review-packet.py",
+      "status": "A "
+    },
+    {
+      "path": "scripts/claude-review.env.example",
+      "status": "M "
+    },
+    {
+      "path": "scripts/claude-review.sh",
+      "status": "M "
+    },
+    {
+      "path": "scripts/create-review-run.sh",
+      "status": "A "
+    },
+    {
+      "path": "scripts/extract-claude-findings.py",
+      "status": "A "
+    },
+    {
+      "path": "scripts/record-review.py",
+      "status": "A "
+    },
+    {
+      "path": "scripts/validate-review-run.py",
+      "status": "A "
+    },
+    {
+      "path": "scripts/verify-review-packet.py",
+      "status": "A "
+    }
+  ],
+  "outOfScopeReason": "The working tree includes the already-reviewed staged T081 implementation baseline; closure is limited to the AD 2024-14-03 controlled human-calibration slice and the listed implementation and review artifacts."
+}

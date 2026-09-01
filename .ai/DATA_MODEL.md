@@ -469,7 +469,14 @@ Required fields:
 Audit notes:
 
 - Idempotency is enforced by directive, input content hash, provider name, provider version, and schema version.
-- Current local provider is `deterministic_ad_extractor` with schema `ad_extraction_v1`.
+- New full-text extractions use `ad_extraction_v3`; retained v1/v2 extraction
+  rows remain readable for audit and replay compatibility but are audit-only at
+  the current release gate. V3 adds source-faithful applicability groups,
+  distinct manufacturer/model identities, serial and installed-equipment
+  predicates, requirement-to-group linkage, discrete compliance requirements,
+  uncertainty, and retained PDF page citations.
+  V3 also separates AMOC authority provisions and evidence-binds timing values,
+  units, anchors, and terminating-action wording.
 
 ### ADExtractionReview
 
@@ -492,6 +499,57 @@ Audit notes:
 
 - Approved and edited decisions validate structured output before becoming available for matching.
 - Rejected decisions preserve the proposed output and reviewer notes.
+- A correction to approved output reopens the review, clears current decision
+  attribution, preserves the prior signed decision in correction history, and
+  revokes release until a new authenticated approval.
+- Pending proposals are operationally quarantined until retained evidence
+  contains the expected source-form AD number in the formal Part 39 directive
+  heading. Missing text, title-only matches, and referenced-number matches
+  cannot be approved.
+- Normalized four-digit identifiers remain storage keys. Pre-2000 directives
+  are presented with their FAA source designation (for example, normalized
+  `1995-21-15` is displayed as AD `95-21-15`).
+
+### ApplicabilityTarget and ADTargetApplicability
+
+`ApplicabilityTarget` is the reusable, indexed query identity. Product type,
+subtype, normalized manufacturer, and normalized model are separate relational
+columns and form `normalized_key`. They are never produced by splitting a v3
+display string.
+
+`ADTargetApplicability` joins a directive to one target/model expanded from an
+approved applicability group. In addition to the existing directive, target,
+publication, basis, status, confidence, action, interval, condition, and
+citation fields, v3 stores:
+
+- `applicability_group_key`: indexed key that preserves the source branch and
+  scopes compliance requirements;
+- `source_identity`: official manufacturer/model wording, optional normalized
+  identities, aliases, and model-scope metadata;
+- `serial_range`: the typed v3 serial applicability object;
+- `equipment_conditions`: typed installed-equipment predicates;
+- `source_payload`: the complete approved group used to create the row.
+
+This is an intentional PostgreSQL hybrid. Stable equality/search dimensions
+are normalized columns. Variable regulatory evidence stays JSON so source
+meaning is retained without inventing columns or lossy guesses. Migration
+`20260822_0021` adds the v3 persistence fields. `20260822_0022` replaces the
+nullable uniqueness constraint with a NULL-safe expression index, distinguishes
+initial from recurring trigger rows, and adds relational AMOC provisions.
+
+Approval supersedes earlier extraction-derived rows, expands one group into
+one row per listed model (or one manufacturer-wide row for non-listed model
+scope), then creates `ADComplianceRequirement` rows only for applicability
+rows named by `requirements[].applicabilityGroupKeys`.
+
+### ADAMOCProvision
+
+Represents a source-cited AMOC authority provision extracted from an approved
+directive. It stores directive/extraction foreign keys, stable provision hash,
+provision key, exact authority text, approving authority, submission
+instructions, conditions, citations, confidence, complete source payload, and
+current/superseded status. It does not represent a separately approved AMOC
+artifact; that remains a future linked record type.
 
 ### ADSupersession
 

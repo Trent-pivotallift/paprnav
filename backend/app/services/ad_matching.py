@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.core import (
     ADExtraction,
     ADMatchAdjudication,
+    ADMatchDueStateLink,
     ADMatchEvidence,
     ADMatchResult,
     ADTargetApplicability,
@@ -29,15 +30,16 @@ from app.services.ad_identity import normalize_ad_number
 from app.services.ad_recurrence import (
     compute_due_state,
     evidence_supports_terminating_action,
-    requirement_for_applicability,
+    requirements_for_applicability,
     sync_verified_time_states,
     upsert_verified_compliance_event,
 )
+from app.services.ad_release import released_signed_extractions
 from app.services.maintenance_extraction import extract_structured_maintenance_data
 from app.services.observability import record_product_event, record_workflow_status
 
 ALGORITHM_NAME = "deterministic_ad_logbook_matcher"
-ALGORITHM_VERSION = "0.5.0"
+ALGORITHM_VERSION = "0.7.0"
 ACTION_WORDS = {"comply", "complied", "compliance", "inspect", "inspection", "replace", "replaced", "modify", "modified"}
 
 
@@ -86,35 +88,52 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
     for extraction in extractions:
         stats["directives_seen"] += 1
         output = extraction.output
-        applicability = select_applicable_component(aircraft, extraction)
-        has_structured_applicability = bool(extraction.directive.target_applicabilities)
-        if has_structured_applicability and applicability is None:
-            if not structured_applicability_is_uncertain(aircraft, extraction):
+        applicability_contexts = select_applicable_components(aircraft, extraction)
+        uncertain_contexts = select_uncertain_components(aircraft, extraction)
+        has_structured_applicability = any(
+            item.status == "current" and item.source_extraction_id == extraction.id
+            for item in extraction.directive.target_applicabilities
+        )
+        if has_structured_applicability and not applicability_contexts:
+            if not uncertain_contexts:
                 stats["skipped_not_applicable"] += 1
                 continue
         if not has_structured_applicability and not is_potentially_applicable(aircraft, output):
             stats["skipped_not_applicable"] += 1
             continue
-        result = upsert_match_result(
-            db,
-            aircraft,
-            entries,
-            extraction,
-            installed_component=applicability[0] if applicability else None,
-            target_applicability=applicability[1] if applicability else None,
-            structured_entries=structured_entries,
-            forced_unresolved_reasons=(
-                ["component_applicability_uncertain"]
-                if has_structured_applicability and applicability is None
-                else None
-            ),
-        )
-        if result.status == "candidate_satisfied":
-            stats["matched"] += 1
-        else:
-            stats["unresolved"] += 1
-            if result.adjudication and result.adjudication.status == "pending":
-                stats["review_tasks"] += 1
+        contexts: list[
+            tuple[InstalledComponent | None, ADTargetApplicability | None, bool]
+        ] = [
+            (component, target, True)
+            for component, target in applicability_contexts
+        ] + [
+            (component, target, False)
+            for component, target in uncertain_contexts
+        ]
+        if not contexts:
+            contexts = [(None, None, True)]
+        for installed_component, target_applicability, applicability_confirmed in contexts:
+            result = upsert_match_result(
+                db,
+                aircraft,
+                entries,
+                extraction,
+                installed_component=installed_component,
+                target_applicability=target_applicability,
+                structured_entries=structured_entries,
+                applicability_confirmed=applicability_confirmed,
+                forced_unresolved_reasons=(
+                    ["component_applicability_uncertain"]
+                    if not applicability_confirmed
+                    else None
+                ),
+            )
+            if result.status == "candidate_satisfied":
+                stats["matched"] += 1
+            else:
+                stats["unresolved"] += 1
+                if result.adjudication and result.adjudication.status == "pending":
+                    stats["review_tasks"] += 1
     record_product_event(
         db,
         event_type="ad_matching_completed",
@@ -162,25 +181,7 @@ def match_aircraft_ads(db: Session, aircraft_id: str) -> dict[str, int]:
 
 
 def approved_current_extractions(db: Session) -> list[ADExtraction]:
-    rows = db.scalars(
-        select(ADExtraction)
-        .where(ADExtraction.status == "approved")
-        .options(
-            selectinload(ADExtraction.directive).selectinload(AirworthinessDirective.discovery_record),
-            selectinload(ADExtraction.directive)
-            .selectinload(AirworthinessDirective.target_applicabilities)
-            .selectinload(ADTargetApplicability.target),
-            selectinload(ADExtraction.directive)
-            .selectinload(AirworthinessDirective.target_applicabilities)
-            .selectinload(ADTargetApplicability.source_publication),
-            selectinload(ADExtraction.directive).selectinload(AirworthinessDirective.superseded_by_edges),
-        )
-        .order_by(ADExtraction.created_at.desc(), ADExtraction.id.desc())
-    ).all()
-    current_by_directive: dict[str, ADExtraction] = {}
-    for extraction in rows:
-        current_by_directive.setdefault(extraction.directive_id, extraction)
-    return list(current_by_directive.values())
+    return released_signed_extractions(db)
 
 
 def upsert_match_result(
@@ -191,6 +192,7 @@ def upsert_match_result(
     installed_component: InstalledComponent | None = None,
     target_applicability: ADTargetApplicability | None = None,
     structured_entries: Mapping[str, dict[str, Any]] | None = None,
+    applicability_confirmed: bool = True,
     forced_unresolved_reasons: list[str] | None = None,
 ) -> ADMatchResult:
     output = extraction.output
@@ -199,7 +201,16 @@ def upsert_match_result(
         output,
         structured_entries=structured_entries,
     )
-    match_type, unresolved_reasons = classify_match_type(output)
+    requirements = (
+        requirements_for_applicability(
+            db,
+            extraction=extraction,
+            applicability=target_applicability,
+        )
+        if target_applicability is not None and applicability_confirmed
+        else []
+    )
+    match_type, unresolved_reasons = classify_requirement_set(output, requirements)
     unresolved_reasons.extend(forced_unresolved_reasons or [])
     if extraction.directive.superseded_by_edges:
         unresolved_reasons.append("directive_superseded")
@@ -214,21 +225,29 @@ def upsert_match_result(
         }:
             unresolved_reasons.append("explicit_compliance_claim_missing")
         unresolved_reasons = sorted(set(unresolved_reasons))
-    due_state = None
-    if match_type == "simple_recurring":
-        requirement = requirement_for_applicability(
-            db,
-            extraction=extraction,
-            applicability=target_applicability,
-        )
+    due_states = []
+    if requirements:
         strongest_evidence = evidence[0] if evidence else None
-        if requirement is None:
-            unresolved_reasons.append("recurrence_requirement_missing")
-        else:
+        context_binding_required = (
+            len(output.get("applicabilityGroups") or []) > 1
+            or len(output.get("requirements") or []) > 1
+        )
+        if len(requirements) > 1 and strongest_evidence:
+            unresolved_reasons.append("multiple_requirement_evidence_requires_adjudication")
+        for requirement in requirements:
             if (
-                strongest_evidence
+                len(requirements) == 1
+                and strongest_evidence
                 and strongest_evidence.explicit_ad_reference
                 and strongest_evidence.disposition_candidate in {"complied", "inspected"}
+                and (
+                    not context_binding_required
+                    or evidence_supports_requirement_context(
+                        strongest_evidence,
+                        requirement,
+                        installed_component,
+                    )
+                )
             ):
                 upsert_verified_compliance_event(
                     db,
@@ -242,26 +261,33 @@ def upsert_match_result(
                         strongest_evidence.matched_text,
                     ),
                 )
+            elif (
+                len(requirements) == 1
+                and strongest_evidence
+                and context_binding_required
+            ):
+                unresolved_reasons.append("component_requirement_evidence_unbound")
             due_state = compute_due_state(
                 db,
                 aircraft_id=aircraft.id,
                 requirement=requirement,
                 component=installed_component,
             )
-            unresolved_reasons = [
-                reason
-                for reason in unresolved_reasons
-                if reason != "recurring_due_status_unknown"
-            ]
+            due_states.append(due_state)
             if due_state.status == "unknown":
                 unresolved_reasons.extend(
-                    ["recurring_due_status_unknown", *(due_state.unresolved_reasons or [])]
+                    [
+                        f"requirement_{requirement.id}_due_status_unknown",
+                        *(due_state.unresolved_reasons or []),
+                    ]
                 )
             elif due_state.status == "due_soon":
-                unresolved_reasons.append("recurring_compliance_due_soon")
+                unresolved_reasons.append(f"requirement_{requirement.id}_due_soon")
             elif due_state.status == "overdue":
-                unresolved_reasons.append("recurring_compliance_overdue")
+                unresolved_reasons.append(f"requirement_{requirement.id}_overdue")
         unresolved_reasons = sorted(set(unresolved_reasons))
+    elif target_applicability is not None and applicability_confirmed:
+        unresolved_reasons.append("compliance_requirement_missing")
     if unresolved_reasons:
         confidence = min(confidence, 0.68)
     applicability_snapshot = build_applicability_snapshot(installed_component, target_applicability)
@@ -280,7 +306,7 @@ def upsert_match_result(
         extraction,
         installed_component,
         target_applicability,
-        due_state_input_hash=due_state.input_hash if due_state else None,
+        due_state_input_hashes=[state.input_hash for state in due_states],
     )
 
     existing = db.scalar(
@@ -297,7 +323,7 @@ def upsert_match_result(
         result.extraction_id = extraction.id
         result.installed_component_id = installed_component.id if installed_component else None
         result.target_applicability_id = target_applicability.id if target_applicability else None
-        result.due_state_id = due_state.id if due_state else None
+        result.due_state_id = due_states[0].id if len(due_states) == 1 else None
         result.status = status
         result.match_type = match_type
         result.confidence = confidence
@@ -307,6 +333,7 @@ def upsert_match_result(
         result.is_current = True
         result.computed_at = datetime.now(timezone.utc)
         db.execute(delete(ADMatchEvidence).where(ADMatchEvidence.match_result_id == result.id))
+        db.execute(delete(ADMatchDueStateLink).where(ADMatchDueStateLink.match_result_id == result.id))
     else:
         result = ADMatchResult(
             aircraft_id=aircraft.id,
@@ -314,7 +341,7 @@ def upsert_match_result(
             extraction_id=extraction.id,
             installed_component_id=installed_component.id if installed_component else None,
             target_applicability_id=target_applicability.id if target_applicability else None,
-            due_state_id=due_state.id if due_state else None,
+            due_state_id=due_states[0].id if len(due_states) == 1 else None,
             status=status,
             match_type=match_type,
             confidence=confidence,
@@ -328,6 +355,14 @@ def upsert_match_result(
         )
         db.add(result)
         db.flush()
+
+    for due_state in due_states:
+        db.add(
+            ADMatchDueStateLink(
+                match_result_id=result.id,
+                due_state_id=due_state.id,
+            )
+        )
 
     for item in evidence[:5]:
         db.add(
@@ -424,55 +459,191 @@ def is_potentially_applicable(aircraft: Aircraft, output: dict[str, Any]) -> boo
     return any(product in joined_aircraft or any(term in product for term in aircraft_terms) for product in products)
 
 
-def select_applicable_component(aircraft: Aircraft, extraction: ADExtraction) -> tuple[InstalledComponent, ADTargetApplicability] | None:
+def select_applicable_components(
+    aircraft: Aircraft,
+    extraction: ADExtraction,
+) -> list[tuple[InstalledComponent, ADTargetApplicability]]:
+    """Return every signed component/group context that is positively applicable."""
+
     active_components = [component for component in aircraft.installed_components if component.removed_at is None]
-    best: tuple[InstalledComponent, ADTargetApplicability, float] | None = None
+    matches: list[tuple[InstalledComponent, ADTargetApplicability, float]] = []
     for applicability in extraction.directive.target_applicabilities:
         target = applicability.target
-        if applicability.status not in {"current", "active", "unknown"}:
+        if (
+            applicability.status != "current"
+            or applicability.source_extraction_id != extraction.id
+        ):
             continue
         target_role = infer_component_role(target.product_type, target.product_subtype)
         for component in active_components:
+            if evaluate_component_applicability(component, applicability, target_role) != "applicable":
+                continue
             score = component_target_score(component, applicability, target_role)
             if score <= 0:
                 continue
-            if best is None or score > best[2]:
-                best = (component, applicability, score)
-    if best is None:
-        return None
-    return best[0], best[1]
+            matches.append((component, applicability, score))
+    matches.sort(key=lambda item: (-item[2], item[1].id, item[0].id))
+    return [(component, applicability) for component, applicability, _score in matches]
+
+
+def select_uncertain_components(
+    aircraft: Aircraft,
+    extraction: ADExtraction,
+) -> list[tuple[InstalledComponent, ADTargetApplicability]]:
+    """Retain every plausible context whose signed predicates cannot be decided."""
+
+    active_components = [
+        component
+        for component in aircraft.installed_components
+        if component.removed_at is None
+    ]
+    matches: list[tuple[InstalledComponent, ADTargetApplicability, float]] = []
+    for applicability in extraction.directive.target_applicabilities:
+        if (
+            applicability.status != "current"
+            or applicability.source_extraction_id != extraction.id
+        ):
+            continue
+        target_role = infer_component_role(
+            applicability.target.product_type,
+            applicability.target.product_subtype,
+        )
+        for component in active_components:
+            if evaluate_component_applicability(component, applicability, target_role) != "uncertain":
+                continue
+            score = max(
+                component_target_score(component, applicability, target_role),
+                component_target_role_score(component, target_role),
+            )
+            if score > 0:
+                matches.append((component, applicability, score))
+    matches.sort(key=lambda item: (-item[2], item[1].id, item[0].id))
+    return [(component, applicability) for component, applicability, _score in matches]
+
+
+def select_applicable_component(aircraft: Aircraft, extraction: ADExtraction) -> tuple[InstalledComponent, ADTargetApplicability] | None:
+    """Compatibility helper for callers that only display one context."""
+
+    contexts = select_applicable_components(aircraft, extraction)
+    return contexts[0] if contexts else None
 
 
 def structured_applicability_is_uncertain(
     aircraft: Aircraft,
     extraction: ADExtraction,
 ) -> bool:
-    active_components = [
-        component
-        for component in aircraft.installed_components
-        if component.removed_at is None
-    ]
-    for applicability in extraction.directive.target_applicabilities:
-        if applicability.status not in {"current", "active", "unknown"}:
+    return bool(select_uncertain_components(aircraft, extraction))
+
+
+def evaluate_component_applicability(
+    component: InstalledComponent,
+    applicability: ADTargetApplicability,
+    target_role: str,
+) -> str:
+    """Evaluate the full signed applicability row without guessing."""
+
+    target = applicability.target
+    if component_target_role_score(component, target_role) <= 0:
+        return "not_applicable"
+    for component_value, target_value in (
+        (component.make, target.make),
+        (component.model, target.model),
+    ):
+        if not target_value:
             continue
-        target = applicability.target
-        target_role = infer_component_role(
-            target.product_type,
-            target.product_subtype,
-        )
-        for component in active_components:
-            if component_target_role_score(component, target_role) <= 0:
-                continue
-            if (target.make and not component.make) or (
-                target.model and not component.model
-            ):
-                return True
-            if identity_is_close(component.make, target.make) and identity_is_close(
-                component.model,
-                target.model,
-            ):
-                return True
-    return False
+        if not component_value:
+            return "uncertain"
+        if not text_matches(component_value, target_value):
+            return "not_applicable"
+
+    source_identity = applicability.source_identity or {}
+    model_scope = source_identity.get("modelApplicability") or {}
+    if model_scope.get("kind") in {"expression", "unknown"}:
+        return "uncertain"
+
+    serial_status = evaluate_serial_scope(
+        component.serial_number,
+        applicability.serial_range or {},
+    )
+    if serial_status != "applicable":
+        return serial_status
+    if applicability.equipment_conditions or applicability.conditions:
+        return "uncertain"
+    source_payload = applicability.source_payload or {}
+    if source_payload.get("uncertaintyReasons"):
+        return "uncertain"
+    return "applicable"
+
+
+def evaluate_serial_scope(serial_number: str | None, scope: dict[str, Any]) -> str:
+    kind = scope.get("kind") or "unknown"
+    excluded = {
+        normalize_serial(value)
+        for value in scope.get("excludedValues") or []
+        if normalize_serial(value)
+    }
+    serial = normalize_serial(serial_number)
+    if serial and serial in excluded:
+        return "not_applicable"
+    if kind == "all":
+        return "applicable"
+    if kind in {"expression", "unknown"}:
+        return "uncertain"
+    if not serial:
+        return "uncertain"
+    if kind == "values":
+        allowed = {
+            normalize_serial(value)
+            for value in scope.get("values") or []
+            if normalize_serial(value)
+        }
+        return "applicable" if serial in allowed else "not_applicable"
+    if kind == "ranges":
+        comparisons = [
+            serial_in_range(serial, item)
+            for item in scope.get("ranges") or []
+            if isinstance(item, dict)
+        ]
+        if any(result is True for result in comparisons):
+            return "applicable"
+        if comparisons and all(result is False for result in comparisons):
+            return "not_applicable"
+        return "uncertain"
+    return "uncertain"
+
+
+def normalize_serial(value: Any) -> str:
+    return re.sub(r"[^A-Z0-9]+", "", str(value or "").upper())
+
+
+def serial_in_range(serial: str, serial_range: dict[str, Any]) -> bool | None:
+    serial_key = comparable_serial_key(serial)
+    start = normalize_serial(serial_range.get("start"))
+    end = normalize_serial(serial_range.get("end"))
+    start_key = comparable_serial_key(start) if start else None
+    end_key = comparable_serial_key(end) if end else None
+    if serial_key is None or (start and start_key is None) or (end and end_key is None):
+        return None
+    bounds = [key for key in (start_key, end_key) if key is not None]
+    if any(serial_key[0] != key[0] for key in bounds):
+        return None
+    values = serial_key[1]
+    if start_key is not None and values < start_key[1]:
+        return False
+    if end_key is not None and values > end_key[1]:
+        return False
+    return True
+
+
+def comparable_serial_key(value: str) -> tuple[tuple[str, ...], tuple[Any, ...]] | None:
+    if not value:
+        return None
+    raw_parts = re.findall(r"[A-Z]+|\d+", value)
+    if not raw_parts or "".join(raw_parts) != value:
+        return None
+    signature = tuple("n" if part.isdigit() else "s" for part in raw_parts)
+    normalized = tuple(int(part) if part.isdigit() else part for part in raw_parts)
+    return signature, normalized
 
 
 def component_target_role_score(
@@ -657,6 +828,44 @@ def rank_candidate_entries(
     return sorted(ranked, key=lambda item: item.confidence, reverse=True)
 
 
+def evidence_supports_requirement_context(
+    evidence: CandidateEvidence,
+    requirement: Any,
+    component: InstalledComponent | None,
+) -> bool:
+    """Require multi-obligation log evidence to identify its exact context."""
+
+    if component is None:
+        return False
+    section_key = (
+        evidence.entry.logbook_section.key
+        if evidence.entry.logbook_section is not None
+        else None
+    )
+    compatible_sections = {
+        "airframe": {"airframe"},
+        "rotorcraft_airframe": {"airframe"},
+        "engine": {"engine"},
+        "propeller": {"propeller"},
+        "rotor_system": {"propeller"},
+    }
+    if section_key in compatible_sections.get(component.role, {component.role}):
+        return True
+
+    text = normalize_match_text(evidence.matched_text)
+    for identity in (component.role, component.make, component.model):
+        normalized = normalize_match_text(str(identity or ""))
+        if len(normalized) >= 4 and normalized in text:
+            return True
+
+    generic = ACTION_WORDS | {
+        "affected", "part", "parts", "required", "action", "actions",
+        "component", "components", "within", "after", "before",
+    }
+    requirement_terms = keywords(str(requirement.action_text or "")) - generic
+    return bool(requirement_terms.intersection(keywords(evidence.matched_text)))
+
+
 def extract_entry_structure(entry: LogbookEntry) -> dict[str, Any]:
     return extract_structured_maintenance_data(
         "\n".join(
@@ -668,21 +877,22 @@ def extract_entry_structure(entry: LogbookEntry) -> dict[str, Any]:
     )
 
 
-def classify_match_type(output: dict[str, Any]) -> tuple[str, list[str]]:
-    intervals = output.get("complianceIntervals") or []
-    products = output.get("affectedProducts") or []
+def classify_requirement_set(
+    output: dict[str, Any],
+    requirements: list[Any],
+) -> tuple[str, list[str]]:
     reasons: list[str] = []
-    if not products:
+    if not output.get("applicabilityGroups") and not output.get("affectedProducts"):
         reasons.append("applicability_unknown")
-    if intervals:
+    if len(requirements) > 1:
+        match_type = "multi_obligation"
+    elif requirements and requirements[0].requirement_type == "recurring":
         match_type = "simple_recurring"
-        reasons.append("recurring_due_status_unknown")
-        normalized_intervals = [item for item in intervals if isinstance(item, dict)]
-        if not normalized_intervals:
-            reasons.append("recurring_interval_unstructured")
     else:
         match_type = "one_time"
-    if not output.get("complianceActions"):
+    if not requirements:
+        reasons.append("compliance_requirement_missing")
+    if not output.get("requirements") and not output.get("complianceActions"):
         reasons.append("compliance_action_unknown")
     return match_type, reasons
 
@@ -702,7 +912,7 @@ def build_input_hash(
     extraction: ADExtraction,
     installed_component: InstalledComponent | None = None,
     target_applicability: ADTargetApplicability | None = None,
-    due_state_input_hash: str | None = None,
+    due_state_input_hashes: list[str] | None = None,
 ) -> str:
     payload = {
         "aircraft": {
@@ -731,7 +941,7 @@ def build_input_hash(
             "componentId": installed_component.id if installed_component else None,
             "targetApplicabilityId": target_applicability.id if target_applicability else None,
         },
-        "dueStateInputHash": due_state_input_hash,
+        "dueStateInputHashes": sorted(due_state_input_hashes or []),
         "extraction": {
             "id": extraction.id,
             "inputContentHash": extraction.input_content_hash,

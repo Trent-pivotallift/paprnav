@@ -1,0 +1,31 @@
+[
+  {
+    "id": "T081-CAL-2024-14-03-CC-001",
+    "severity": "medium",
+    "invariant": "The full backend test suite passes for the reviewed tree; a safety-relevant recurring-AD/adjudication scenario has working, verifiable test coverage.",
+    "summary": "backend/tests/test_full_product_readiness.py::test_scenario_05_recurring_ad_requires_adjudication reproducibly fails because the shared _approved_ad/create_approved_extraction fixture writes complianceIntervals as a list of raw dicts, but the v3 schema (AD_EXTRACTION_JSON_SCHEMA.complianceIntervals) requires an array of strings; this only surfaces when a non-empty intervals argument is supplied (the recurring scenario is the only caller that does so), so extraction_has_signed_release(...) returns False and the fixture's own internal assertion fails before the test's adjudication assertions run.",
+    "evidence": [
+      "backend/tests/test_ad_matching.py:609 sets \"complianceIntervals\": compliance_intervals (raw dicts from the caller) directly into the extraction output.",
+      "backend/tests/test_full_product_readiness.py:290-320 builds output2 via `**extraction.output` spread without overriding complianceIntervals, so the dict-valued list survives into the v3 payload.",
+      "backend/app/services/ad_extraction.py:214 declares \"complianceIntervals\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}} in AD_EXTRACTION_JSON_SCHEMA.",
+      "backend/tests/test_full_product_readiness.py:354 `assert extraction_has_signed_release(extraction) is True` fails with `False is True`.",
+      "Reproduced independently via a minimal script that isolates the schema check: validate_extraction_json_schema raises 'AD extraction schema error at $.complianceIntervals[0]: must be string' for this fixture's output.",
+      "`PYTHONPATH=. .venv/bin/pytest -q` on the current tree: `1 failed, 201 passed` \u2014 the only failure is this test, reproducible across repeated runs."
+    ],
+    "impact": "The only full-product-readiness scenario that exercises a recurring compliance interval end-to-end (matching -> due-state -> needs_adjudication) is currently red, so there is no passing regression test proving recurring-AD adjudication behavior on the current v3 schema. This is fixture drift rather than a proven production defect (a real extraction pipeline independently validates complianceIntervals before it could reach this state), but it leaves a safety-relevant path unverified and the branch's CI signal is not green.",
+    "requiredClosure": "Fix the shared fixture(s) in test_ad_matching.py/test_full_product_readiness.py so complianceIntervals is a list of human-readable strings consistent with the v3 schema (e.g., derive a sourceText-style summary from `intervals`, mirroring how compliance_actions is built), and confirm `pytest` is fully green before this task is considered mergeable."
+  },
+  {
+    "id": "T081-CAL-2024-14-03-CC-002",
+    "severity": "medium",
+    "invariant": "Design invariant (decision.md, 'Test strategy'): the staging CLI's same-row locking against terminal-state conflicts and its dry-run/commit split must have executable proof, not just manual verification.",
+    "summary": "The new staging CLI (backend/app/scripts/stage_ad_review_proposal.py) still has no automated test for (a) a real cross-session/PostgreSQL race between staging and the HTTP approval endpoint acquiring the same `FOR UPDATE` row, or (b) the CLI's `main()` dry-run path (no `--commit`) leaving zero persisted state. This gap was already identified by the internal adversarial-implementation review as IA-006 and remains unresolved even though IA-001/002/003/004/005 from the same report have since been fixed in code.",
+    "evidence": [
+      "backend/app/scripts/verify_ad_review_concurrency.py:1-40 (and full file) only seeds and races two terminal `decide_extraction_review`-style decisions; it never imports or calls `stage_review_proposal`.",
+      "backend/tests/test_ad_ingestion.py has exactly two staging-specific test functions (`test_visual_ocr_draft_exception_is_limited_to_an_exact_cited_model_cell`, `test_staging_complete_proposal_is_audited_idempotent_and_reversible`); none invoke `app.scripts.stage_ad_review_proposal.main()` or exercise the `--commit`-absent rollback path.",
+      ".ai/review-runs/T081-CAL-2024-14-03/adversarial-implementation.md finding T081-CAL-IA-006 states the same gap and notes the only cross-path evidence is a one-off manual live-PostgreSQL check, not a reproducible test."
+    ],
+    "impact": "The row-locking/serialization guarantee between staging and human approval (closed design finding T081-CAL-DA-002) has plausible code but only manual, non-reproducible verification of its concurrency behavior; a future refactor of either code path could silently reintroduce a race with no CI test to catch it. Similarly, a bug in the dry-run/rollback branch of `main()` (e.g. accidentally committing) would not be caught automatically.",
+    "requiredClosure": "Add an automated PostgreSQL-backed test (can reuse the pattern in verify_ad_review_concurrency.py) that starts a `stage_review_proposal` transaction, blocks on the same review row, and proves a concurrent `decide_extraction_review` sees the row already locked/updated and vice versa; add a unit test that runs `main()` (or an equivalent code path) without `--commit` and asserts the review/extraction/decision rows are unchanged afterward."
+  }
+]

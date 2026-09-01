@@ -1,0 +1,84 @@
+[
+  {
+    "requirementKey": "a-applicability-determination",
+    "requirementType": "conditional",
+    "actionText": "Within 10 hours time in service after the effective date of this AD, determine if this AD applies, as follows:",
+    "initialThresholds": [
+      {
+        "metric": "total_time_hours",
+        "value": 10,
+        "unit": "hours",
+        "anchorKind": "effective_date",
+        "sourceText": "Within 10 hours time in service after the effective date of this AD"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [
+      "Engine repair required crankshaft removal between February 1, 1995 and December 31, 1997.",
+      "If the crankshaft repairer cannot be determined, compliance is required."
+    ],
+    "terminatingAction": "No further action is required if the engine was not repaired in the specified period or the crankshaft was not repaired by Nelson Balancing Service.",
+    "citations": [
+      {
+        "sourceDocumentId": "asd_9e7cba005b4c4529a699537f4c64940c",
+        "pageNumber": 22,
+        "text": "Within 10 hours time in service after the effective date of this AD, determine if this AD applies, as follows:"
+      }
+    ],
+    "confidence": 0.88,
+    "uncertaintyReasons": [
+      "Confirm whether applicability determinations should remain requirements or be represented only as applicability predicates."
+    ]
+  },
+  {
+    "requirementKey": "b-inspect-or-remove-crankshaft",
+    "requirementType": "alternative",
+    "actionText": "Perform a visual inspection as defined in paragraph (b)(2) of this AD, magnetic particle inspection, and a dimensional check of the crankshaft journals, or remove from service affected crankshafts and replace with serviceable parts.",
+    "initialThresholds": [
+      {
+        "metric": "total_time_hours",
+        "value": 10,
+        "unit": "hours",
+        "anchorKind": "effective_date",
+        "sourceText": "Within 10 hours time in service after the effective date of this AD"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "alternative",
+    "conditions": [
+      "The applicability determination does not establish that no further action is required."
+    ],
+    "terminatingAction": "Removal from service and replacement with a serviceable crankshaft satisfies this alternative obligation.",
+    "citations": [
+      {
+        "sourceDocumentId": "asd_9e7cba005b4c4529a699537f4c64940c",
+        "pageNumber": 22,
+        "text": "Perform a visual inspection as defined in paragraph (b)(2) of this AD, magnetic particle inspection, and a dimensional check of the crankshaft journals, or remove from service affected crankshafts and replace with serviceable parts."
+      }
+    ],
+    "confidence": 0.94,
+    "uncertaintyReasons": []
+  },
+  {
+    "requirementKey": "b-3-failed-inspection-correction",
+    "requirementType": "alternative",
+    "actionText": "Replace any crankshaft that fails the visual inspection, magnetic particle inspection, or the dimensional check with a serviceable crankshaft, unless the crankshaft can be reworked to bring it in compliance with: (i) All the overhaul requirements of the appropriate TCM or LYC Overhaul/Maintenance Manuals; or (ii) All of the FAA-approved requirements for any repair station which currently has approval for limits other than those in the appropriate TCM or LYC Overhaul/Maintenance Manuals.",
+    "initialThresholds": [],
+    "recurringTriggers": [],
+    "combinationLogic": "alternative",
+    "conditions": [
+      "The crankshaft fails the visual inspection, magnetic-particle inspection, or dimensional check."
+    ],
+    "terminatingAction": "Replacement with a serviceable crankshaft or qualifying rework resolves the failed-inspection condition.",
+    "citations": [
+      {
+        "sourceDocumentId": "asd_9e7cba005b4c4529a699537f4c64940c",
+        "pageNumber": 22,
+        "text": "Replace any crankshaft that fails the visual inspection, magnetic particle inspection, or the dimensional check with a serviceable crankshaft, unless the crankshaft can be reworked to bring it in compliance with: (i) All the overhaul requirements of the appropriate TCM or LYC Overhaul/Maintenance Manuals; or (ii) All of the FAA-approved requirements for any repair station which currently has approval for limits other than those in the appropriate TCM or LYC Overhaul/Maintenance Manuals."
+      }
+    ],
+    "confidence": 0.92,
+    "uncertaintyReasons": []
+  }
+]

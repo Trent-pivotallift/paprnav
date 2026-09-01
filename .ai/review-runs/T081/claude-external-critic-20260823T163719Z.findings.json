@@ -1,0 +1,54 @@
+[
+  {
+    "id": "T081-CC-001",
+    "severity": "high",
+    "invariant": "Every published applicability/requirement/AMOC field is supported by an exact citation to a retained source document and page; unrelated content must never enter the citation-eligible evidence pool.",
+    "summary": "The evidence-scoping heuristic that isolates one AD's text from a combined/retained PDF fails open instead of failing closed when it cannot find the rule's closing 'FR Doc' footer, silently admitting all remaining document text (which can include a different, unrelated AD or notice) as citable evidence.",
+    "evidence": [
+      "backend/app/services/ad_extraction.py:1706-1711 \u2014 `footer = re.search(...); section_end = anchor_start + footer.end() if footer else len(combined)` extends the bounded section to end-of-document whenever no `[FR Doc...]`/`[PR Doc...]` footer pattern matches after the anchor.",
+      "backend/app/services/ad_extraction.py:1725-1768 (`bounded_source_document_pages`) calls `bounded_issue_pages` unconditionally for every retained document (not just ones flagged `source_type == 'issue_pdf'`), so this same fail-open path is exercised on every approval/release/rehash re-scoping (`extraction_has_signed_release` -> `persisted_source_pages`; `decide_extraction_review`; `correct_approved_ad_review.py`; `stage_ad_review_proposal.py`).",
+      "backend/app/services/ad_extraction.py:1808-1852 (`source_evidence_status`) only checks that the *target* AD's formal heading is present somewhere in the bounded pages; it never checks that the bounded section excludes a *different* AD's formal heading or otherwise bounds the tail, so an over-wide section still reports `verified`.",
+      "backend/tests/test_ad_ingestion.py:784-829 exercises only the case where a trailing footer is present and correctly truncates; no test exercises a missing/unmatched footer, a footer using non-bracketed or non-English formatting, or an OCR-mangled footer."
+    ],
+    "impact": "If the footer regex fails to match for any reason (different Federal Register era formatting, OCR noise, a target rule that happens to be followed by non-rule matter without an `[FR Doc...]` marker), the reviewer's cited evidence pool silently includes unrelated regulatory text. Because `require_cited_wording`/`validate_timing_evidence`/`validate_requirement_evidence` only check that a field's claimed quote is a literal substring of the (now over-wide) citation set, a fabricated or misattributed manufacturer/model/serial/timing value that actually belongs to a neighboring rule can pass mechanical evidence validation and be approved as if it were sourced from the correct AD.",
+    "requiredClosure": "When no closing footer (or equivalent authoritative section boundary, e.g. the next Part 39 heading) can be located after the anchor, fail closed: return no pages (or mark the evidence status as unverified/bounded-failure) rather than defaulting to end-of-document. Add negative tests for a missing footer, an OCR-corrupted footer, and a target rule immediately followed by a second rule with no recognizable separator."
+  },
+  {
+    "id": "T081-CC-002",
+    "severity": "medium",
+    "invariant": "Each human decision (including corrections and pre-approval staging) is serialized, immutable, and fully actor-attributed; provider/staging output remains an untrusted proposal until an authenticated platform-admin decision.",
+    "summary": "The two out-of-band administrative pathways that mutate an approved or in-review AD extraction outside the authenticated HTTP decision endpoint do not bind actor identity to a real session: the correction script only checks that a caller-supplied `--actor-user-id` happens to belong to an active platform_admin row (no credential/session proof), and the staging script records no actor identity at all.",
+    "evidence": [
+      "backend/app/scripts/correct_approved_ad_review.py:68-87 accepts `--actor-user-id` as a bare CLI argument and only verifies the referenced row is `active`/`platform_admin`; nothing proves the process invoker is that user.",
+      "backend/app/scripts/stage_ad_review_proposal.py:24-105 has no `--actor-user-id` (or any identity) argument at all; `record_workflow_status(..., actor_type='system')` at line 104 records no user.",
+      "Contrast with backend/app/api/routes/ads.py:598-609 (`decide_extraction_review`), which derives the actor from `Depends(get_current_user)` \u2014 an authenticated session \u2014 for the normal decision path."
+    ],
+    "impact": "The correction and staging workflows are exactly the pathways used to quietly rewrite a previously-approved regulatory decision (the case T081-DA-6/DC-2 were concerned with). Anyone with container/shell access to run these scripts can attribute a correction to any platform-admin user id of their choosing, or stage a v3 draft with zero recorded actor at all, weakening the non-repudiation guarantee the packet's 'Trust, authorization, and audit boundaries' section claims for reviewer/actor identity.",
+    "requiredClosure": "Either restrict these scripts to a trust boundary equivalent to direct database access and document that explicitly as the accepted operational model, or require the same authenticated-session identity used by the HTTP decision endpoint (e.g., a signed operator token validated against `User`/session state) before recording actor attribution, and record an actor for every staging event."
+  },
+  {
+    "id": "T081-CC-003",
+    "severity": "medium",
+    "invariant": "Calibration exercises the v3 failure modes claimed by the design, including group, serial, equipment, AMOC, and correction/release negative cases (design item 10 / ledger T081-DA-10).",
+    "summary": "Independently confirmed that T081-DA-10 remains open: all five `.ai/ad-calibration/*.requirements.json` files are still v2-style requirement-only arrays (no `applicabilityGroups`, no `amocProvisions`, no negative aircraft/component adjudication cases), and the linked v3 reviews are explicitly documented as pending/incomplete.",
+    "evidence": [
+      ".ai/ad-calibration/README.md:1-8 states plainly: 'the linked records are new pending v3 reviews... The remaining four were never completed.'",
+      "Each of .ai/ad-calibration/{1998-17-11,2002-13-04,2008-26-10,2011-10-09,2024-14-03}.requirements.json parses as a bare JSON list of requirement objects (verified by inspection), not a complete `{applicabilityGroups, requirements, amocProvisions}` v3 packet."
+    ],
+    "impact": "No end-to-end proof yet exists that the shipped v3 schema/evaluator correctly reproduces the five targeted compliance structures (whichever-first, conditional branches, AMOC separation, etc.) against real source text with expected positive/negative outcomes, so the calibration cannot yet be used to validate reviewer behavior or catch regressions in `ad_recurrence.py`/`ad_matching.py` logic.",
+    "requiredClosure": "Complete the five v3 packets in the admin GUI (as the README already directs), including expected positive and negative aircraft/component adjudication outcomes for each, before relying on this set as calibration evidence for broader release."
+  },
+  {
+    "id": "T081-CC-004",
+    "severity": "low",
+    "invariant": "The review packet's prose (objective, current behavior, expected file scope) accurately reflects the reviewed working tree so a reviewer can trust the narrative without independently re-deriving the manifest.",
+    "summary": "The decision packet's prose is stale relative to the actual working tree: it states 'PostgreSQL is at `0023`' and lists 'migrations `20260822_0021`-`0023`' as the expected file scope, but the working tree contains a fourth, untracked migration `20260823_0024_bind_signed_ad_materialization.py` that is required to close T081-DA-4/DA-9(partially)/DC-2/DC-3, is the current alembic head, and is only discoverable via the JSON manifest, not the prose.",
+    "evidence": [
+      ".ai/review-runs/T081/review-packet.md:75 \u2014 'PostgreSQL is at `0023`'.",
+      ".ai/review-runs/T081/review-packet.md:232-236 \u2014 'Expected file scope' lists migrations `20260822_0021`-`0023` only.",
+      "backend/app/db/migrations/versions/20260823_0024_bind_signed_ad_materialization.py exists (untracked, `git status` shows `??`) and is the alembic head confirmed by `alembic current` after `run_alembic upgrade head` in scripts/verify-t081-postgres-migrations.sh."
+    ],
+    "impact": "A reviewer who trusts the prose summary (as the instructions otherwise encourage doing for framing) could under-scope review of the most consequential new migration in this slice, and could mistakenly believe the AMOC-envelope repair (DA-4/DC-2) is still unaddressed when it has in fact been implemented and tested in 0024.",
+    "requiredClosure": "Regenerate or hand-correct the decision-packet prose to name migration `0024` and its purpose, and update 'PostgreSQL is at' to the actual current head before the packet is used for closure sign-off."
+  }
+]

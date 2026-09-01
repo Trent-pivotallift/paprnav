@@ -26,7 +26,8 @@ Demo users:
 
 - Owner: `owner.demo@paprnav.local`
 - Maintenance shop: `shop.demo@paprnav.local`
-- Password for both: `demo-password`
+- Paprnav admin: `admin.demo@paprnav.local`
+- Password for all three: `demo-password`
 
 Seeded demo aircraft:
 

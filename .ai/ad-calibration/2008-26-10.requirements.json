@@ -1,0 +1,205 @@
+[
+  {
+    "requirementKey": "e-1-non-ifr-inspection",
+    "requirementType": "one_time",
+    "actionText": "For all affected airplanes that are not equipped for flight under instrument flight rules (IFR): Inspect the alternate static air source selector valve to assure that the part number identification placard is not obstructing the port.",
+    "initialThresholds": [
+      {
+        "metric": "total_time_hours",
+        "value": 100,
+        "unit": "hours",
+        "anchorKind": "effective_date",
+        "sourceText": "Within the next 100 hours time-in-service after January 5, 2009"
+      },
+      {
+        "metric": "calendar",
+        "value": 4,
+        "unit": "months",
+        "anchorKind": "effective_date",
+        "sourceText": "or within the next 4 months after January 5, 2009, whichever occurs first"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "whichever_first",
+    "conditions": [
+      "Affected airplane is not equipped for IFR flight."
+    ],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_37922ee632e24a23a5f0ecd1aa4809fe",
+        "pageNumber": 4,
+        "text": "For all affected airplanes that are not equipped for flight under instrument flight rules (IFR): Inspect the alternate static air source selector valve to assure that the part number identification placard is not obstructing the port."
+      }
+    ],
+    "confidence": 0.92,
+    "uncertaintyReasons": [
+      "Confirm how a usage-hour allowance anchored to a calendar effective date should map into the current threshold model."
+    ]
+  },
+  {
+    "requirementKey": "e-2-ifr-immediate-alternative",
+    "requirementType": "alternative",
+    "actionText": "Inspect the alternate static air source selector valve to assure that the part number identification placard is not obstructing the port; or fabricate a placard that incorporates the following words (using at least 1/8-inch letters) and install this placard on the instrument panel within the pilot's clear view: ‘IFR OPERATION IS PROHIBITED’ and ‘USE OF THE ALTERNATE STATIC AIR SOURCE IS PROHIBITED.’",
+    "initialThresholds": [
+      {
+        "metric": "calendar",
+        "value": 10,
+        "unit": "days",
+        "anchorKind": "effective_date",
+        "sourceText": "Inspect within the next 10 days after January 5, 2009; or install placards before further flight"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "alternative",
+    "conditions": [
+      "Affected airplane is equipped for IFR flight."
+    ],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_37922ee632e24a23a5f0ecd1aa4809fe",
+        "pageNumber": 4,
+        "text": "Inspect the alternate static air source selector valve to assure that the part number identification placard is not obstructing the port; or"
+      },
+      {
+        "sourceDocumentId": "asd_37922ee632e24a23a5f0ecd1aa4809fe",
+        "pageNumber": 4,
+        "text": "Fabricate a placard that incorporates the following words (using at least 1/8-inch letters) and install this placard on the instrument panel within the pilot's clear view: ‘IFR OPERATION IS PROHIBITED’ and ‘USE OF THE ALTERNATE STATIC AIR SOURCE IS PROHIBITED.’"
+      }
+    ],
+    "confidence": 0.78,
+    "uncertaintyReasons": [
+      "The current schema cannot bind a distinct deadline to each branch of one alternative requirement; decide whether alternative groups need first-class branch objects."
+    ]
+  },
+  {
+    "requirementKey": "e-3-temporary-placard-follow-up",
+    "requirementType": "conditional",
+    "actionText": "For all affected airplanes that are equipped for flight under instrument flight rules (IFR): If placards were installed in accordance with paragraph (e)(2)(ii) of this AD, inspect the alternate static air source selector valve to assure that the part number identification placard is not obstructing the port.",
+    "initialThresholds": [
+      {
+        "metric": "total_time_hours",
+        "value": 100,
+        "unit": "hours",
+        "anchorKind": "effective_date",
+        "sourceText": "Within the next 100 hours TIS after January 5, 2009"
+      },
+      {
+        "metric": "calendar",
+        "value": 4,
+        "unit": "months",
+        "anchorKind": "effective_date",
+        "sourceText": "or within the next 4 months after January 5, 2009, whichever occurs first"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "whichever_first",
+    "conditions": [
+      "Placards were installed under paragraph (e)(2)(ii)."
+    ],
+    "terminatingAction": "Complete the inspection and remove the temporary placards before further flight.",
+    "citations": [
+      {
+        "sourceDocumentId": "asd_37922ee632e24a23a5f0ecd1aa4809fe",
+        "pageNumber": 4,
+        "text": "For all affected airplanes that are equipped for flight under instrument flight rules (IFR): If placards were installed in accordance with paragraph (e)(2)(ii) of this AD, inspect the alternate static air source selector valve to assure that the part number identification placard is not obstructing the port."
+      }
+    ],
+    "confidence": 0.88,
+    "uncertaintyReasons": []
+  },
+  {
+    "requirementKey": "e-4-obstructed-port-correction",
+    "requirementType": "conditional",
+    "actionText": "For all affected airplanes: If the alternate static air source selector valve port is found obstructed by the part number identification placard during the inspection required in paragraphs (e)(1), (e)(2)(i), and (e)(3) of this AD, remove the placard from the valve body, discard the placard, and assure that the port is open and unobstructed.",
+    "initialThresholds": [],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [
+      "The selector-valve port is obstructed by the part-number identification placard."
+    ],
+    "terminatingAction": "Removal of the obstructing placard and verification of an open port resolves this finding.",
+    "citations": [
+      {
+        "sourceDocumentId": "asd_37922ee632e24a23a5f0ecd1aa4809fe",
+        "pageNumber": 4,
+        "text": "For all affected airplanes: If the alternate static air source selector valve port is found obstructed by the part number identification placard during the inspection required in paragraphs (e)(1), (e)(2)(i), and (e)(3) of this AD, remove the placard from the valve body, discard the placard, and assure that the port is open and unobstructed."
+      }
+    ],
+    "confidence": 0.96,
+    "uncertaintyReasons": []
+  },
+  {
+    "requirementKey": "e-5-replacement-valve-installation",
+    "requirementType": "installation_prohibition",
+    "actionText": "For all affected airplanes: When a replacement valve is needed, only install a P/N 2013142-18 alternate static air source selector valve that has been inspected and the port is found free from obstruction.",
+    "initialThresholds": [
+      {
+        "metric": "calendar",
+        "value": 10,
+        "unit": "days",
+        "anchorKind": "effective_date",
+        "sourceText": "As of 10 days after January 5, 2009"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [
+      "A replacement alternate static-air-source selector valve is needed."
+    ],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_37922ee632e24a23a5f0ecd1aa4809fe",
+        "pageNumber": 5,
+        "text": "For all affected airplanes: When a replacement valve is needed, only install a P/N 2013142-18 alternate static air source selector valve that has been inspected and the port is found free from obstruction."
+      }
+    ],
+    "confidence": 0.94,
+    "uncertaintyReasons": []
+  },
+  {
+    "requirementKey": "f-obstruction-report",
+    "requirementType": "conditional",
+    "actionText": "Report to the FAA the results of the inspection required by this AD where an obstruction was found.",
+    "initialThresholds": [
+      {
+        "metric": "calendar",
+        "value": 10,
+        "unit": "days",
+        "anchorKind": "last_compliance",
+        "sourceText": "Within 10 days after the inspection or 10 days after the effective date of this AD, whichever occurs later"
+      },
+      {
+        "metric": "calendar",
+        "value": 10,
+        "unit": "days",
+        "anchorKind": "effective_date",
+        "sourceText": "Within 10 days after the inspection or 10 days after the effective date of this AD, whichever occurs later"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "whichever_later",
+    "conditions": [
+      "An inspection required by the AD found an obstruction."
+    ],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_37922ee632e24a23a5f0ecd1aa4809fe",
+        "pageNumber": 5,
+        "text": "Report to the FAA the results of the inspection required by this AD where an obstruction was found."
+      },
+      {
+        "sourceDocumentId": "asd_3c7aa0ef184646e2b32b1171e44b4f7a",
+        "pageNumber": 2,
+        "text": "On page 78943, in the second column, in paragraph (f)(2), on line 3, change 1804 to 1801."
+      }
+    ],
+    "confidence": 0.86,
+    "uncertaintyReasons": [
+      "Confirm whether a reporting deadline belongs in aircraft due-state materialization or in a separate administrative-obligation class."
+    ]
+  }
+]

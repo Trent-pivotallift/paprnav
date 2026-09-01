@@ -6,7 +6,7 @@ import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import distinct, func, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.core import (
@@ -23,6 +23,7 @@ from app.models.core import (
 from app.core.config import get_settings
 from app.services.ad_applicability import get_or_create_target
 from app.services.ad_costs import record_ad_cost_entry
+from app.services.ad_release import released_signed_extractions
 
 
 @dataclass
@@ -178,19 +179,24 @@ def refresh_coverage_set(
         db,
         target,
     )
-    directive_count = db.scalar(
-        select(func.count(distinct(ADTargetApplicability.directive_id))).where(
-            ADTargetApplicability.target_id.in_(compatible_target_ids),
-            ADTargetApplicability.status == "current",
-        )
-    ) or 0
+    released_extractions = released_signed_extractions(db)
+    released_applicabilities = [
+        applicability
+        for extraction in released_extractions
+        for applicability in extraction.directive.target_applicabilities
+        if applicability.status == "current"
+        and applicability.source_extraction_id == extraction.id
+        and applicability.target_id in compatible_target_ids
+    ]
+    directive_count = len(
+        {applicability.directive_id for applicability in released_applicabilities}
+    )
     publication_ids = (
-        select(ADTargetApplicability.source_publication_id)
-        .where(
-            ADTargetApplicability.target_id.in_(compatible_target_ids),
-            ADTargetApplicability.source_publication_id.is_not(None),
-        )
-        .distinct()
+        {
+            applicability.source_publication_id
+            for applicability in released_applicabilities
+            if applicability.source_publication_id is not None
+        }
     )
     publication_rows = db.scalars(
         select(ADPublication).where(ADPublication.id.in_(publication_ids))

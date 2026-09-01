@@ -209,12 +209,15 @@ def get_or_create_entry(
 def seed(db: Session) -> None:
     owner_user = get_or_create_user(db, "owner.demo@paprnav.local", "Olivia Owner")
     maintenance_user = get_or_create_user(db, "shop.demo@paprnav.local", "Miles Mechanic")
+    admin_user = get_or_create_user(db, "admin.demo@paprnav.local", "Paprnav Admin")
 
     owner_org = get_or_create_organization(db, "Demo Owner Hangar", "owner")
     shop_org = get_or_create_organization(db, "Demo Maintenance Shop", "maintenance_shop")
+    platform_org = get_or_create_organization(db, "Paprnav Operations", "platform")
 
     get_or_create_membership(db, owner_org, owner_user, "owner_admin")
     get_or_create_membership(db, shop_org, maintenance_user, "maintenance_admin")
+    get_or_create_membership(db, platform_org, admin_user, "platform_admin")
 
     airframe = get_or_create_section(db, "airframe", "Airframe", 1)
     engine = get_or_create_section(db, "engine", "Engine", 2)

@@ -155,7 +155,7 @@ def test_incomplete_component_identity_prevents_current_coverage(
     )
 
 
-def test_model_coverage_includes_drs_manufacturer_successor_variants(
+def test_model_coverage_does_not_publish_unreviewed_drs_variants(
     db_session: Session,
     demo_data: dict[str, object],
 ) -> None:
@@ -203,7 +203,8 @@ def test_model_coverage_includes_drs_manufacturer_successor_variants(
         )
     )
     assert coverage is not None
-    assert coverage.directive_count == 2
+    assert coverage.directive_count == 0
+    assert coverage.status == "pending_applicability"
 
 
 def test_stale_snapshot_prevents_current_coverage(
@@ -249,9 +250,7 @@ def test_admin_ad_cost_summary_is_platform_only_and_separates_allocation(
         content_hash="d" * 64,
     )
     resolve_aircraft_ad_coverage(db_session, aircraft.id)
-    coverage = db_session.scalar(
-        select(ADCoverageSet).where(ADCoverageSet.status == "current")
-    )
+    coverage = db_session.scalar(select(ADCoverageSet))
     assert coverage is not None
     record_ad_cost_entry(
         db_session,
@@ -286,8 +285,10 @@ def test_admin_ad_cost_summary_is_platform_only_and_separates_allocation(
     assert Decimal(payload["totals"]["actualCostUsd"]) == Decimal("1.25000000")
     assert Decimal(payload["totals"]["allocatedCostUsd"]) == Decimal("0E-8")
     assert payload["totals"]["coverageSetCount"] == 3
-    current = next(item for item in payload["coverages"] if item["status"] == "current")
-    assert current["make"] == "Cessna"
-    assert current["model"] == "172R"
-    assert current["clients"][0]["nNumber"] == "N123AB"
-    assert current["clients"][0]["triggeredCreation"] is True
+    airframe_coverage = next(
+        item for item in payload["coverages"]
+        if item["make"] == "Cessna" and item["model"] == "172R"
+    )
+    assert airframe_coverage["status"] == "pending_applicability"
+    assert airframe_coverage["clients"][0]["nNumber"] == "N123AB"
+    assert airframe_coverage["clients"][0]["triggeredCreation"] is True

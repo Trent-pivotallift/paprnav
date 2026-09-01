@@ -1,0 +1,371 @@
+[
+  {
+    "id": "T081-V4-DA-001",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The design gate reviews a complete immutable packet that binds every proposed schema artifact.",
+    "summary": "The review packet omits the decision and detailed schema proposal from its manifest and digest.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/review-packet.md", ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md"],
+    "impact": "A review could remain recorded as current after the actual schema changed.",
+    "requiredClosure": "Hash and include the domain contract, decision, proposal, and relevant consumers in a rebuilt packet, then rerun design review.",
+    "closureEvidence": [
+      "scripts/build-review-packet.py:77 adds explicit review inputs; lines 149-151 bind their metadata into the scope fingerprint and manifest.",
+      "scripts/verify-review-packet.py:60-74 rehashes explicit review inputs and rejects a changed fingerprint.",
+      ".ai/review-runs/T081-V4-SCHEMA/manifest.json reviewInputs contains readable SHA-256 metadata for the decision, finding ledger, proposal, calibration index, and all five calibration packets.",
+      "Closure reviewer re-ran scripts/verify-review-packet.py against the final rebuilt packet and confirmed that the packet was current."
+    ]
+  },
+  {
+    "id": "T081-V4-DA-002",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Applicability and obligation branches have complete fail-closed semantics under true, false, and unknown inputs.",
+    "summary": "The proposed applicability and branch algebra does not define nested logic, multi-rule semantics, or conditional predicates.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:363", ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:372", ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:568"],
+    "impact": "Complex source logic can be silently broadened or narrowed and produce incorrect obligations.",
+    "requiredClosure": "Define typed Boolean and branch algebra, three-valued truth tables, evaluator versioning, relational representation, cycle rules, and calibration cases.",
+    "closureEvidence": [
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:387 defines a recursive typed expression AST, including ScopeRef, and a closed predicate set.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:422 defines complete Kleene T/F/U NOT, ALL, and ANY truth tables, explicit requirement activation and alternative-branch outcomes, evaluator version/trace, and cycle rules.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md calibration/negative-test sections require positive, false, and unknown branch cases."
+    ]
+  },
+  {
+    "id": "T081-V4-DA-003",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Every signed source clause is mechanically derived from immutable retained bytes and negative assertions are evidence-bound.",
+    "summary": "Evidence fragments can hash supplied text without a hash-bound page rendition, and fragment status conflicts with immutability.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:301", ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:422"],
+    "impact": "Inaccurate parser text or unsupported negative assertions can appear source-verified.",
+    "requiredClosure": "Define immutable page renditions/text versions, coordinate/offset and parser hash bindings, separate lifecycle events, and evidence rules for not-applicable values.",
+    "closureEvidence": [
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:518 defines immutable source-hash-bound page renditions, page-text/coordinate versions, and server-derived fragment selections.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md evidence section moves fragment lifecycle into append-only events and binds negative/not-applicable assertions to evidence.",
+      "The canonical example and three-valued schema now require reason, evidence keys, and temporal scope for not_applicable."
+    ]
+  },
+  {
+    "id": "T081-V4-DA-004",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Canonical V4 semantics and evidence round-trip losslessly through constrained PostgreSQL rows.",
+    "summary": "The relational sketch loses field-level state, temporal scope, and evidence and leaves matching semantics in opaque JSON.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:512", ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:568"],
+    "impact": "SQL NULL can regain safety meaning and matching may use ungoverned comparators or incomplete data.",
+    "requiredClosure": "Provide lossless field mappings and constraints, typed STC/series/identifier/temporal structures, value evidence, round-trip tests, and database-negative tests.",
+    "closureEvidence": [
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:637 defines field assertions and typed temporal, STC, series, identifier, logic-expression, and predicate tables with CHECK/FK/unique constraints.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md contains a field-by-field canonical-to-relational mapping and value-level evidence links.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:726-734 requires canonical row round-trip equality and direct database-negative tests."
+    ]
+  },
+  {
+    "id": "T081-V4-DA-005",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Unknown values have an explicit publication and automation consequence.",
+    "summary": "Candidate-only publication of reviewed unknowns is left as an unresolved domain question.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:722"],
+    "impact": "Implementations may either hide unresolved directives or expose them as automation-safe.",
+    "requiredClosure": "Obtain a domain-owner publication decision and enforce distinct eligibility states plus node-level automation gates.",
+    "closureEvidence": [
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:965 distinguishes candidate_only from released_actionable and forbids candidate-only released catalog, compliance, due, termination, or coverage effects.",
+      ".ai/AD_EXTRACTION_DOMAIN_CONTRACT.md records the domain-owner decision: reviewed explicit unknowns may be retained only for administrator and aircraft-specific discovery as Uncertain—human determination required.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:965 enforces that candidate-only records never enter the released catalog or produce affirmative applicability, compliance, termination credit, next-due values, or coverage; missing minimum identity/evidence/applicability/obligation remains remediation-only."
+    ]
+  },
+  {
+    "id": "T081-V4-DA-006",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Real source-complete calibration proves every regulatory structure claimed by the design.",
+    "summary": "The proposal provides an illustrative incomplete JSON and future assertions, not source-complete gold packets.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:41", ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:819", ".ai/AD_EXTRACTION_DOMAIN_CONTRACT.md:384"],
+    "impact": "The third redesign remains unproven against real applicability, timing, branch, STC, service-bulletin, AMOC, and correction patterns.",
+    "requiredClosure": "Create source-complete V4 gold packets with expected queries and positive and negative aircraft/component outcomes.",
+    "closureEvidence": [
+      ".ai/AD_EXTRACTION_DOMAIN_CONTRACT.md version 1.1 records the domain-owner clarification that retained incorporated bulletins and actual aircraft-specific AMOC-use records are administrator-ingested supporting evidence, not required artifacts in the initial five-packet set.",
+      ".ai/review-runs/T081-V4-SCHEMA/calibration/INDEX.md and five source-accounted packets provide expected searches plus positive and negative AD cases; retained source integrity is 6 passed out of 6 and evidence-key resolution is 5 passed out of 5.",
+      ".ai/review-runs/T081-V4-SCHEMA/calibration/INDEX.md defines five initial absence/unverified structural scenarios: immutable bytes/hash/source attribution, scoped admin ingestion, independent human review, candidate-only fail-closed behavior, possible AMOC—unverified, invalidation on changed input, and deterministic replay of unchanged signed inputs.",
+      ".ai/review-runs/T081-V4-SCHEMA/calibration/2008-26-10.md source-completely identifies four unretained incorporated bulletins and proves that dependent method verification remains candidate-only; it explicitly separates general AMOC authority from actual aircraft-specific use.",
+      ".ai/review-runs/T081-V4-SCHEMA/decision.md and codex-schema-proposal.md revise the initial gate: source-contained AD patterns are required now, absent/unverified supporting evidence must fail closed, and future lawfully retained real bulletin/AMOC-use examples become regression fixtures when available.",
+      "Positive real-artifact fixtures remain 0 available out of 2 and are not claimed as passed.",
+      "Independent closure review verified the hash-bound contract 1.1 clarification, the five falsifiable absence/unverified workflow scenarios, and the proposal's authorization, provenance, immutable-retention, independent-review, invalidation, and deterministic-replay requirements.",
+      "Independent visual inspection of retained E8-30465.pdf page 6 confirmed the four incorporated bulletin identities and general AD-level AMOC language represented by the 2008-26-10 packet; no aircraft-specific AMOC-use record or retained bulletin content is claimed."
+    ]
+  },
+  {
+    "id": "T081-V4-DA-007",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Correction, supersession, invalidation, selection, and rollback are immutable auditable state transitions.",
+    "summary": "Lifecycle status is mutable and rollback eligibility lacks explicit events, edges, and transactional rules.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:469", ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:780"],
+    "impact": "Known-stale decisions or projections can be resurrected after correction, rollback, or concurrency.",
+    "requiredClosure": "Define immutable lifecycle events and edges, compare-and-swap selection, one-current constraints, rollback eligibility, and failure-injection tests.",
+    "closureEvidence": [
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:1089 defines immutable lifecycle/invalidation/relationship events, deterministic folded states, permitted transitions, CAS selection, and one-current-generation constraints.",
+      "The correction/rollback section freezes new V3 approvals, prohibits corrected-V4 fallback to V3, and specifies failure-injection rehearsal at transaction boundaries."
+    ]
+  },
+  {
+    "id": "T081-V4-DA-008",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every signoff preserves the exact membership or aircraft assignment that authorized it.",
+    "summary": "Reviewer identity and role do not preserve an attributable authorization snapshot or self-review policy.",
+    "evidence": [".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:477", "backend/app/api/routes/admin.py:19", "backend/app/api/routes/aircraft.py:87"],
+    "impact": "Later audit cannot prove the authority scope under which a decision was made.",
+    "requiredClosure": "Bind signoffs to membership/assignment IDs and snapshots, define scope and self-review policy, append determinations, and test authorization/concurrency.",
+    "closureEvidence": [
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:1001 binds every signoff to membership and aircraft-assignment IDs plus immutable authorization snapshots and policy version.",
+      "The provisional policy defines global/aircraft scope, single-signoff behavior, prohibited self-review, append-only correction, server-side API enforcement, concurrency, and negative authorization tests."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "An implementation review must be performed against a current immutable packet that binds the implemented-slice declaration and governing design.",
+    "summary": "The implementation packet does not hash-bind either implementation-slice-1.md or codex-schema-proposal.md as review inputs.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA/manifest.json reviewInputs contains only decision.md and findings.json",
+      ".ai/review-runs/T081-V4-SCHEMA/implementation-slice-1.md",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md"
+    ],
+    "impact": "The claimed boundary, deferrals, and verification totals—or the governing design—can change without invalidating packet freshness, so the implementation decision is not reproducible.",
+    "requiredClosure": "Rebuild the implementation packet with the slice declaration and governing proposal as explicit review inputs, verify the new fingerprint, and rerun implementation review against only that packet.",
+    "closureEvidence": [
+      "The implementation packet build explicitly binds .ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md and implementation-slice-1.md in addition to decision.md and findings.json.",
+      "The final manifest records readable SHA-256 metadata for all four review inputs and scripts/verify-review-packet.py verifies their current bytes and scope fingerprint.",
+      "Independent closure review verified the refreshed implementation packet as current with fingerprint 090ebfd5058adce0695b7fd91d425b0aa6dea47d60ca67d6580fe94172f90c1d."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "PostgreSQL must prevent an immutable evidence fragment from being attributed to a directive, retained document, content hash, rendition, text version, or page other than the source from which its exact text was derived.",
+    "summary": "Migration 0025 uses independent foreign keys and unconstrained copied identity fields, so direct SQL can create internally inconsistent, permanently immutable evidence.",
+    "evidence": [
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:50 binds a rendition only to source_document_id, not to that document's content_hash",
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:120-123 independently bind directive_id, source_document_id, page_text_version_id, and actor while source_content_hash/page_start remain copied values",
+      "No composite FK or constraint binds fragment directive/document to an ADPublication pair, fragment document/hash/page to its text-version rendition, or rendition hash to the retained-document hash"
+    ],
+    "impact": "A future script, migration, or SQL caller can admit wrong-document or wrong-page regulatory wording that the immutable triggers then prevent operators from correcting in place.",
+    "requiredClosure": "Add relationally enforceable composite identities/FKs or deferred constraint triggers for document/content hash, publication attribution, rendition/text/page, offsets/exact-text/hash integrity; add direct PostgreSQL negative tests for every mismatch.",
+    "closureEvidence": [
+      "Migration 20260830_0025 and backend/app/models/core.py add candidate keys and composite FKs from retained document/hash through rendition, text version, page, fragment, and directive/document publication attribution.",
+      "Migration triggers validate page-text SHA-256, exact offset-derived fragment text, and the canonical server fragment hash before insert.",
+      "backend/tests/test_ad_evidence_postgres.py rejects a direct-SQL source-chain mismatch; isolated PostgreSQL verification passed 2 out of 2 pending independent review.",
+    "Closure-2 PostgreSQL replay passed 2 out of 2 and now also rejects out-of-bounds selectors plus parser provenance that differs from the referenced text version.",
+    "Coordinator independently reran the current narrow suite against fresh migration-0025 PostgreSQL and obtained 2 passed out of 2 in 1.62 seconds."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Fragment lifecycle is an append-only, cryptographically linked state machine with exactly one valid admission root and no usable fragment lacking that root.",
+    "summary": "Lifecycle predecessor and event hashes have only length/uniqueness checks, and fragment reuse does not verify a valid admitted event.",
+    "evidence": [
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:147-159 permits any 64-character event_hash and predecessor_event_hash without a predecessor FK, same-fragment chain rule, root rule, sequence rule, or server hash validation",
+      "backend/app/services/ad_evidence.py:318-321 returns an existing fragment before verifying that an admitted lifecycle event exists",
+      "backend/tests/test_ad_evidence_postgres.py:150-184 checks counts and fragment immutability but does not reject forged/orphan lifecycle rows"
+    ],
+    "impact": "PostgreSQL can contain a fragment with no admission, multiple roots, a predecessor from another fragment, or a fabricated hash; the service can still return such a fragment as admitted evidence.",
+    "requiredClosure": "Enforce the lifecycle graph and canonical event identity in PostgreSQL (or reduce the contract to a constrained admission record), require a valid admission root on reuse, and add direct-SQL negative and concurrent transition tests.",
+    "closureEvidence": [
+      "Migration 20260830_0025 enforces one admitted root, sequence uniqueness, same-fragment predecessor identity, predecessor sequence, canonical event hashing, and a deferred fragment-must-have-admission constraint.",
+      "backend/app/services/ad_evidence.py recomputes and validates the canonical admitted root before reusing a fragment and fails closed with fragment_not_admitted.",
+      "PostgreSQL tests reject forged event hashes and otherwise valid orphan fragments; API tests reject reuse after a missing root.",
+      "Closure-2 isolated PostgreSQL replay completed 2 passed out of 2 with explicit subprocess/future timeouts.",
+    "Closure-3 adds and executes the two previously missing cases: a cross-fragment predecessor is rejected, and two concurrent sequence-1 successors yield exactly one committed canonical transition and one database rejection; fresh isolated PostgreSQL suite passed 2 out of 2 in 1.71 seconds.",
+    "Coordinator independently reran that updated suite on paprnav_t081_v4_coord_20260830b: 2 passed out of 2 in 1.62 seconds; the exact database was dropped and zero paprnav_t081_v4_% databases remained."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-004",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "A downgrade must never delete retained regulatory evidence, including evidence committed concurrently with downgrade preflight.",
+    "summary": "The occupied-downgrade preflight reads the four tables without locking them against concurrent inserts before destructive DROP statements.",
+    "evidence": [
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:186-193 performs unlocked EXISTS checks",
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:200-222 then removes triggers and drops all four tables",
+      "backend/tests/test_ad_evidence_postgres.py contains admission concurrency only; it does not race admission against downgrade"
+    ],
+    "impact": "An admission that commits after the empty check but before DROP obtains its lock can be silently destroyed despite the migration's stated fail-safe guarantee.",
+    "requiredClosure": "Acquire transaction-scoped table locks that exclude inserts before checking emptiness and retain them through DROP, then add a two-session downgrade/admission race test proving either downgrade refuses or admission cannot commit into a dropped slice.",
+    "closureEvidence": [
+      "Migration downgrade acquires ACCESS EXCLUSIVE locks on all four evidence tables before the emptiness check and retains them through DROP in the migration transaction.",
+      "The two-session PostgreSQL race holds an uncommitted evidence insert, starts Alembic downgrade, proves downgrade waits, commits evidence, and proves downgrade refuses while revision remains 20260830_0025.",
+    "Closure-2 isolated PostgreSQL replay completed the downgrade race within the focused 2 passed out of 2 run.",
+    "Coordinator independent current-suite execution passed the two-session downgrade refusal and evidence-preservation assertions."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-005",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "An admitted rendition identity must describe bytes actually readable from retained storage, not merely bytes acknowledged by the storage write call.",
+    "summary": "A newly written PNG is not read back and rehashed before its immutable database row is created.",
+    "evidence": [
+      "backend/app/services/ad_evidence.py:180-218 accepts store_bytes metadata and immediately flushes the rendition row",
+      "backend/app/services/ad_evidence.py:219-220 invokes _verified_rendition_bytes only when reusing an existing rendition"
+    ],
+    "impact": "A storage adapter that acknowledges a short, missing, or corrupted write can leave an immutable database chain claiming a rendition that cannot later be verified or displayed.",
+    "requiredClosure": "Read the newly stored object through the configured backend and verify PNG signature, byte count, and SHA-256 before persisting the rendition row; add a write-acknowledged/read-corrupt counterexample test.",
+    "closureEvidence": [
+      "backend/app/services/ad_evidence.py reads each new rendition through the configured backend and verifies SHA-256, byte count, PNG structure, and dimensions before flushing an immutable row.",
+      "test_new_rendition_requires_successful_storage_readback supplies a write-acknowledged/read-corrupt counterexample and proves no rendition row is persisted.",
+      "Independent closure review ran tests/test_ad_evidence_fragments.py: 5 passed out of 5, including the corrupt-new-rendition read-back counterexample."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-006",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Migration and PostgreSQL claims must be exercised by a current, runnable harness covering the actual head and every immutable evidence table.",
+    "summary": "The repository migration verifier still requires revision 0024, while the focused PostgreSQL test is opt-in and verifies UPDATE/DELETE rejection only for the fragment table.",
+    "evidence": [
+      "scripts/verify-t081-postgres-migrations.sh:97,103,139,153,170,205 hard-code 20260823_0024 even though 0025 is now head",
+      "backend/tests/test_ad_evidence_postgres.py:32-35 skips unless PAPRNAV_TEST_POSTGRES_URL is supplied",
+      "backend/tests/test_ad_evidence_postgres.py:172-184 exercises mutation rejection only on ADEvidenceFragment",
+      "Independent run: test_ad_evidence_fragments.py passed 3 out of 3; test_ad_evidence_postgres.py skipped 1 out of 1 because no PostgreSQL URL was supplied"
+    ],
+    "impact": "The checked-in verification path cannot substantiate the slice's migration-head and four-table immutability claims, and can fail for the wrong expected revision after a successful upgrade.",
+    "requiredClosure": "Update the isolated migration harness to 0025, exercise occupied/empty/re-upgrade and downgrade concurrency, and assert UPDATE/DELETE rejection on rendition, text version, fragment, and lifecycle tables in PostgreSQL CI.",
+    "closureEvidence": [
+      "scripts/verify-t081-postgres-migrations.sh now uses disposable current-image containers, expects head 20260830_0025, invokes the focused PostgreSQL verifier, and reports 14 passed out of 14 when fully executed.",
+      "backend/tests/test_ad_evidence_postgres.py rejects UPDATE and DELETE on all four evidence tables and covers direct-SQL mismatch, forged lifecycle, orphan fragment, admission concurrency, and downgrade concurrency.",
+      "Direct isolated verification: 2 passed out of 2 PostgreSQL tests; 4 passed out of 4 migration legs; full wrapper execution remains for independent verification because the desktop sandbox blocks nested Docker from a shell wrapper.",
+    "scripts/verify-t081-v4-slice1-postgres.py provides a slice-only seven-phase verifier with a 170-second total ceiling, per-command timeouts, and unconditional isolated-database cleanup; direct closure-2 execution of its missing PostgreSQL proof passed 2 out of 2.",
+    "Coordinator independently upgraded a fresh explicit database through 0025, ran the current focused suite with 2 passed out of 2 in 1.62 seconds, dropped it, and verified zero matching temporary databases; paprnav_db was untouched."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-007",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "State-changing, storage-creating operations use explicit mutation semantics so navigation, prefetch, retry, and caches cannot create regulatory artifacts unexpectedly.",
+    "summary": "The page-evidence GET endpoint renders, stores, inserts, and commits immutable artifacts.",
+    "evidence": [
+      "backend/app/api/routes/ads.py:160-183 exposes materialize_source_page under GET and commits",
+      ".ai/review-runs/T081-V4-SCHEMA/implementation-slice-1.md acknowledges page materialization is a write even though exposed as a page-read helper"
+    ],
+    "impact": "Authorized browser prefetch, retries, or intermediaries can incur rendering/storage/database writes without an explicit reviewer mutation action.",
+    "requiredClosure": "Make materialization an idempotent POST (or split read from explicit create), retain platform-admin authorization, and test that ordinary GET/navigation is side-effect free.",
+    "closureEvidence": [
+      "Materialization moved to POST /source-documents/{id}/pages/{page}/materialization with the platform-admin gate and idempotent service behavior.",
+      "GET /source-documents/{id}/pages/{page} now only verifies and returns existing artifacts, returns 404 before materialization, and performs no storage or database writes.",
+      "Focused API tests prove GET side-effect freedom and maintenance-shop denial.",
+      "Independent closure review ran tests/test_ad_evidence_fragments.py: 5 passed out of 5; the initial GET returned 404 with zero rendition rows, explicit POST materialized, and subsequent GET returned the existing verified artifact."
+    ]
+  },
+  {
+    "id": "T081-V4-IA-008",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "PostgreSQL must enforce that every fragment selector is wholly within its immutable page text and that recorded parser provenance matches the selected text version.",
+    "summary": "The new fragment trigger accepts an out-of-bounds character_end because PostgreSQL substring truncates at end-of-text, and it does not bind parser_name/parser_version to the text version.",
+    "evidence": [
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:303-306 derives expected_text with substring but never checks character_end <= char_length(authoritative_text)",
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:310-317 includes the claimed out-of-bounds character_end in the hash while hashing the silently truncated exact_text",
+      "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py:286-323 never compares fragment parser_name/parser_version with the referenced text version, and those fields are absent from the canonical fragment hash",
+      "backend/app/services/ad_evidence.py:443 enforces the upper bound only in the service path; the accepted design and IA-002 closure require direct-database negative enforcement"
+    ],
+    "impact": "Direct SQL can create and admit an immutable fragment whose declared selector extends beyond its source and whose extraction provenance is false, while all current fragment/hash triggers accept it.",
+    "requiredClosure": "Reject character_end greater than the authoritative page-text length in PostgreSQL, bind parser provenance to the referenced text version (or remove the copied fields), include any retained provenance in canonical identity, and add direct-SQL negative tests for out-of-bounds selectors and parser mismatch.",
+    "closureEvidence": [
+      "Migration 20260830_0025 now rejects character_end greater than char_length of the authoritative page text before PostgreSQL substring can truncate it.",
+      "The fragment trigger requires parser_name/parser_version to equal the referenced text-version extractor and includes both fields in the canonical hash; backend/app/services/ad_evidence.py computes the same identity.",
+    "backend/tests/test_ad_evidence_postgres.py contains direct-SQL overlong-selector and forged-parser counterexamples; isolated closure-2 PostgreSQL verification passed 2 out of 2.",
+      "Coordinator independent current-suite execution passed both direct-SQL counterexamples as part of 2 passed out of 2 in 1.62 seconds."
+    ]
+  },
+  {
+    "id": "T081-V4-CA-001",
+    "stage": "closure",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The supported final validator must reproduce the same hash-bound packet fingerprint as packet construction and packet verification before a review run can enter the closed state.",
+    "summary": "validate-review-run.py omits explicit reviewInputs when recomputing the fingerprint, so it rejects the current closure packet that verify-review-packet.py accepts.",
+    "evidence": [
+      "Closure packet verification passed at fingerprint 6c63fa80c0ab7c14a2aa25cfabdc26c20c43a006aa0af9ff19251b7a275c16dd",
+      "scripts/build-review-packet.py:149 computes scopeFingerprint over files + review_inputs",
+      "scripts/verify-review-packet.py:60-74 rehashes manifest reviewInputs and reproduces the packet fingerprint",
+      "scripts/validate-review-run.py:58-75 hashes only changed inventory files and omits manifest reviewInputs",
+      "Independent pre-closure invocation of scripts/validate-review-run.py reported `working tree changed after packet generation` alongside the expected absence of closure PASS/closed state"
+    ],
+    "impact": "Recording closure PASS would change state to closed but the repository's required final validator would still reject the review run, making formal closure internally contradictory and unverifiable.",
+    "requiredClosure": "Make validate-review-run.py reproduce the build/verify review-input fingerprint algorithm, add a regression test with explicit review inputs, rebuild and verify the closure packet, then perform a new independent closure review.",
+    "closureEvidence": [
+      "scripts/review_packet_fingerprint.py now provides the canonical scope_fingerprint and current_scope_fingerprint paths used by packet construction, packet verification, and final run validation; current reconstruction includes ordered manifest reviewInputs.",
+      "scripts/tests/test_review_packet_fingerprint.py proves build, verify, and validate agree with an explicit review input and that both verification paths reject a subsequent change to that input; 2 passed out of 2.",
+      "Python compilation passed for the shared helper, all three consumers, and the regression test. Independent closure verification remains required before this finding can close.",
+      "Independent closure reviewer ran the regression suite with backend/.venv: 2 passed out of 2 in 0.71 seconds; compilation passed 5 out of 5 Python files and git diff --check passed.",
+      "Independent closure reviewer verified the refreshed closure packet as current at fingerprint 1ee1ad81f1d593fb80419598ddf743e4401f74c77e3aafb01f8da32d0266f21e and confirmed validate-review-run no longer reports fingerprint drift before closure attestation."
+    ]
+  },
+  {
+    "id": "T081-V4-CA-002",
+    "stage": "closure",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "A supported closure workflow must allow a new independent attestation against the packet rebuilt after a closure finding is dispositioned, without manual mutation of immutable review history or state.",
+    "summary": "Closing hash-bound CA-001 after packet review made the packet stale, but record-review.py moved state to closed and refuses a replacement closure attestation from that phase.",
+    "evidence": [
+      "CA-001 was fixed_pending_verification in packet 1ee1ad81f1d593fb80419598ddf743e4401f74c77e3aafb01f8da32d0266f21e; independent review then changed its hash-bound findings.json status to closed before recording closure PASS",
+      "scripts/record-review.py recorded the closure PASS and transitioned state directly from implementation_reviewed to closed",
+      "The immediately following scripts/validate-review-run.py invocation failed only with `working tree changed after packet generation`",
+      "Rebuilding now would create a new scope fingerprint, but scripts/record-review.py:45 permits a closure review only when phase equals implementation_reviewed and therefore offers no supported closed-state re-attestation",
+      "The existing review record and state have not been manually rewritten or removed"
+    ],
+    "impact": "The run says closed while its required final validator rejects it; the coordinator cannot restore a valid hash-bound closure using supported immutable review tooling.",
+    "requiredClosure": "Add a supported closed-state closure re-attestation path that requires an existing closure PASS, a newly current closure-stage packet, a new immutable artifact, independent reviewer/builder separation, and append-only review history. On re-attestation PASS keep state closed; on FAIL reopen to implementation_reviewed. Add positive and negative tests for phase eligibility, stale/current fingerprint handling, artifact immutability, reviewer separation, state results, and final validator acceptance; rebuild the packet and obtain a new independent closure attestation.",
+    "closureEvidence": [
+      "scripts/record-review.py now exposes explicit --reattest and permits closure PASS or FAIL only when state is already closed, a prior closure PASS exists, reviewer and builder differ, the artifact path is new, the closure-stage packet bytes are unchanged, the out-of-scope inventory is unchanged, and the canonical current fingerprint matches the manifest.",
+      "A PASS re-attestation appends a review record with reattest=true and leaves state closed; a FAIL re-attestation appends the immutable failure and transitions state to implementation_reviewed. Design and implementation re-attestation remain rejected.",
+      "scripts/tests/test_review_packet_fingerprint.py covers valid append-only closed-state PASS and final-validator acceptance, FAIL reopening, stale FAIL packet without reopening, missing prior PASS, non-closed phase, wrong stage, reviewer/builder identity equality, and reused FAIL artifact without reopening; 10 passed out of 10.",
+      "Python compilation passed for the canonical helper, build/verify/validate/record consumers, and the regression test. Independent closure verification and a fresh external re-attestation remain required before this finding can close.",
+      "Independent phase-1 closure verification against packet 1f642ac865a6173e49f6045226a5cb868659d5656d7d806856e837a92f0af0d0 passed the complete regression suite 10 out of 10 in 2.54 seconds, compilation 3 out of 3, packet freshness 1 out of 1, and git diff --check.",
+      "Independent inspection verified that current FAIL re-attestation appends immutable closure history then reopens to implementation_reviewed, while stale/reused FAIL attempts append nothing and leave state closed; PASS appends and preserves closed."
+    ]
+  }
+]

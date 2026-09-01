@@ -3,7 +3,7 @@ from datetime import date as PythonDate
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, ForeignKeyConstraint, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -504,6 +504,7 @@ class ADSourceDocument(TimestampMixin, Base):
             "content_hash",
             name="uq_ad_source_document_version",
         ),
+        UniqueConstraint("id", "content_hash", name="uq_ad_source_document_id_content_hash"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("asd"))
@@ -529,6 +530,249 @@ class ADSourceDocument(TimestampMixin, Base):
 
     source_snapshot = relationship("ADSourceSnapshot", back_populates="source_documents")
     publications = relationship("ADPublication", back_populates="source_document")
+    page_renditions = relationship("ADSourcePageRendition", back_populates="source_document")
+    evidence_fragments = relationship(
+        "ADEvidenceFragment", back_populates="source_document", viewonly=True
+    )
+
+
+class ADSourcePageRendition(Base):
+    """Immutable, content-addressed rendering of one retained source page."""
+
+    __tablename__ = "ad_source_page_renditions"
+    __table_args__ = (
+        CheckConstraint("page_number >= 1", name="ck_ad_source_page_rendition_page_number"),
+        CheckConstraint("storage_bytes > 0", name="ck_ad_source_page_rendition_storage_bytes"),
+        CheckConstraint("width_px > 0 AND height_px > 0", name="ck_ad_source_page_rendition_dimensions"),
+        CheckConstraint("length(source_content_hash) = 64", name="ck_ad_source_page_rendition_source_hash"),
+        CheckConstraint("length(renderer_configuration_hash) = 64", name="ck_ad_source_page_rendition_config_hash"),
+        CheckConstraint("length(rendition_hash) = 64", name="ck_ad_source_page_rendition_hash"),
+        ForeignKeyConstraint(
+            ["source_document_id", "source_content_hash"],
+            ["ad_source_documents.id", "ad_source_documents.content_hash"],
+            name="fk_ad_source_page_rendition_document_hash",
+        ),
+        UniqueConstraint(
+            "id", "source_document_id", "source_content_hash", "page_number",
+            name="uq_ad_source_page_rendition_chain",
+        ),
+        UniqueConstraint(
+            "source_document_id",
+            "source_content_hash",
+            "page_number",
+            "renderer_configuration_hash",
+            name="uq_ad_source_page_rendition_identity",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("asr"))
+    source_document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    source_content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    renderer_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    renderer_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    renderer_configuration_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    media_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    width_px: Mapped[int] = mapped_column(Integer, nullable=False)
+    height_px: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_backend: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(1024), nullable=False)
+    rendition_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    storage_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    source_document = relationship("ADSourceDocument", back_populates="page_renditions")
+    text_versions = relationship("ADSourcePageTextVersion", back_populates="rendition")
+
+
+class ADSourcePageTextVersion(Base):
+    """Immutable server-derived text bound to an immutable page rendition."""
+
+    __tablename__ = "ad_source_page_text_versions"
+    __table_args__ = (
+        CheckConstraint("length(extractor_configuration_hash) = 64", name="ck_ad_source_page_text_config_hash"),
+        CheckConstraint("length(text_hash) = 64", name="ck_ad_source_page_text_hash"),
+        ForeignKeyConstraint(
+            ["rendition_id", "source_document_id", "source_content_hash", "page_number"],
+            [
+                "ad_source_page_renditions.id",
+                "ad_source_page_renditions.source_document_id",
+                "ad_source_page_renditions.source_content_hash",
+                "ad_source_page_renditions.page_number",
+            ],
+            name="fk_ad_source_page_text_rendition_chain",
+        ),
+        UniqueConstraint(
+            "id", "rendition_id", "source_document_id", "source_content_hash", "page_number",
+            name="uq_ad_source_page_text_chain",
+        ),
+        UniqueConstraint(
+            "rendition_id",
+            "extractor_configuration_hash",
+            "text_hash",
+            name="uq_ad_source_page_text_version_identity",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ast"))
+    rendition_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    source_document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    source_content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    extractor_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    extractor_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    extractor_configuration_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    page_text: Mapped[str] = mapped_column(Text, nullable=False)
+    text_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    coordinate_map_storage_key: Mapped[str] = mapped_column(String(1024), nullable=True)
+    coordinate_map_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    extraction_quality: Mapped[float] = mapped_column(Float, nullable=True)
+    text_classification: Mapped[str] = mapped_column(String(64), nullable=False, default="native")
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    rendition = relationship("ADSourcePageRendition", back_populates="text_versions")
+    evidence_fragments = relationship(
+        "ADEvidenceFragment", back_populates="page_text_version", viewonly=True
+    )
+
+
+class ADEvidenceFragment(Base):
+    """One immutable exact clause; semantic consumers reference this row."""
+
+    __tablename__ = "ad_evidence_fragments"
+    __table_args__ = (
+        CheckConstraint("page_start >= 1", name="ck_ad_evidence_fragment_page_start"),
+        CheckConstraint("page_end = page_start", name="ck_ad_evidence_fragment_single_page"),
+        CheckConstraint("character_start >= 0", name="ck_ad_evidence_fragment_character_start"),
+        CheckConstraint("character_end > character_start", name="ck_ad_evidence_fragment_character_end"),
+        CheckConstraint("length(source_content_hash) = 64", name="ck_ad_evidence_fragment_source_hash"),
+        CheckConstraint("length(fragment_hash) = 64", name="ck_ad_evidence_fragment_hash"),
+        CheckConstraint("length(exact_text) > 0", name="ck_ad_evidence_fragment_exact_text"),
+        ForeignKeyConstraint(
+            ["directive_id", "source_document_id"],
+            ["ad_publications.directive_id", "ad_publications.source_document_id"],
+            name="fk_ad_evidence_fragment_publication",
+        ),
+        ForeignKeyConstraint(
+            ["source_document_id", "source_content_hash"],
+            ["ad_source_documents.id", "ad_source_documents.content_hash"],
+            name="fk_ad_evidence_fragment_document_hash",
+        ),
+        ForeignKeyConstraint(
+            [
+                "page_text_version_id", "rendition_id", "source_document_id",
+                "source_content_hash", "page_start",
+            ],
+            [
+                "ad_source_page_text_versions.id", "ad_source_page_text_versions.rendition_id",
+                "ad_source_page_text_versions.source_document_id",
+                "ad_source_page_text_versions.source_content_hash",
+                "ad_source_page_text_versions.page_number",
+            ],
+            name="fk_ad_evidence_fragment_text_chain",
+        ),
+        UniqueConstraint(
+            "page_text_version_id",
+            "character_start",
+            "character_end",
+            "paragraph_locator",
+            "table_locator",
+            "row_locator",
+            "note_locator",
+            name="uq_ad_evidence_fragment_selection",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("aef"))
+    directive_id: Mapped[str] = mapped_column(
+        ForeignKey("airworthiness_directives.id"), nullable=False, index=True
+    )
+    source_document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    source_content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    rendition_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    page_text_version_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    page_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    page_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    paragraph_locator: Mapped[str] = mapped_column(String(255), nullable=True)
+    table_locator: Mapped[str] = mapped_column(String(255), nullable=True)
+    row_locator: Mapped[str] = mapped_column(String(255), nullable=True)
+    note_locator: Mapped[str] = mapped_column(String(255), nullable=True)
+    character_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    character_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    region_map_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    exact_text: Mapped[str] = mapped_column(Text, nullable=False)
+    fragment_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    parser_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    parser_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    source_document = relationship(
+        "ADSourceDocument", back_populates="evidence_fragments", viewonly=True
+    )
+    directive = relationship("AirworthinessDirective", back_populates="evidence_fragments")
+    page_text_version = relationship(
+        "ADSourcePageTextVersion", back_populates="evidence_fragments", viewonly=True
+    )
+    created_by = relationship("User")
+    lifecycle_events = relationship("ADEvidenceFragmentLifecycleEvent", back_populates="fragment")
+
+
+class ADEvidenceFragmentLifecycleEvent(Base):
+    """Append-only fragment usability history; fragments have no mutable status."""
+
+    __tablename__ = "ad_evidence_fragment_lifecycle_events"
+    __table_args__ = (
+        CheckConstraint(
+            "event_type IN ('admitted', 'superseded', 'quarantined')",
+            name="ck_ad_evidence_fragment_lifecycle_event_type",
+        ),
+        CheckConstraint("length(event_hash) = 64", name="ck_ad_evidence_fragment_event_hash"),
+        CheckConstraint(
+            "predecessor_event_hash IS NULL OR length(predecessor_event_hash) = 64",
+            name="ck_ad_evidence_fragment_predecessor_hash",
+        ),
+        CheckConstraint("sequence_number >= 0", name="ck_ad_evidence_fragment_event_sequence"),
+        CheckConstraint(
+            "(event_type = 'admitted' AND sequence_number = 0 AND predecessor_event_hash IS NULL) "
+            "OR (event_type <> 'admitted' AND sequence_number > 0 AND predecessor_event_hash IS NOT NULL)",
+            name="ck_ad_evidence_fragment_event_root",
+        ),
+        ForeignKeyConstraint(
+            ["fragment_id", "predecessor_event_hash"],
+            ["ad_evidence_fragment_lifecycle_events.fragment_id", "ad_evidence_fragment_lifecycle_events.event_hash"],
+            name="fk_ad_evidence_fragment_event_predecessor",
+        ),
+        UniqueConstraint(
+            "fragment_id", "event_hash", name="uq_ad_evidence_fragment_event_chain_identity"
+        ),
+        UniqueConstraint(
+            "fragment_id", "sequence_number", name="uq_ad_evidence_fragment_event_sequence"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("afe"))
+    fragment_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_evidence_fragments.id"), nullable=False, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    predecessor_event_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    event_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    occurred_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    fragment = relationship("ADEvidenceFragment", back_populates="lifecycle_events")
+    actor = relationship("User")
 
 
 class AirworthinessDirective(TimestampMixin, Base):
@@ -553,8 +797,10 @@ class AirworthinessDirective(TimestampMixin, Base):
     extractions = relationship("ADExtraction", back_populates="directive")
     match_results = relationship("ADMatchResult", back_populates="directive")
     publications = relationship("ADPublication", back_populates="directive")
+    evidence_fragments = relationship("ADEvidenceFragment", back_populates="directive")
     target_applicabilities = relationship("ADTargetApplicability", back_populates="directive")
     compliance_requirements = relationship("ADComplianceRequirement", back_populates="directive")
+    amoc_provisions = relationship("ADAMOCProvision", back_populates="directive")
     supersedes_edges = relationship(
         "ADSupersession",
         foreign_keys="ADSupersession.superseding_ad_id",
@@ -624,6 +870,10 @@ class ADPublication(TimestampMixin, Base):
             "source_identifier",
             name="uq_ad_publication_identity",
         ),
+        UniqueConstraint(
+            "directive_id", "source_document_id",
+            name="uq_ad_publication_directive_document",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("pub"))
@@ -649,34 +899,43 @@ class ADPublication(TimestampMixin, Base):
 
 class ADTargetApplicability(TimestampMixin, Base):
     __tablename__ = "ad_target_applicability"
-    __table_args__ = (
-        UniqueConstraint(
-            "directive_id",
-            "target_id",
-            "source_publication_id",
-            "applicability_basis",
-            name="uq_ad_target_applicability",
-        ),
-    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ata"))
     directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
     target_id: Mapped[str] = mapped_column(ForeignKey("applicability_targets.id"), nullable=False, index=True)
     source_publication_id: Mapped[str] = mapped_column(ForeignKey("ad_publications.id"), nullable=True, index=True)
+    source_extraction_id: Mapped[str] = mapped_column(ForeignKey("ad_extractions.id"), nullable=True, index=True)
     applicability_basis: Mapped[str] = mapped_column(String(64), nullable=False, default="source_row")
+    applicability_group_key: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
     serial_range: Mapped[dict] = mapped_column(JSON, nullable=True)
+    source_identity: Mapped[dict] = mapped_column(JSON, nullable=True)
+    equipment_conditions: Mapped[list] = mapped_column(JSON, nullable=True)
     conditions: Mapped[list] = mapped_column(JSON, nullable=True)
     compliance_actions: Mapped[list] = mapped_column(JSON, nullable=True)
     compliance_intervals: Mapped[list] = mapped_column(JSON, nullable=True)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.8)
     citations: Mapped[list] = mapped_column(JSON, nullable=True)
+    source_payload: Mapped[dict] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(64), nullable=False, default="current", index=True)
 
     directive = relationship("AirworthinessDirective", back_populates="target_applicabilities")
     target = relationship("ApplicabilityTarget", back_populates="applicabilities")
     source_publication = relationship("ADPublication")
+    source_extraction = relationship("ADExtraction", back_populates="target_applicabilities")
     match_results = relationship("ADMatchResult", back_populates="target_applicability")
     compliance_requirements = relationship("ADComplianceRequirement", back_populates="target_applicability")
+
+
+Index(
+    "uq_ad_target_applicability_identity_v3",
+    ADTargetApplicability.directive_id,
+    ADTargetApplicability.target_id,
+    func.coalesce(ADTargetApplicability.source_publication_id, ""),
+    ADTargetApplicability.applicability_basis,
+    func.coalesce(ADTargetApplicability.applicability_group_key, ""),
+    func.coalesce(ADTargetApplicability.source_extraction_id, ""),
+    unique=True,
+)
 
 
 class ADComplianceRequirement(TimestampMixin, Base):
@@ -723,6 +982,7 @@ class ADComplianceTrigger(TimestampMixin, Base):
         ForeignKey("ad_compliance_requirements.id"), nullable=False, index=True
     )
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    trigger_kind: Mapped[str] = mapped_column(String(32), nullable=False, default="recurring")
     metric: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     interval_value: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
     interval_unit: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -730,6 +990,31 @@ class ADComplianceTrigger(TimestampMixin, Base):
     source_text: Mapped[str] = mapped_column(Text, nullable=True)
 
     requirement = relationship("ADComplianceRequirement", back_populates="triggers")
+
+
+class ADAMOCProvision(TimestampMixin, Base):
+    __tablename__ = "ad_amoc_provisions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("aam"))
+    directive_id: Mapped[str] = mapped_column(
+        ForeignKey("airworthiness_directives.id"), nullable=False, index=True
+    )
+    source_extraction_id: Mapped[str] = mapped_column(
+        ForeignKey("ad_extractions.id"), nullable=False, index=True
+    )
+    provision_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    provision_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    authority_text: Mapped[str] = mapped_column(Text, nullable=False)
+    approving_authority: Mapped[str] = mapped_column(String(512), nullable=True, index=True)
+    submission_instructions: Mapped[str] = mapped_column(Text, nullable=True)
+    conditions: Mapped[list] = mapped_column(JSON, nullable=False)
+    citations: Mapped[list] = mapped_column(JSON, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    source_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="current", index=True)
+
+    directive = relationship("AirworthinessDirective", back_populates="amoc_provisions")
+    source_extraction = relationship("ADExtraction", back_populates="amoc_provisions")
 
 
 class ADComplianceEvent(TimestampMixin, Base):
@@ -825,6 +1110,7 @@ class AircraftADDueState(TimestampMixin, Base):
     installed_component = relationship("InstalledComponent", back_populates="ad_due_states")
     last_compliance_event = relationship("ADComplianceEvent", back_populates="due_states")
     match_results = relationship("ADMatchResult", back_populates="due_state")
+    match_links = relationship("ADMatchDueStateLink", back_populates="due_state")
 
 
 class ADCoverageSet(TimestampMixin, Base):
@@ -968,6 +1254,9 @@ class ADExtraction(TimestampMixin, Base):
     reviews = relationship("ADExtractionReview", back_populates="extraction")
     match_results = relationship("ADMatchResult", back_populates="extraction")
     compliance_requirements = relationship("ADComplianceRequirement", back_populates="source_extraction")
+    amoc_provisions = relationship("ADAMOCProvision", back_populates="source_extraction")
+    target_applicabilities = relationship("ADTargetApplicability", back_populates="source_extraction")
+    review_decisions = relationship("ADExtractionReviewDecision", back_populates="extraction")
 
 
 class ADExtractionReview(TimestampMixin, Base):
@@ -985,6 +1274,27 @@ class ADExtractionReview(TimestampMixin, Base):
 
     extraction = relationship("ADExtraction", back_populates="reviews")
     reviewer = relationship("User")
+    decision_history = relationship("ADExtractionReviewDecision", back_populates="review")
+
+
+class ADExtractionReviewDecision(TimestampMixin, Base):
+    __tablename__ = "ad_extraction_review_decisions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ard"))
+    review_id: Mapped[str] = mapped_column(ForeignKey("ad_extraction_reviews.id"), nullable=False, index=True)
+    extraction_id: Mapped[str] = mapped_column(ForeignKey("ad_extractions.id"), nullable=False, index=True)
+    decision: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    output_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    decision_output: Mapped[dict] = mapped_column(JSON, nullable=True)
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    decided_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, default="review_decision", index=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    review = relationship("ADExtractionReview", back_populates="decision_history")
+    extraction = relationship("ADExtraction", back_populates="review_decisions")
+    actor = relationship("User")
 
 
 class ADMatchResult(TimestampMixin, Base):
@@ -1029,6 +1339,25 @@ class ADMatchResult(TimestampMixin, Base):
     due_state = relationship("AircraftADDueState", back_populates="match_results")
     evidence_links = relationship("ADMatchEvidence", back_populates="match_result")
     adjudication = relationship("ADMatchAdjudication", back_populates="match_result", uselist=False)
+    due_state_links = relationship("ADMatchDueStateLink", back_populates="match_result")
+
+
+class ADMatchDueStateLink(TimestampMixin, Base):
+    __tablename__ = "ad_match_due_state_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "match_result_id",
+            "due_state_id",
+            name="uq_ad_match_due_state_link",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("mdl"))
+    match_result_id: Mapped[str] = mapped_column(ForeignKey("ad_match_results.id"), nullable=False, index=True)
+    due_state_id: Mapped[str] = mapped_column(ForeignKey("aircraft_ad_due_states.id"), nullable=False, index=True)
+
+    match_result = relationship("ADMatchResult", back_populates="due_state_links")
+    due_state = relationship("AircraftADDueState", back_populates="match_links")
 
 
 class ADMatchEvidence(TimestampMixin, Base):

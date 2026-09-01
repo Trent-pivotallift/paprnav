@@ -1,0 +1,98 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/t081_design_adversary",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-23T01:55:02+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "a623e8ec4bbba8b9041215cc51019ff0d226e9d6319bd25a60591c057d15523b",
+    "artifact": ".ai/review-runs/T081/adversarial-design-initial.md",
+    "artifactSha256": "40ee05e2c60cba45ed87933dd0c35900d83d2ac9fc3cca9330e02c75858e6805"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t081_design_closure",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-23T02:01:19+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "a623e8ec4bbba8b9041215cc51019ff0d226e9d6319bd25a60591c057d15523b",
+    "artifact": ".ai/review-runs/T081/adversarial-design-closure-1.md",
+    "artifactSha256": "e6fc527f550c0bda265570c8377ef9e9b7afe6d8311857d543c3b88085254158"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t081_design_final",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-23T02:07:20+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "a623e8ec4bbba8b9041215cc51019ff0d226e9d6319bd25a60591c057d15523b",
+    "artifact": ".ai/review-runs/T081/adversarial-design-final.md",
+    "artifactSha256": "77e4b4a9f358bdc8dde157f6e552fd4b28bcb6f9df93577c55d1c90559a1d0fd"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t081_implementation_adversary",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-23T02:57:14+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "0177c05c769e3def7d68662a25bb0b92eaefa14d99876542c7db108509ada8e8",
+    "artifact": ".ai/review-runs/T081/adversarial-implementation-initial.md",
+    "artifactSha256": "da0d078551655e031e601feaf06dd3909e9d504c4ff7a6983c1940d7c86b73d6"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t081_implementation_closure",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-08-23T12:58:19+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "2c4c1a95e4969744d12b844e9d63c51147105ee143b40e912802498dc16c62a5",
+    "artifact": ".ai/review-runs/T081/adversarial-implementation-closure-1.md",
+    "artifactSha256": "4a2c0cdefca8ed632f513613bf5fe7712b328ea7c12a7b6a9aa0a2306198a458"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t081_implementation_final",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-23T13:06:28+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "be6bc68fdb5d42b8dd69b59b561217a1a9adef68c5bd7c6595f4c71da3b0f628",
+    "artifact": ".ai/review-runs/T081/adversarial-implementation-final.md",
+    "artifactSha256": "2c67b83505313deed9a8febbf29b045f13d35f09ba005eb819cddcbc6fd34314"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/t081_closure_final",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-23T18:07:42+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "b2e4ffc91191b12a04e76f8f515576c62bf69da42f8318b60e71707008bc12ca",
+    "artifact": ".ai/review-runs/T081/adversarial-closure-final.md",
+    "artifactSha256": "732bd441262e84bfc5e77f218026661fe20de68113410093b84d9765f19d4a3a"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/t081_closure_final",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-08-23T18:09:31+00:00",
+    "baseRef": "HEAD",
+    "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+    "scopeFingerprint": "49e7a16196ab2c22100424b8e2b6d6450d7f8ffbf031509404cb3a06c681071b",
+    "artifact": ".ai/review-runs/T081/adversarial-closure-staged.md",
+    "artifactSha256": "553c7bbd77121b31105a87530cdb168421877dd0c5b41618c124c676654ba274"
+  }
+]

@@ -303,6 +303,7 @@ export interface AirworthinessDirective {
   id: string;
   discoveryRecordId: string | null;
   adNumber: string | null;
+  officialAdNumber: string | null;
   title: string;
   status: string;
   extractionStatus: string;
@@ -311,6 +312,15 @@ export interface AirworthinessDirective {
   publicationDate: string | null;
   htmlUrl: string | null;
   pdfUrl: string | null;
+  applicabilityTargets: Array<{
+    groupKey: string | null;
+    productType: string;
+    productSubtype: string | null;
+    manufacturer: string | null;
+    model: string | null;
+    sourceManufacturer: string | null;
+    sourceModel: string | null;
+  }>;
 }
 
 export interface ADExtraction {
@@ -336,10 +346,56 @@ export interface ADExtractionReview {
   extraction: ADExtraction;
   directive: AirworthinessDirective;
   sourceText: string;
+  sourcePages: Array<{
+    sourceDocumentId: string;
+    contentHash: string;
+    pageNumber: number;
+    text: string;
+  }>;
+  sourceDocuments: Array<{
+    id: string;
+    sourceSystem: string;
+    sourceType: string;
+    sourceIdentifier: string;
+    parentSourceIdentifier: string | null;
+    sourceUrl: string | null;
+    contentUrl: string;
+    mediaType: string | null;
+    contentHash: string;
+    storageBytes: number;
+    capturedAt: string;
+    publicationDate: string | null;
+    parserName: string | null;
+    parserVersion: string | null;
+    relevantPageStart: number | null;
+    relevantPageEnd: number | null;
+    relevantPageNumbers: number[];
+    relevantPagesContiguous: boolean;
+    navigationUrl: string;
+  }>;
+  requirementCount: number;
+  unresolvedRequirementCount: number;
+  evidenceStatus: "verified" | "missing" | "identity_unverified" | "identity_mismatch" | "unverified";
+  evidenceMessage: string;
+  canApprove: boolean;
+  approvalBlockers: string[];
+  proposalProvenance: {
+    stagingDecisionId: string;
+    actorUserId: string | null;
+    stagedAt: string;
+    stagingMode: "strict" | "allow_incomplete";
+  } | null;
 }
 
 export interface ADExtractionReviewListResponse {
   reviews: ADExtractionReview[];
+  currentOffset: number;
+  totalCount: number;
+  pendingCount: number;
+  reviewedCount: number;
+  verifiedCount: number;
+  quarantinedCount: number;
+  approvalReadyCount: number;
 }
 
 export interface ADMatchEvidence {
@@ -427,6 +483,7 @@ export interface ADMatchResult {
   unresolvedReasons: string[];
   applicability: ADMatchApplicability | null;
   dueState: ADDueState | null;
+  dueStates: ADDueState[];
   algorithmName: string;
   algorithmVersion: string;
   inputHash: string;
@@ -732,8 +789,36 @@ export function extractLogbookEntries(jobId: string) {
   });
 }
 
-export function listAdExtractionReviews() {
-  return apiFetch<ADExtractionReviewListResponse>("/api/v1/ads/extraction-reviews");
+export function listAdExtractionReviews(offset = 0, limit = 1, reviewId?: string | null) {
+  const query = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+  if (reviewId) query.set("reviewId", reviewId);
+  return apiFetch<ADExtractionReviewListResponse>(`/api/v1/ads/extraction-reviews?${query.toString()}`);
+}
+
+export function adSourceDocumentContentUrl(sourceDocumentId: string, pageNumber?: number | null) {
+  const contentUrl = `${API_BASE_URL}/api/v1/ads/source-documents/${encodeURIComponent(sourceDocumentId)}/content`;
+  return pageNumber ? `${contentUrl}#page=${pageNumber}` : contentUrl;
+}
+
+export function listAirworthinessDirectives(params: {
+  q?: string;
+  adNumber?: string;
+  status?: string;
+  productType?: string;
+  manufacturer?: string;
+  model?: string;
+  includeUnreviewed?: boolean;
+} = {}) {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.adNumber) query.set("ad_number", params.adNumber);
+  if (params.status) query.set("status", params.status);
+  if (params.productType) query.set("productType", params.productType);
+  if (params.manufacturer) query.set("manufacturer", params.manufacturer);
+  if (params.model) query.set("model", params.model);
+  if (params.includeUnreviewed) query.set("includeUnreviewed", "true");
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiFetch<AirworthinessDirective[]>(`/api/v1/ads/directives${suffix}`);
 }
 
 export function decideAdExtractionReview(

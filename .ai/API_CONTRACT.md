@@ -524,11 +524,92 @@ Response: array of Federal Register discovery records with document number, titl
 
 `GET /api/v1/ads/directives`
 
-Response: array of candidate or reviewed AD records with AD number when detected, Federal Register document number, source URLs, extraction status, and review status.
+Response: array of released, administrator-reviewed AD records with normalized
+`adNumber`, source-form `officialAdNumber`, Federal Register document number,
+source URLs, extraction status, review status, and current relational
+`applicabilityTargets`. Optional query parameters are `q`, `ad_number`,
+`status`, `productType`, `manufacturer`, `model`, and `limit`. `q` searches the
+AD number/title and current relational target identities; the structured
+applicability filters query `applicability_targets` rather than splitting
+display strings. A platform administrator may request
+`includeUnreviewed=true`; other roles receive HTTP 403 for that option.
 
 ### List AD Extraction Reviews
 
-`GET /api/v1/ads/extraction-reviews`
+`GET /api/v1/ads/extraction-reviews?offset=0&limit=1`
+
+`GET /api/v1/ads/extraction-reviews?reviewId=arv_123`
+
+Access requires an active Paprnav `platform_admin` membership. Maintenance
+shops use the released catalog and aircraft-specific AD applicability views;
+they cannot read or decide unpublished machine-extraction reviews. Decisions
+are attributed to the authenticated administrator.
+The endpoint is paginated because retained page evidence is returned only for
+the requested review window; `limit` defaults to 1 and is capped at 20.
+`reviewId` selects a stable review directly and returns its global queue index
+as `currentOffset`; calibration and audit documents should use this form rather
+than unstable numeric offsets.
+Bounded page text is persisted during review preparation. At read and decision
+time, cached pages are accepted only while their source-document ID and content
+hash match the currently retained publication evidence; reviewer requests do
+not reparse complete Federal Register issue PDFs.
+Each review reports `evidenceStatus`, `evidenceMessage`, `approvalBlockers`, and
+`canApprove`. The envelope reports global `verifiedCount`, `quarantinedCount`,
+and `approvalReadyCount` in addition to decision progress. Approval requires a
+bounded Part 39 section whose formal directive heading contains the expected
+official AD designation, schema v3, a matching proposed AD number, at least one
+typed applicability group, at least one compliance requirement, no unresolved
+applicability or requirement uncertainty reasons, valid group-key references,
+and valid citations into the retained bounded pages. A
+number appearing only as a referenced or foreign directive does not satisfy
+identity verification. Source-verified v3 proposals remain editable when
+incomplete; the edited output is validated by the server before publication.
+Machine/provider output never publishes full-text regulatory meaning without
+this authenticated decision. Aircraft match responses apply the same verified
+release gate as the fleet-neutral catalog.
+Each review also returns `sourceDocuments` with publisher/source identity,
+capture time, media type, byte count, parser identity, SHA-256 hash, original
+source URL, and an authenticated `contentUrl`. Platform admins use that retained
+content URL for the exact artifact that produced the bounded pages; publisher
+API URLs are attribution only and may require separate credentials.
+
+`applicabilityGroups` is the authoritative v3 applicability structure. Each
+group separates product type, official manufacturer wording, optional
+normalized manufacturer identity, model scope and model designations, serial
+scope, installed-equipment conditions, other predicates, confidence,
+uncertainty, and retained-page citations. Manufacturer and model must never be
+combined into one value or emitted as unrelated sibling strings.
+
+`requirements` is the authoritative v3 compliance structure and is an array of
+objects. Every requirement includes `applicabilityGroupKeys`. Approval expands
+each group into indexed relational make/model targets and materializes a
+requirement only on rows whose group key is explicitly named.
+`complianceActions` remains a compatibility summary array of strings;
+the server derives it from the ordered, unique requirement `actionText` values
+when provider or reviewer output is normalized. Every `actionText` must preserve
+the regulatory wording found in one of that requirement's retained-page
+citations. Normalized deadlines, predicates, and branch logic belong in the
+threshold, condition, and combination fields rather than paraphrasing the
+regulatory action.
+Every initial threshold and recurring trigger includes an evidence-bound
+`sourceText`, numeric value, unit, and `anchorKind`. Initial and recurring
+triggers are materialized separately; effective-date, last-compliance,
+installation, manufacture, and unknown anchors are never silently collapsed.
+`combinationLogic` is also preserved: `whichever_first` uses the earliest
+threshold, `whichever_later` uses the latest, and `alternative` remains
+adjudication-blocked rather than being silently flattened to `all`.
+`amocProvisions` is a separate top-level list for the AD's AMOC authority text,
+approving authority, submission instructions, conditions, citations,
+confidence, and uncertainty. It is not a compliance `alternative`.
+`affectedProducts` is likewise a server-derived display/legacy summary and
+never drives v3 persistence.
+Supported `requirementType` values are `one_time`, `recurring`, `alternative`,
+`conditional`, and `installation_prohibition`. The last type keeps a continuing
+parts-installation restriction explicit; due-state materialization leaves it in
+adjudication until an installation-control policy is defined.
+The complete v3 field rules, reviewer checklist, relational mapping, migration
+policy, and known v2 inconsistencies are documented in
+`.ai/AD_APPLICABILITY_SCHEMA_REVIEW.md`.
 
 Response:
 
@@ -543,9 +624,12 @@ Response:
         "title": "Airworthiness Directives; Airbus Helicopters",
         "effectiveDate": null,
         "publicationDate": "2026-06-16",
+        "applicabilityGroups": [],
         "affectedProducts": ["Airbus Helicopters"],
         "complianceActions": ["Review source document for required corrective actions."],
         "complianceIntervals": [],
+        "requirements": [],
+        "amocProvisions": [],
         "supersedesAdNumbers": [],
         "sourceUrls": {
           "html": "https://www.federalregister.gov/...",
@@ -561,7 +645,7 @@ Response:
         "directiveId": "ad_123",
         "providerName": "deterministic_ad_extractor",
         "providerVersion": "0.1.0",
-        "schemaVersion": "ad_extraction_v1",
+        "schemaVersion": "ad_extraction_v3",
         "inputContentHash": "sha256",
         "status": "needs_review",
         "confidence": 0.84,
@@ -581,9 +665,23 @@ Response:
         "htmlUrl": "https://www.federalregister.gov/...",
         "pdfUrl": "https://www.govinfo.gov/..."
       },
-      "sourceText": "source title, abstract, and excerpts"
+      "sourceText": "bounded retained source pages",
+      "sourcePages": [],
+      "requirementCount": 0,
+      "unresolvedRequirementCount": 0,
+      "evidenceStatus": "missing",
+      "evidenceMessage": "No retained source section is available. Approval is blocked.",
+      "canApprove": false,
+      "approvalBlockers": ["No retained source section is available. Approval is blocked."],
+      "proposalProvenance": null
     }
-  ]
+  ],
+  "totalCount": 33,
+  "pendingCount": 32,
+  "reviewedCount": 1,
+  "verifiedCount": 14,
+  "quarantinedCount": 19,
+  "approvalReadyCount": 1
 }
 ```
 
@@ -601,9 +699,44 @@ Request:
     "title": "Airworthiness Directives; Airbus Helicopters",
     "effectiveDate": null,
     "publicationDate": "2026-06-16",
-    "affectedProducts": ["Airbus Helicopters Model AS350B2"],
+    "applicabilityGroups": [{
+      "groupKey": "paragraph-c-airbus-as350b2",
+      "productType": "rotorcraft",
+      "productSubtype": null,
+      "manufacturer": {"sourceName": "Airbus Helicopters", "normalizedName": null},
+      "modelApplicability": {
+        "kind": "listed",
+        "models": [{"sourceDesignation": "AS350B2", "normalizedDesignation": null, "aliases": []}],
+        "sourceText": "Model AS350B2 helicopters"
+      },
+      "serialNumberApplicability": {
+        "kind": "all", "values": [], "ranges": [], "excludedValues": [], "sourceText": "all serial numbers"
+      },
+      "equipmentCombinationLogic": "all",
+      "equipmentConditions": [],
+      "conditions": [],
+      "citations": [{"sourceDocumentId": "asd_123", "pageNumber": 2, "text": "source applicability excerpt"}],
+      "confidence": 0.96,
+      "uncertaintyReasons": []
+    }],
+    "affectedProducts": ["Airbus Helicopters AS350B2"],
     "complianceActions": ["Review source document for required corrective actions."],
     "complianceIntervals": [],
+    "requirements": [{
+      "requirementKey": "paragraph-g-inspection",
+      "applicabilityGroupKeys": ["paragraph-c-airbus-as350b2"],
+      "requirementType": "one_time",
+      "actionText": "Inspect the affected part before further flight.",
+      "initialThresholds": [],
+      "recurringTriggers": [],
+      "combinationLogic": "all",
+      "conditions": [],
+      "terminatingAction": null,
+      "citations": [{"sourceDocumentId": "asd_123", "pageNumber": 3, "text": "Inspect the affected part before further flight."}],
+      "confidence": 0.96,
+      "uncertaintyReasons": []
+    }],
+    "amocProvisions": [],
     "supersedesAdNumbers": [],
     "sourceUrls": {
       "html": "https://www.federalregister.gov/...",
@@ -615,7 +748,15 @@ Request:
 }
 ```
 
-Allowed decisions are `approved`, `edited`, and `rejected`. Approved and edited decisions validate the extraction output schema, mark the extraction approved, and make the directive available for future matching work.
+Allowed decisions are `approved`, `edited`, and `rejected`. Approved and edited
+decisions apply the same fail-closed evidence/schema/identity/applicability/requirement/citation
+gate, mark the extraction approved, materialize normalized requirements, and
+make the directive available to the released catalog and future matching work.
+The released catalog independently rechecks this gate, so legacy approval state
+cannot expose an unverifiable directive.
+Corrections to an already approved output are staged as a new pending review:
+the prior decision and attribution remain in correction history, publication is
+revoked, and a new authenticated reviewer must approve before rematerialization.
 
 ### List Aircraft AD Matches
 

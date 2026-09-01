@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "stage", "reviewer", "severity", "status", "invariant", "summary", "evidence", "impact", "requiredClosure", "closureEvidence"],
+    "properties": {
+      "id": {"type": "string", "minLength": 1},
+      "stage": {"enum": ["design", "implementation", "external_critic", "closure"]},
+      "reviewer": {"type": "string", "minLength": 1},
+      "severity": {"enum": ["blocker", "high", "medium", "low"]},
+      "status": {"enum": ["open", "fix_in_progress", "fixed_pending_verification", "closed", "accepted_risk", "rejected_finding", "deferred"]},
+      "invariant": {"type": "string", "minLength": 1},
+      "summary": {"type": "string", "minLength": 1},
+      "evidence": {"type": "array", "minItems": 1, "items": {"type": ["string", "object"]}},
+      "impact": {"type": "string", "minLength": 1},
+      "requiredClosure": {"type": "string", "minLength": 1},
+      "disposition": {"type": ["string", "null"]},
+      "owner": {"type": ["string", "null"]},
+      "revisitCondition": {"type": ["string", "null"]},
+      "closureEvidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+      "supersedes": {"type": "array", "items": {"type": "string"}}
+    },
+    "additionalProperties": false
+  }
+}

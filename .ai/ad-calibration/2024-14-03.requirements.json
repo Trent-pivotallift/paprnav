@@ -1,0 +1,48 @@
+[
+  {
+    "requirementKey": "g-software-update",
+    "requirementType": "one_time",
+    "actionText": "Within 12 months after the effective date of this AD, update the Garmin GFC 500 Autopilot System software applicable to your airplane to a version that is not 8.01 or earlier for the G5, not version 9.01 or earlier for the G3X Touch, and not version 2.59 or earlier for the GI 275.",
+    "initialThresholds": [
+      {
+        "metric": "calendar",
+        "value": 12,
+        "unit": "months",
+        "anchorKind": "effective_date",
+        "sourceText": "Within 12 months after the effective date of this AD"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0",
+        "pageNumber": 5,
+        "text": "Within 12 months after the effective date of this AD, update the Garmin GFC 500 Autopilot System software applicable to your airplane to a version that is not 8.01 or earlier for the G5, not version 9.01 or earlier for the G3X Touch, and not version 2.59 or earlier for the GI 275."
+      }
+    ],
+    "confidence": 0.98,
+    "uncertaintyReasons": []
+  },
+  {
+    "requirementKey": "h-installation-prohibition",
+    "requirementType": "installation_prohibition",
+    "actionText": "As of the effective date of this AD, do not install Garmin GFC 500 Autopilot System Software that is version 8.01 or earlier for the G5, version 9.01 or earlier for the G3X Touch, or version 2.59 or earlier for the GI 275, on any airplane.",
+    "initialThresholds": [],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0",
+        "pageNumber": 5,
+        "text": "As of the effective date of this AD, do not install Garmin GFC 500 Autopilot System Software that is version 8.01 or earlier for the G5, version 9.01 or earlier for the G3X Touch, or version 2.59 or earlier for the GI 275, on any airplane."
+      }
+    ],
+    "confidence": 0.98,
+    "uncertaintyReasons": []
+  }
+]

@@ -29,6 +29,9 @@ services:
       PAPRNAV_MAX_UPLOAD_SIZE_BYTES: "104857600"
     ports:
       - "8000:8000"
+    volumes:
+      # Retained regulatory evidence must outlive API image/container rebuilds.
+      - ad_source_data:/app/.data
     ulimits:
       nofile:
         soft: 65536
@@ -38,14 +41,11 @@ services:
         condition: service_healthy
 
   migrate:
-    build:
-      context: .
+    image: backend-api
     command: alembic upgrade head
     environment:
       DATABASE_URL: postgresql+psycopg://paprnav_user:paprnav_password@db:5432/paprnav_db
       PAPRNAV_ENV: local
-    volumes:
-      - .:/app
     depends_on:
       db:
         condition: service_healthy
@@ -69,3 +69,4 @@ services:
 
 volumes:
   db_data:
+  ad_source_data:

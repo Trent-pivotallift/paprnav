@@ -1,0 +1,1002 @@
+{
+  "taskId": "T081-V4-SCHEMA",
+  "stage": "closure",
+  "generatedAt": "2026-08-31T02:04:27+00:00",
+  "baseRef": "HEAD",
+  "head": "9e45397d24fd1e9e2e988a7decf42941d346929c",
+  "scopePaths": [],
+  "scopeFingerprint": "b777f2af0eed588889cceb5a2b2484986b261cb67adbd120d76c3f040bf5199e",
+  "files": [
+    {
+      "path": ".agents/skills/adversarial-review/SKILL.md",
+      "status": "A ",
+      "size": 3111,
+      "sha256": "f3d22abdadd7dcf24ac4bd152327257910bc84bf111ed73984a286a3af472048",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".agents/skills/adversarial-review/agents/openai.yaml",
+      "status": "A ",
+      "size": 226,
+      "sha256": "533cb157d2a047af6d630ad3b1018ee5a0fe64d70fc60ae4ef0b097932f4568a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".agents/skills/adversarial-review/references/checklists.md",
+      "status": "A ",
+      "size": 1201,
+      "sha256": "9d541c157c9a603e7c5e08b70a5af1b6b63d38d61eee0e820970cb0cdd964d2c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".agents/skills/adversarial-review/references/severity.md",
+      "status": "A ",
+      "size": 815,
+      "sha256": "2aa99b4cbfa276b425022c0d4b03d17d47ba5d3a682f3ae5770b98a6b6290ff3",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/AD_APPLICABILITY_SCHEMA_REVIEW.md",
+      "status": "A ",
+      "size": 11564,
+      "sha256": "83783c8d093ee97e987a94b2c109600d6073824114a1a648ddb4efe90a1f56b1",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/AD_EXTRACTION_DOMAIN_CONTRACT.md",
+      "status": "A ",
+      "size": 25813,
+      "sha256": "64a85e93a17a0afb12525c0216de2b4887d4fabc23a2de0c071cca2a3939eb2a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/AD_SOURCE_PROOF_2026-08-04.md",
+      "status": "M ",
+      "size": 10326,
+      "sha256": "6654065f185253160a13b3c23178e8ef22db5dc22e2b532e74e2431fc082255f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/API_CONTRACT.md",
+      "status": "M ",
+      "size": 27876,
+      "sha256": "77cee6d8b9852170716fec0d4caec2c2e08c3a74871f3a1537a9c06aef3e4b27",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/CLAUDE_REVIEWER.md",
+      "status": "M ",
+      "size": 1396,
+      "sha256": "88e81861a8be90991ad4f02604ccd9bd4a26a341701da623522bbfd83325c7ee",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/DATA_MODEL.md",
+      "status": "M ",
+      "size": 29180,
+      "sha256": "b1d0c7c582caa266cdd35cf3a9b608d5a9a3b3d22070b26e96b734257f25735a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/GOAL_TASKS.md",
+      "status": "M ",
+      "size": 101987,
+      "sha256": "c871f24f8035b3de6e1c28a8584625115d5d2c36010c350094c39770b961a27c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/LOCAL_MVP_DEMO.md",
+      "status": "M ",
+      "size": 3814,
+      "sha256": "f676add4ac04012b3d98abd4eb6889626003bd2794512c2378bed8400a4d68f1",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/PROVIDER_REFERENCES.md",
+      "status": "M ",
+      "size": 35761,
+      "sha256": "94abffcf02747ac2020a85c18c0b15a72454839663e5d26277647774e965d020",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/REVIEW_PROCESS.md",
+      "status": "A ",
+      "size": 5101,
+      "sha256": "f9e7b5875fa3eeb9ea7211a0709fc575ee5c8ae1d3a563fa5ac3ce5e893b73c2",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/1998-17-11.requirements.json",
+      "status": "A ",
+      "size": 4467,
+      "sha256": "6380048e8728390feb8be612ec44909fee3ccab8e39989f653d6032cfc91088d",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2002-13-04.requirements.json",
+      "status": "A ",
+      "size": 3269,
+      "sha256": "86c747eb7fc1e40e5d49bf67f234363823d94e5a746c30b0b737ef6390a7acac",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2008-26-10.requirements.json",
+      "status": "A ",
+      "size": 9386,
+      "sha256": "9f94f62789ab120da20b295b063deca1f996424c8802547abfdefe021f089a32",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2011-10-09.requirements.json",
+      "status": "A ",
+      "size": 4190,
+      "sha256": "7b6ae8b5b897b633c8feb728b5cd64a3647717c4235e30e4b7dce973d5111928",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2024-14-03.requirements.json",
+      "status": "A ",
+      "size": 2199,
+      "sha256": "bcc539a3016ded3f07797068eae7fa553949db9dc4182453b3e6e037c9d2fad5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2024-14-03.v3.proposal.json",
+      "status": "A ",
+      "size": 43270,
+      "sha256": "25a7cd3f7a7d16da76323ec5e2850c9f8d0aee370007647cd2d4800662cd2022",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/README.md",
+      "status": "A ",
+      "size": 7901,
+      "sha256": "16723a1915b4f89d9d66c4ff326bad7b0730402aaff464f7b3b1ebdc5bdbd9a5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/ADVERSARIAL_REVIEWER.md",
+      "status": "A ",
+      "size": 1184,
+      "sha256": "2af95ada3305a879630f8abb2938c46c5afeb95ac60b68f9c21c6bb44c583ffc",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/BUILDER.md",
+      "status": "A ",
+      "size": 798,
+      "sha256": "fa050074b25531049c148b883f612d96401184ee1a4a6ee0a40ffb32272d9fe8",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/CLAUDE_CRITIC.md",
+      "status": "A ",
+      "size": 689,
+      "sha256": "4cdd97dc7f3a6f9150d07420bc4b18ef22eafc9ab8ec78a137a9ad086f8a1c42",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/agents/COORDINATOR.md",
+      "status": "A ",
+      "size": 641,
+      "sha256": "187f4bf574aab3097e37d361bcc2eb88d60bee5ea6f9e9f8e6eb52a5e3e05af2",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-closure.md",
+      "status": "A ",
+      "size": 3270,
+      "sha256": "b0d8315e0be114fb45d24a737ad87085fb6102d13f8b8a4877547158cc573a15",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-design-closure-1.md",
+      "status": "A ",
+      "size": 5594,
+      "sha256": "7f67ec675f2a783354f29d9a57dbbf157b0ee7f2c12f196d6201a4ce6418a218",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-design-closure-2.md",
+      "status": "A ",
+      "size": 4719,
+      "sha256": "9be2c98c9953d8cae87516198945e1143272bec41c5f6caba37287cc6460e40c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-design.md",
+      "status": "A ",
+      "size": 9537,
+      "sha256": "2e838ffe443d6251e17a2819b65bbc71406772d472763cac0864db2d7c0fa7a5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-implementation-closure-1.md",
+      "status": "A ",
+      "size": 6068,
+      "sha256": "177e4df27e773cea1a2fede55c127d53a7188adb792b9cc3f4ca89b82aa90bd5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/adversarial-implementation.md",
+      "status": "A ",
+      "size": 11930,
+      "sha256": "b6adb0114e57dcbc136cfb3da146d9e7a9910531a1bde605e698bee6b88fa21f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/claude-external-critic-20260824T042633Z.findings.json",
+      "status": "A ",
+      "size": 5441,
+      "sha256": "ee5b64110afb5d28106a54b1d87eb6616f1d614238154f7a1aad312cd6f0e7de",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/claude-external-critic-20260824T042633Z.md",
+      "status": "A ",
+      "size": 13913,
+      "sha256": "d665bd94732b687444db86ca02dcfb91c2eef6720eb592ef33ffedf73128bd67",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/closure.md",
+      "status": "A ",
+      "size": 3189,
+      "sha256": "f2b764c2fc7e00c3fff15f9abaf24dca2d205862b597028edb6c2b0c282ad6e3",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/decision.md",
+      "status": "A ",
+      "size": 9365,
+      "sha256": "e5ed927f1ba20ca35e9f9cb15d178c9f2aee084a6dfc6f72142c1ff0b5a8d864",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/findings.json",
+      "status": "A ",
+      "size": 10337,
+      "sha256": "64970db00109f482b6c964e6c8bca6646b9d1653a6d0888fe98ab1e4f22c980f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/latest",
+      "status": "A ",
+      "size": 271990,
+      "sha256": "be0a50254906f2a1b1c7be221e4334e307189079b4af4ab34072a6cea38a9f64",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/manifest.json",
+      "status": "A ",
+      "size": 14289,
+      "sha256": "e727b13c5741e84c7c82d62faac632bc17e07d424f02976128b4c5cd7acca9a5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/review-packet.md",
+      "status": "A ",
+      "size": 381380,
+      "sha256": "9050dbe3f9af37f43a8c55e3b6e25fddd348ae89cfc95a6916bbaa1c163e266d",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/reviews.json",
+      "status": "A ",
+      "size": 2599,
+      "sha256": "21d5ebe6026fed473e3ebec2280f5f54fc8439576e0cd0660cee304b1c011785",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-CAL-2024-14-03/state.json",
+      "status": "A ",
+      "size": 54,
+      "sha256": "3907588bbb6e20c5e9164c06d2b8916ef2eb238eec2fa111f335589a9e811b2a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-closure-final.md",
+      "status": "A ",
+      "size": 5417,
+      "sha256": "732bd441262e84bfc5e77f218026661fe20de68113410093b84d9765f19d4a3a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-closure-staged.md",
+      "status": "A ",
+      "size": 1063,
+      "sha256": "553c7bbd77121b31105a87530cdb168421877dd0c5b41618c124c676654ba274",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-design-closure-1.md",
+      "status": "A ",
+      "size": 1499,
+      "sha256": "e6fc527f550c0bda265570c8377ef9e9b7afe6d8311857d543c3b88085254158",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-design-final.md",
+      "status": "A ",
+      "size": 1721,
+      "sha256": "77e4b4a9f358bdc8dde157f6e552fd4b28bcb6f9df93577c55d1c90559a1d0fd",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-design-initial.md",
+      "status": "A ",
+      "size": 5056,
+      "sha256": "40ee05e2c60cba45ed87933dd0c35900d83d2ac9fc3cca9330e02c75858e6805",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-implementation-closure-1.md",
+      "status": "A ",
+      "size": 8641,
+      "sha256": "4a2c0cdefca8ed632f513613bf5fe7712b328ea7c12a7b6a9aa0a2306198a458",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-implementation-final.md",
+      "status": "A ",
+      "size": 4817,
+      "sha256": "2c67b83505313deed9a8febbf29b045f13d35f09ba005eb819cddcbc6fd34314",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/adversarial-implementation-initial.md",
+      "status": "A ",
+      "size": 10519,
+      "sha256": "da0d078551655e031e601feaf06dd3909e9d504c4ff7a6983c1940d7c86b73d6",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/claude-external-critic-20260823T163719Z.findings.json",
+      "status": "A ",
+      "size": 9016,
+      "sha256": "87c580b97582f8633a434f66440593bdb62b6b4a6cdee1d613c19e52fea7fa9e",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/claude-external-critic-20260823T163719Z.md",
+      "status": "A ",
+      "size": 21086,
+      "sha256": "09d80dc089765979de8f28729cc362945257931cc5068a49223c704e5f5460f7",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/closure.md",
+      "status": "A ",
+      "size": 3606,
+      "sha256": "664699f6ce866713962cd1c2bc26dd0ea33281b4c09abb8310cb0a09b53182d4",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/decision.md",
+      "status": "A ",
+      "size": 13974,
+      "sha256": "0cd538fb5ea7a9d576f8b114c07dc4b5dc4d4617a263f97e3700d5cfabb75c9c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/findings.json",
+      "status": "A ",
+      "size": 18614,
+      "sha256": "6119b1766dade984b91eb09e16ee6efeb4b6833f42e1fb368a8ee4c325a69570",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/latest",
+      "status": "A ",
+      "size": 142917,
+      "sha256": "98fce7272de1860c8e02d81cbcd67a8021f7c8a317f1fbf3b6c9249f73580730",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/manifest.json",
+      "status": "A ",
+      "size": 21734,
+      "sha256": "e8e8ee628c036ea6c8bf4d56a6231bf314135fbc44dcb7d2cd63a777f7f132ee",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/review-packet.md",
+      "status": "A ",
+      "size": 2926720,
+      "sha256": "3e9230d339417d9cb069fc5b3767ec464a24b24465bbb088591db9f49e617d8d",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/reviews.json",
+      "status": "A ",
+      "size": 4082,
+      "sha256": "e055b0053e7098faf8641a63f43caf28cf3db72ebdab3994d8fc3701ce4ec387",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081/state.json",
+      "status": "A ",
+      "size": 54,
+      "sha256": "3907588bbb6e20c5e9164c06d2b8916ef2eb238eec2fa111f335589a9e811b2a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-1.md",
+      "status": "A ",
+      "size": 489,
+      "sha256": "1dc50fa398ff2dc3ffe4418567b3ca4b954dd4d4c4c20b73a8b5c9e39bdefad6",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-2.md",
+      "status": "A ",
+      "size": 508,
+      "sha256": "3b6353644ff87d133506d048a3d4f89f65c09bca89ea241cc2e46a082fe90135",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-attempt-3.md",
+      "status": "A ",
+      "size": 416,
+      "sha256": "b8a530a804c9b31a1dcb3382e51dba42c04e00a0c7440cf9713a90d0b057a40e",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-closure-final.md",
+      "status": "A ",
+      "size": 625,
+      "sha256": "6a97e8e97fc509fd3a81caf3840a24c6af9906b6cab023661482f57bdb852ab4",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-design.md",
+      "status": "A ",
+      "size": 620,
+      "sha256": "d2a529966d7a20d9399a9507141dac9956aa2364b328721263e514b4433b1069",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-implementation-attempt-1.md",
+      "status": "A ",
+      "size": 1055,
+      "sha256": "89b881464e1ec53768229353321cce9087bf35737af16b03262d5727bbc60a0a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-implementation-final.md",
+      "status": "A ",
+      "size": 562,
+      "sha256": "41e97a6e161303a46a734d9c6879dec1c4c812ec2ebd2db3fb16ccb9ff7a358c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/adversarial-implementation.md",
+      "status": "A ",
+      "size": 1380,
+      "sha256": "2ee2d8d1e8e065af16dc465b04b49f4466293b2c3fb80212aa4af3ca1896961b",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/claude-external-critic-20260823T003808Z.findings.json",
+      "status": "A ",
+      "size": 2940,
+      "sha256": "a637e21228716f63cf59e90af161a3c889d77e92e9c62c732df5940edb33e74f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/claude-external-critic-20260823T003808Z.md",
+      "status": "A ",
+      "size": 15670,
+      "sha256": "71a02fecd3930db1bcb451d843fb82105699fa05b7d59d7f5ea9ad00e598a188",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/claude-findings-implementation-closure.md",
+      "status": "A ",
+      "size": 686,
+      "sha256": "7fc7d1d5e49fe20ed26a2cf932eb57fad73da5707bbe3dacf252d7b8b50b1ea5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/closure.md",
+      "status": "A ",
+      "size": 2203,
+      "sha256": "7d8f80858aa8f14ca3488cc7b0e68b4facc3da722aca3071a7f70f8002333391",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/decision.md",
+      "status": "A ",
+      "size": 3223,
+      "sha256": "1fbfe7cf212f731e8a57e3690f3e9f9a8f8a3d5e873c8a85868e5190489a54bb",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/findings.json",
+      "status": "A ",
+      "size": 18381,
+      "sha256": "af42d41c13480e5e45d1e5eff949799904ac81de95b3cb1eec170903511793f8",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/latest",
+      "status": "A ",
+      "size": 68634,
+      "sha256": "92624fc5a9afc4b7dbe2aa4ba81863c43bfbfbe2b24c93aec73ca9d711af055b",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/manifest.json",
+      "status": "A ",
+      "size": 9897,
+      "sha256": "62f7f8cbcac057441d756630c395468bfff8f31d280665337183bacd6e5a95c9",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/review-packet.md",
+      "status": "A ",
+      "size": 96493,
+      "sha256": "2a83f8d8d463edfda7fac7e14508b7c8958d06c3be9d23de5f4814182ef09122",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/reviews.json",
+      "status": "A ",
+      "size": 4994,
+      "sha256": "8e381fd64032565b5087edf969eb8f82b775c353dd7d1139ad3fc8aee853aef0",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/review-infrastructure/state.json",
+      "status": "A ",
+      "size": 189,
+      "sha256": "4f34dc5518c80f6c4583937596f8fd004f0256040f3d5cc3686c53188009dac3",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-templates/CLOSURE_REPORT.md",
+      "status": "A ",
+      "size": 205,
+      "sha256": "424db2c94c845505141b080d221940e552e2474dfd5d8627ef6312978177e7d3",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-templates/DECISION_PACKET.md",
+      "status": "A ",
+      "size": 413,
+      "sha256": "35cac3ae79315c642a6fa21731cf934087ebf9199d79d298479bd2ec92821677",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-templates/FINDINGS.json.schema",
+      "status": "A ",
+      "size": 1354,
+      "sha256": "f45ba4ae03d3a0b9592c16e29da271f6c9800899dc0d54f09c25fb3d61d4f033",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/reviews/claude-t081-remediation-closure-20260822.md",
+      "status": "A ",
+      "size": 2951,
+      "sha256": "fce6d63007aba38a038a2475dd6bb901c67e7a16b1988899a51544742c73fe58",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/reviews/claude-t081-reviewer-calibration-20260822.md",
+      "status": "A ",
+      "size": 12151,
+      "sha256": "8fcef949bfdb5df6f93bdd59078d2fe865e7d94f8d89f37375f87d36415f7db5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/reviews/claude-t081-schema-data-20260822.md",
+      "status": "A ",
+      "size": 11964,
+      "sha256": "d46d28af6bf21e2464bacf1f3b08505c9f8c2786870fa5d27b677cb7e3ac2d56",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".gitignore",
+      "status": "M ",
+      "size": 626,
+      "sha256": "4aa59be90e8ae03e46fbbdbd12bc6f72bee7c06faac76df701c92567404ca21d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "A ",
+      "size": 1768,
+      "sha256": "1bd67ae08070dac1b0235b9a8eac37f361ec29a670740538d135286b37c6b5b5",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/README.md",
+      "status": "M ",
+      "size": 19754,
+      "sha256": "bc13ef7abd330e9d11ca9dfa77ac396944aad50b5df96024a61463ac39501d4e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": "M ",
+      "size": 54249,
+      "sha256": "6855b6754feb15cf04dbb6738199ecb733cac801cbe348049dbaf2149a48b81a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0021_add_ad_applicability_v3.py",
+      "status": "A ",
+      "size": 2580,
+      "sha256": "922164309f78fbe6bfbfe9801443fbbd70e18d146f6af35e02a93d1ee119252c",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0022_harden_ad_review_materialization.py",
+      "status": "A ",
+      "size": 4466,
+      "sha256": "110edf1e31f5833e80a3fbb6d7188135a63525dfc3ba3b7eedabfcac0d6ed0e1",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260822_0023_backfill_ad_v3_amoc_envelope.py",
+      "status": "A ",
+      "size": 704,
+      "sha256": "7c74737f8e332973a14c307525b470ea19a050758f0006f751294f24a0a7fd23",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260823_0024_bind_signed_ad_materialization.py",
+      "status": "A ",
+      "size": 10918,
+      "sha256": "c0f461d4fa7ffa5c02217990be9c72c444d23c9c1d2a276fe5326212503e8d29",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py",
+      "status": "A ",
+      "size": 24280,
+      "sha256": "5f0c3bc1b4597e87cca56c28b726b62f8f1329795d716eaa5bd75feac5bd90a2",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": "M ",
+      "size": 84631,
+      "sha256": "4ff8e5612e5c2d502d8fd1aa7a820cadc88e74ef99ed59cfa6a353729f392990",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": "M ",
+      "size": 7928,
+      "sha256": "3708cddbc3fdf6746453a95a9db02adb3e61fa78d50ba07b5c8ff3ee07e07194",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/audit_ad_review_evidence.py",
+      "status": "A ",
+      "size": 5287,
+      "sha256": "f21369db9d06e83707db9a4d41e9af3404654cdcfd86702048fc14f00e027a87",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/correct_approved_ad_review.py",
+      "status": "A ",
+      "size": 11555,
+      "sha256": "08eb1f23bf7e100e8c4f4fabf5cd0659debfdf1e20344f66693bc1493aa143c9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/prepare_ad_compliance_reviews.py",
+      "status": "A ",
+      "size": 1536,
+      "sha256": "02fe6c3ef3fd0e7b36f7164b40e7eb51225db9cd38719ae401d7a1666aa9276e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/seed_dev.py",
+      "status": "M ",
+      "size": 8638,
+      "sha256": "ea1319ac5acb2ba2b36edec6473aad1f5c70e28ac45cbd4e69393aa88d9fbaf4",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/stage_ad_review_proposal.py",
+      "status": "A ",
+      "size": 16052,
+      "sha256": "b968fdd0cdb2148cbd0d7dd3e1cf24b69f2739d8ba38df8b19254ed161de2e72",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/verify_ad_correction_workflow.py",
+      "status": "A ",
+      "size": 15753,
+      "sha256": "773ba3bc5cec1abb4e21365702956109230876edb56597af6453e42e7007212c",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/verify_ad_review_concurrency.py",
+      "status": "A ",
+      "size": 6400,
+      "sha256": "beb25ef9965f7d7295ff80f53d2c1f951b68c5bdfa883d29dc00afbd95baf1bd",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/verify_ad_staging_concurrency.py",
+      "status": "A ",
+      "size": 9866,
+      "sha256": "2a4671f770b46b7b705b9001903f7bbfb075f95e47764749655f20ced4a7087e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_applicability.py",
+      "status": "M ",
+      "size": 13545,
+      "sha256": "37913f5a5b556c48a7e37adb73c6852413721f450e92d6fb98b7c07428b86bb7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_compliance_population.py",
+      "status": "A ",
+      "size": 5772,
+      "sha256": "426f6958bfd7df9a6afc613dbfb9960f3a60a5f1f1102f3d52d53444fa3412f2",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_coverage.py",
+      "status": "M ",
+      "size": 22630,
+      "sha256": "73e16881875747d511e91187646300850ba39c1a4c7efb7b41903da0de2ae3a3",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_evidence.py",
+      "status": "A ",
+      "size": 19546,
+      "sha256": "2042d39ff27c707f0d9a714fad25a51a3bb7025877c2cd9337d975c2b68594c0",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_extraction.py",
+      "status": "M ",
+      "size": 92165,
+      "sha256": "cf735b132056f01efba87ebaed39e8508d0c832778b75fdd09e3b6b86cfd5fcf",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_matching.py",
+      "status": "M ",
+      "size": 37044,
+      "sha256": "ffe82b8b5b11c0e15d683c394e417ec845f905158858dcebb0587ad8cff6cafa",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_recurrence.py",
+      "status": "M ",
+      "size": 40749,
+      "sha256": "575ac5af715bf02ced827a6ea3a99493f3d1bab5fb6e27785235909beb09743b",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_release.py",
+      "status": "A ",
+      "size": 4446,
+      "sha256": "07722df795a5e30bfe132a5665ae7e218ca61a57f821b4a4a3ea01bf4f0c566a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/docker-compose.yml",
+      "status": "M ",
+      "size": 1789,
+      "sha256": "1c2c03450f3a7eee9cfbbb78f122314f8714a8bd4c99f87497e1dd1b6b81d15f",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_coverage.py",
+      "status": "M ",
+      "size": 9884,
+      "sha256": "94bc62bd5866822392abe02880b9bf586d2a1e2fa80748f8de0f1e9aa7b64690",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_evidence_fragments.py",
+      "status": "A ",
+      "size": 14094,
+      "sha256": "abc8bac2565cd9423df792f08160a1860e286ae896f9512d132a9e5ffeee6d11",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_evidence_postgres.py",
+      "status": "A ",
+      "size": 23081,
+      "sha256": "feef2f01d0062a08f8113c232be6d0e2a3e79b2910f917d7cb62061e0f3cc2d9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_ingestion.py",
+      "status": "M ",
+      "size": 73391,
+      "sha256": "813ffd03aa333590eec54e4e00a0702d28591053bd3da97c7e83f68404dddd56",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_matching.py",
+      "status": "M ",
+      "size": 23553,
+      "sha256": "c35287d119a01c96d904e1b8c15f62dd8fbef2982ed036f1e35c1380acd8c2d7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_recurrence.py",
+      "status": "M ",
+      "size": 38588,
+      "sha256": "bcf5189216828988e16a7dc5d070adbc7eae678dc8cfa980dcd97d22cc2cd6b9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_full_product_readiness.py",
+      "status": "M ",
+      "size": 26489,
+      "sha256": "c7f226d2b0e906159867af25a6e533f73488a0d05223acbfd51df80b64a48f14",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/[nNumber]/page.tsx",
+      "status": "M ",
+      "size": 25236,
+      "sha256": "fd9e85a9989df71649a642659907189dd02907e97c9c575f24baf8f9d954fb7d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/ads/page.tsx",
+      "status": "M ",
+      "size": 11439,
+      "sha256": "3f7202c3c21986b8c37faac9408e186a25233a94a357a43c90aa99634446f5c5",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/logbook/ads/reviews/page.tsx",
+      "status": "A ",
+      "size": 18343,
+      "sha256": "eb939c35efc34bdfe1881ddfe685ed71b36d19c87bcd0f9971f840311f0596ec",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/lib/api.ts",
+      "status": "M ",
+      "size": 23650,
+      "sha256": "88a658016f83ee76515970f03c2238e461d9c7125d35dc9be9c0ea987a10b373",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/advance-review-run.py",
+      "status": "A ",
+      "size": 1499,
+      "sha256": "79812e2775c508d85471b71df624ceb0df77bd533e393f8457079c4e44c6c301",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/build-review-packet.py",
+      "status": "A ",
+      "size": 8467,
+      "sha256": "034ec94e6f62a6f340552c5902e8c8792b8de35a9187c701bc4ecd61ac11bbe3",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/claude-review.env.example",
+      "status": "M ",
+      "size": 1310,
+      "sha256": "78485086320ace6cab94d505f3838f1c46f9f3fcec171517caa022fee9f00532",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/claude-review.sh",
+      "status": "M ",
+      "size": 7424,
+      "sha256": "02e0d7bdb9dda2f7cb40901bef8cf768456b369df20ee5bfcf7ed447f2bb1ac7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/create-review-run.sh",
+      "status": "A ",
+      "size": 1056,
+      "sha256": "bdf8cd4f27538c050bb23f3dd1589da44e71e182d7decf574ffa32012175b631",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/extract-claude-findings.py",
+      "status": "A ",
+      "size": 895,
+      "sha256": "496aee7459e5bd25c2227379fac6ebfbd79628ef9861e3cd59ad3efeebe01707",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/record-review.py",
+      "status": "A ",
+      "size": 6090,
+      "sha256": "d8953df230e6d478735b7fbcbed8f7555843fb24d9288d8870ea5f1d4375416c",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/review_packet_fingerprint.py",
+      "status": "A ",
+      "size": 3480,
+      "sha256": "4a03c5f0ff8d7c23b5305d0679faaaf7acdcb3c745da12cf2abae2a97ffd9fe8",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/tests/test_review_packet_fingerprint.py",
+      "status": "A ",
+      "size": 10115,
+      "sha256": "27d9c737f6f644a9dac54e6628e1213da08675c509497405a9498a24a54a705b",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/validate-review-run.py",
+      "status": "A ",
+      "size": 11093,
+      "sha256": "1e8ba820187033798b22c8fc496d02b399c85db946b0811e4fce40f40d56ab8e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/verify-review-packet.py",
+      "status": "A ",
+      "size": 1930,
+      "sha256": "d26e279290e4a0db3c1aa11ad52164dba02e6531894c8d2ef95369d0c7292786",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/verify-t081-postgres-migrations.sh",
+      "status": "A ",
+      "size": 11673,
+      "sha256": "88b81b5d9bc47e70ce1d7abaa87bc9a272dc7acc63ac66a35c2c49422c25b7cb",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/verify-t081-v4-slice1-postgres.py",
+      "status": "A ",
+      "size": 5182,
+      "sha256": "d6befe648b06be42c27836eaca4cb526d1ead9c325e65e1dff640ba7bde45e92",
+      "readStatus": "readable"
+    }
+  ],
+  "reviewInputs": [
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/decision.md",
+      "status": "review_input",
+      "size": 23882,
+      "sha256": "e80815fc1cd1ba4e40aa0e2411f8423e0e2e6a0bea360089440bd0f8bc78d767",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/findings.json",
+      "status": "review_input",
+      "size": 37586,
+      "sha256": "0bfbe9e4a21e798cd9cf42b0898763c53669a1b5f8868a5053cc862ea0dee522",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md",
+      "status": "review_input",
+      "size": 67240,
+      "sha256": "c864afb79d0e0dd2576b1a497dd44ba8df21bc4d40852820feca053d80c7cf62",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/implementation-slice-1.md",
+      "status": "review_input",
+      "size": 8219,
+      "sha256": "214f294cdd32a3938f06eb117f80f5bb79f22585a116b26233da8ce5a09a161f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/closure.md",
+      "status": "review_input",
+      "size": 9868,
+      "sha256": "f6f498e074d09351f42e18bce13ca0322495a49cbb792942a9d49c6bae0ebbd1",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [],
+  "outOfScopeReason": null
+}

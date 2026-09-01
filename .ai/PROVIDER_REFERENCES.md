@@ -411,10 +411,11 @@ Operational mapping:
 ## AD Extraction Providers
 
 - Status: implemented local deterministic extraction provider for T049; future LLM provider remains behind the same metadata/review contract
-- Date checked: 2026-06-18
+- Date checked: 2026-08-12 for the T081 Structured Outputs contract
 - References:
   - `.ai/DECISIONS.md` D015
   - `backend/app/services/ad_extraction.py`
+  - `https://developers.openai.com/api/docs/guides/structured-outputs`
 
 Verified fields and behaviors:
 
@@ -422,20 +423,34 @@ Verified fields and behaviors:
 - Provider metadata persisted:
   - `provider_name=deterministic_ad_extractor`
   - `provider_version=0.1.0`
-  - `schema_version=ad_extraction_v1`
+  - Legacy metadata extraction used `schema_version=ad_extraction_v1`.
+  - T081 full-text compliance extraction uses `schema_version=ad_extraction_v3`
+    and `ad_full_text_compliance_prompt_v3`. The strict Responses API schema
+    makes every object closed with `additionalProperties: false`, requires all
+    declared fields, and uses explicit nullable values or empty arrays when a
+    source does not establish a field.
   - `input_content_hash`
 - Structured output validates required keys before persistence/review approval:
   - `adNumber`
   - `title`
   - `effectiveDate`
   - `publicationDate`
-  - `affectedProducts`
+  - `applicabilityGroups` (authoritative typed manufacturer/model, model/serial
+    scope, installed-equipment conditions, confidence, uncertainty, and page
+    citations)
+  - `affectedProducts` (server-derived compatibility summary only)
   - `complianceActions`
   - `complianceIntervals`
   - `supersedesAdNumbers`
   - `sourceUrls`
+  - `requirements[].applicabilityGroupKeys`
+  - evidence-bound `initialThresholds` and `recurringTriggers`, including
+    source text, value, unit, and anchor kind
+  - `amocProvisions` (separate AMOC authority/submission structure, not an
+    in-rule alternative action)
 - Confidence is a local `0.0-1.0` score.
-- Low-confidence extraction routes to `ADExtractionReview`.
+- Every full-text v3 extraction routes to authenticated platform-admin review;
+  provider confidence never publishes regulatory meaning by itself.
 - Idempotency uses directive id, input content hash, provider name, provider version, and schema version.
 - A live Docker worker run on 2026-06-18 processed 20 directives and queued 13 pending human reviews.
 

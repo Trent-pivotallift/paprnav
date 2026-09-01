@@ -1,0 +1,76 @@
+[
+  {
+    "requirementKey": "a-magneto-replacement",
+    "requirementType": "one_time",
+    "actionText": "Replace any magneto that has a SN of 99110001 through 99129999, inclusive, with a magneto that does not have a serial number in that range.",
+    "initialThresholds": [
+      {
+        "metric": "total_time_hours",
+        "value": 10,
+        "unit": "hours",
+        "anchorKind": "effective_date",
+        "sourceText": "Compliance with this AD is required within 10 flight hours after the effective date of this AD"
+      }
+    ],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [
+      "Installed magneto serial number is 99110001 through 99129999 inclusive."
+    ],
+    "terminatingAction": "Replacement with a magneto outside the affected serial-number range satisfies the replacement obligation, subject to the separate installation prohibition.",
+    "citations": [
+      {
+        "sourceDocumentId": "asd_2c509af5b8df4eb2aa1cbc2f2563d54d",
+        "pageNumber": 2,
+        "text": "Replace any magneto that has a SN of 99110001 through 99129999, inclusive, with a magneto that does not have a serial number in that range."
+      }
+    ],
+    "confidence": 0.9,
+    "uncertaintyReasons": [
+      "Confirm whether flight hours should map to total-time or tach-hours in the normalized due-state model."
+    ]
+  },
+  {
+    "requirementKey": "b-missing-stop-pin-engine-inspection",
+    "requirementType": "conditional",
+    "actionText": "Inspect each removed magneto to verify that the impulse coupling stop pin is present. If the pin is missing, do the following:",
+    "initialThresholds": [],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [
+      "The impulse-coupling stop pin is missing.",
+      "Follow paragraph (b)(1) for C-125, C145, O-300, IO-360, and TSIO-360 series engines or paragraph (b)(2) for LTSIO-520-AE series engines."
+    ],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_2c509af5b8df4eb2aa1cbc2f2563d54d",
+        "pageNumber": 2,
+        "text": "Inspect each removed magneto to verify that the impulse coupling stop pin is present. If the pin is missing, do the following:"
+      }
+    ],
+    "confidence": 0.82,
+    "uncertaintyReasons": [
+      "Determine whether the two engine-family branches need separate requirement objects for applicability and materialization."
+    ]
+  },
+  {
+    "requirementKey": "c-installation-prohibition",
+    "requirementType": "installation_prohibition",
+    "actionText": "After the effective date of this AD, do not install any Unison Industries magnetos, model 6314, 6324, or 6364 that have a SN of 99110001 through 99129999 inclusive, on any engine.",
+    "initialThresholds": [],
+    "recurringTriggers": [],
+    "combinationLogic": "all",
+    "conditions": [],
+    "terminatingAction": null,
+    "citations": [
+      {
+        "sourceDocumentId": "asd_2c509af5b8df4eb2aa1cbc2f2563d54d",
+        "pageNumber": 2,
+        "text": "After the effective date of this AD, do not install any Unison Industries magnetos, model 6314, 6324, or 6364 that have a SN of 99110001 through 99129999 inclusive, on any engine."
+      }
+    ],
+    "confidence": 0.96,
+    "uncertaintyReasons": []
+  }
+]

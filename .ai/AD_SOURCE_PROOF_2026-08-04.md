@@ -195,14 +195,23 @@ during the local proof and recurrence implementation.
 
 The source/applicability catalog is relationally complete for the proven
 N3671L scope, but catalog completeness is separate from approved compliance
-meaning. The current database contains 45 current 172G/O-300-D directives; 23
-have retained full-text publication evidence and 22 remain valid
-historical-source adjudication cases. None of the 45 yet has an approved
+meaning. The current database contains 35 current N3671L airframe/engine
+directives. Across current and retained historical airframe/engine
+relationships, 17 have linked full-text publication evidence and 24 remain
+valid historical-source adjudication cases. The broader retained target proof
+has six additional full-text Appliance directives, but they are excluded from
+N3671L until an installed appliance identity is verified. None yet has an approved
 compliance extraction, so the normalized recurrence tables remain empty after
 migration rather than inferring intervals from DRS titles or indexes.
 
 Alembic `20260809_0020` adds normalized requirements, triggers, verified
 compliance events, time-state observations, and replayable due states. The
-next local gate is evidence-backed extraction and platform review of the 23
-retained publications. AWS deployment follows that gate; it does not replace
+next local gate is evidence-backed extraction and platform review of the 17
+airframe/engine publications. AWS deployment follows that gate; it does not replace
 it.
+
+T081 preparation passed **5 passed out of 5** in both rollback-only and
+committed modes on 2026-08-14. Seventeen `ad_extraction_v2` platform reviews
+were persisted: 16 have bounded native text, while AD 1994-14-12 remains an
+explicit source-boundary adjudication case. No deterministic extraction was
+approved and no recurrence requirement was fabricated.

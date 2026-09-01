@@ -1,0 +1,501 @@
+{
+  "adNumber": "2024-14-03",
+  "title": "Autopilot System",
+  "effectiveDate": "2024-08-20",
+  "publicationDate": "2024-07-16",
+  "applicabilityGroups": [
+    {
+      "groupKey": "commander-aircraft-table-1",
+      "productType": "aircraft",
+      "productSubtype": "airplane",
+      "manufacturer": {"sourceName": "Commander Aircraft", "normalizedName": null},
+      "modelApplicability": {
+        "kind": "listed",
+        "models": [
+          {"sourceDesignation": "112B", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "112TC", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "112TCA", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "114", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "114A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "114B", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "114TC", "normalizedDesignation": null, "aliases": []}
+        ],
+        "sourceText": "Table 1 to Paragraph (c)—Applicable Airplane Models"
+      },
+      "serialNumberApplicability": {
+        "kind": "unknown", "values": [], "ranges": [], "excludedValues": [],
+        "sourceText": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD"
+      },
+      "equipmentCombinationLogic": "all",
+      "equipmentConditions": [
+        {
+          "conditionKey": "garmin-gfc-500",
+          "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GFC 500", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "having a Garmin GFC 500 Autopilot System",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "having a Garmin GFC 500 Autopilot System"}]
+        },
+        {
+          "conditionKey": "garmin-gsa-28-stc",
+          "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GSA 28", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76"}]
+        }
+      ],
+      "conditions": ["certificated in any category"],
+      "citations": [
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD, certificated in any category, having a Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Table 1 to Paragraph (c)—Applicable Airplane Models"},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Commander Aircraft 112B, 112TC, 112TCA, 114, 114A, 114B, and 114TC Corporation"}
+      ],
+      "confidence": 0.82,
+      "uncertaintyReasons": [
+        "Serial-number scope is not stated separately in paragraph (c); retain unknown until the methodology explicitly resolves omission semantics.",
+        "The retained table parser separates the final word Corporation from Commander Aircraft; sourceName preserves only the contiguous parsed identity pending table remediation."
+      ]
+    },
+    {
+      "groupKey": "daher-aerospace-table-1",
+      "productType": "aircraft",
+      "productSubtype": "airplane",
+      "manufacturer": {"sourceName": "DAHER AEROSPACE", "normalizedName": null},
+      "modelApplicability": {
+        "kind": "listed",
+        "models": [
+          {"sourceDesignation": "TB 20", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TB 21", "normalizedDesignation": null, "aliases": []}
+        ],
+        "sourceText": "Table 1 to Paragraph (c)—Applicable Airplane Models"
+      },
+      "serialNumberApplicability": {
+        "kind": "unknown", "values": [], "ranges": [], "excludedValues": [],
+        "sourceText": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD"
+      },
+      "equipmentCombinationLogic": "all",
+      "equipmentConditions": [
+        {
+          "conditionKey": "garmin-gfc-500",
+          "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GFC 500", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "having a Garmin GFC 500 Autopilot System",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "having a Garmin GFC 500 Autopilot System"}]
+        },
+        {
+          "conditionKey": "garmin-gsa-28-stc",
+          "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GSA 28", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76"}]
+        }
+      ],
+      "conditions": ["certificated in any category"],
+      "citations": [
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD, certificated in any category, having a Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Table 1 to Paragraph (c)—Applicable Airplane Models"},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "DAHER AEROSPACE TB 20 and TB 21"}
+      ],
+      "confidence": 0.9,
+      "uncertaintyReasons": ["Serial-number scope is not stated separately in paragraph (c); retain unknown until the methodology explicitly resolves omission semantics."]
+    },
+    {
+      "groupKey": "mooney-international-table-1",
+      "productType": "aircraft",
+      "productSubtype": "airplane",
+      "manufacturer": {"sourceName": "Mooney International", "normalizedName": null},
+      "modelApplicability": {
+        "kind": "listed",
+        "models": [
+          {"sourceDesignation": "M20C", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20J", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20M", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20R", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M20S", "normalizedDesignation": null, "aliases": []}
+        ],
+        "sourceText": "Table 1 to Paragraph (c)—Applicable Airplane Models"
+      },
+      "serialNumberApplicability": {
+        "kind": "unknown", "values": [], "ranges": [], "excludedValues": [],
+        "sourceText": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD"
+      },
+      "equipmentCombinationLogic": "all",
+      "equipmentConditions": [
+        {
+          "conditionKey": "garmin-gfc-500",
+          "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GFC 500", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "having a Garmin GFC 500 Autopilot System",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "having a Garmin GFC 500 Autopilot System"}]
+        },
+        {
+          "conditionKey": "garmin-gsa-28-stc",
+          "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GSA 28", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76"}]
+        }
+      ],
+      "conditions": ["certificated in any category"],
+      "citations": [
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD, certificated in any category, having a Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Table 1 to Paragraph (c)—Applicable Airplane Models"},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Mooney International M20C, M20D, M20E, M20F, M20G, M20J, M20K, M20M, Corporation M20R, and M20S"}
+      ],
+      "confidence": 0.82,
+      "uncertaintyReasons": [
+        "Serial-number scope is not stated separately in paragraph (c); retain unknown until the methodology explicitly resolves omission semantics.",
+        "The retained table parser separates the final word Corporation from Mooney International; sourceName preserves only the contiguous parsed identity pending table remediation."
+      ]
+    },
+    {
+      "groupKey": "piper-aircraft-table-1",
+      "productType": "aircraft",
+      "productSubtype": "airplane",
+      "manufacturer": {"sourceName": "Piper Aircraft, Inc.", "normalizedName": null},
+      "modelApplicability": {
+        "kind": "listed",
+        "models": [
+          {"sourceDesignation": "PA-24", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-24-250", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-24-260", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-140", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-150", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-151", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-160", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-161", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-180", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-181", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-201T", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-235", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28-236", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28R-180", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28R-200", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28R-201", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28R-201T", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28RT-201", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-28RT-201T", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-30", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-39", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32-260", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32-300", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32-301", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32-301FT", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32-301T", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32-301XTC", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32R-300", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32RT-300", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32RT-300T", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32R-301 (HP)", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32R-301 (SP)", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "PA-32R-301T", "normalizedDesignation": null, "aliases": []}
+        ],
+        "sourceText": "Table 1 to Paragraph (c)—Applicable Airplane Models"
+      },
+      "serialNumberApplicability": {
+        "kind": "unknown", "values": [], "ranges": [], "excludedValues": [],
+        "sourceText": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD"
+      },
+      "equipmentCombinationLogic": "all",
+      "equipmentConditions": [
+        {
+          "conditionKey": "garmin-gfc-500", "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GFC 500", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [], "conditionText": "having a Garmin GFC 500 Autopilot System",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "having a Garmin GFC 500 Autopilot System"}]
+        },
+        {
+          "conditionKey": "garmin-gsa-28-stc", "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GSA 28", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76"}]
+        }
+      ],
+      "conditions": ["certificated in any category"],
+      "citations": [
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD, certificated in any category, having a Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Table 1 to Paragraph (c)—Applicable Airplane Models"},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Piper Aircraft, Inc. PA-24, PA-24-250, and PA-24-260 Piper Aircraft, Inc. PA-28-140, PA-28-150, PA-28-151, PA-28-160, PA-28-161, PA-28-180, PA-28-181, PA-28-201T, PA-28-235, PA-28-236, PA-28R-180, PA-28R-200, PA-28R-201, PA-28R-201T, PA-28RT-201, and PA-28RT-201 T Piper Aircraft, Inc. PA-30 and PA-39 Piper Aircraft, Inc. PA-32-260, PA-32-300, PA-32-301, PA-32-301FT, PA-32-301T, PA-32-301XTC, PA-32R-300, PA-32RT-300, PA-32RT-300T, PA-32R-301 (HP), PA-32R-301 (SP), and PA-32R-301 T"}
+      ],
+      "confidence": 0.78,
+      "uncertaintyReasons": [
+        "Serial-number scope is not stated separately in paragraph (c); retain unknown until the methodology explicitly resolves omission semantics.",
+        "visual_ocr_model_cell_mismatch|modelIndex=18|visual=PA-28RT-201T|parsed=PA-28RT-201 T|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=3",
+        "visual_ocr_model_cell_mismatch|modelIndex=32|visual=PA-32R-301T|parsed=PA-32R-301 T|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=3"
+      ]
+    },
+    {
+      "groupKey": "textron-aviation-table-1",
+      "productType": "aircraft",
+      "productSubtype": "airplane",
+      "manufacturer": {"sourceName": "Textron Aviation Inc.", "normalizedName": null},
+      "modelApplicability": {
+        "kind": "listed",
+        "models": [
+          {"sourceDesignation": "19A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "B19", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M19A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "A23A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "A23-19", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "A23-24", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "B23", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "C23", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "A24", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "A24R", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "B24R", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "C24R", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "C35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "D35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "E35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "G35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "35-33", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "35-A33", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "35-B33", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "35-C33", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "35-C33A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "36", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "A36", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "A36TC", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "B36TC", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "E33", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "E33A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "E33C", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F33", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F33A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F33C", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "G33", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "H35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "J35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "K35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "M35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "N35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "P35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "S35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "V35", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "V35A", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "V35B", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172H", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172I", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172L", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172M", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172N", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172P", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172Q", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172R", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172S", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172H", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172L", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172M", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172N", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F172P", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "172RG", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "P172D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "R172K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "FR172K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "177B", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "177RG", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F177RG", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182H", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182J", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182L", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182M", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182N", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182P", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182Q", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182R", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182S", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "182T", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F182P", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "F182Q", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "FR182", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "R182", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T182", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T182T", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TR182", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "206H", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "P206C", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "P206D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "P206E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T206H", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TP206C", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TP206D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TP206E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TU206C", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TU206D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TU206E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TU206F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "TU206G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "U206C", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "U206D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "U206E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "U206F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "U206G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210D", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210E", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210H", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210J", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210L", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210M", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "210N", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210F", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210G", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210H", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210J", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210K", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210L", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210M", "normalizedDesignation": null, "aliases": []},
+          {"sourceDesignation": "T210N", "normalizedDesignation": null, "aliases": []}
+        ],
+        "sourceText": "Table 1 to Paragraph (c)—Applicable Airplane Models"
+      },
+      "serialNumberApplicability": {
+        "kind": "unknown", "values": [], "ranges": [], "excludedValues": [],
+        "sourceText": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD"
+      },
+      "equipmentCombinationLogic": "all",
+      "equipmentConditions": [
+        {
+          "conditionKey": "garmin-gfc-500", "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GFC 500", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [], "conditionText": "having a Garmin GFC 500 Autopilot System",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "having a Garmin GFC 500 Autopilot System"}]
+        },
+        {
+          "conditionKey": "garmin-gsa-28-stc", "productType": "equipment",
+          "manufacturer": {"sourceName": "Garmin", "normalizedName": null},
+          "model": {"sourceDesignation": "GSA 28", "normalizedDesignation": null, "aliases": []},
+          "softwareVersions": [],
+          "conditionText": "includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76",
+          "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76"}]
+        }
+      ],
+      "conditions": ["certificated in any category"],
+      "citations": [
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "This AD applies to all airplane models specified in Table 1 to paragraph (c) of this AD, certificated in any category, having a Garmin GFC 500 Autopilot System that includes an optional GSA 28 pitch trim servo installed per Supplemental Type Certificate No. SA01866WI using Master Drawing List 005–01264–00, Revisions 1 through 76."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Table 1 to Paragraph (c)—Applicable Airplane Models"},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 3, "text": "Textron Aviation Inc. 19A, B19, M19A, A23A, A23-19, A23-24, B23, C23, A24, ( type certificate A24R, B24R, and C24R previously held by Beech Aircraft Corporation, Raytheon Aircraft Company, Hawker Beechcraft Corporation, and Beechcraft Corporation) Textron Aviation Inc. C35, D35, E35, F35, and G35 ( type certificate previously held by Beech Aircraft Corporation, Raytheon Aircraft Company, Hawker Beechcraft Corporation, and Beechcraft Corporation) Textron Aviation Inc. 35-33, 35-A33, 35-B33, 35-C33, 35-C33A, 36, A36, A36TC, (type certificate B36TC, E33, E33A, E33C, F33, F33A, F33C, G33, H35, J35, previously held by Beech K35, M35, N35, P35, S35, V35, V35A, and V35B"},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 4, "text": "Type certificate holder Airplane model Aircraft Corporation, Raytheon Aircraft Company, Hawker Beechcraft Corporation, and Beechcraft Corporation) Textron Aviation Tnc. 172D, 172E, 172F, 172G, 172H, 172T, 172K, 172L, 172M, 172N, ( type certificate 172P, 172Q, 172R, and 172S previously held by Cessna Aircraft Company) Textron Aviation Inc. Fl 72E, Fl 72F, Fl 72G, Fl 72H, Fl 72K, Fl 72L, Fl 72M, Fl 72N, ( type certificate F172P previously held by Cessna Aircraft Company) Textron Aviation Inc. 172RG, Pl 72D, and Rl 72K ( type certificate previously held by Cessna Aircraft Company) Textron Aviation Inc. FR172K (type certificate previously held by Cessna Aircraft Company) Textron Aviation Inc. 177B (type certificate previously held by Cessna Aircraft Company) Textron Aviation Inc. 177RG (type certificate previously held by Cessna Aircraft Company) Textron Aviation Inc. F177RG ( type certificate previously held by Cessna Aircraft Company) Textron Aviation Inc. 182E, 182F, 182G, 182H, 182J, 182K, 182L, 182M, 182N, 182P, ( type certificate 182Q, 182R, 182S, 182T, F182P, F182Q, FR182, R182, T182, previously held by Cessna T182T, and TR182 Aircraft Company) Textron Aviation Inc. 206H,P206C,P206D,P206E, T206H,TP206C, TP206D, ( type certificate TP206E, TU206C, TU206D, TU206E, TU206F, TU206G, previously held by Cessna U206C, U206D, U206E, U206F, and U206G Aircraft Company) Textron Aviation Inc. 210D, 210E, 210F, 2100, 210H, 210J, 210K, 210L, 210M, 210N, (type certificate T210F, T210G, T210H, T210J, T210K, T210L, T210M, and previously held by Cessna T210N Aircraft Company)"}
+      ],
+      "confidence": 0.72,
+      "uncertaintyReasons": [
+        "Serial-number scope is not stated separately in paragraph (c); retain unknown until the methodology explicitly resolves omission semantics.",
+        "visual_ocr_model_cell_mismatch|modelIndex=48|visual=172I|parsed=172T|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=57|visual=F172E|parsed=Fl 72E|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=58|visual=F172F|parsed=Fl 72F|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=59|visual=F172G|parsed=Fl 72G|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=60|visual=F172H|parsed=Fl 72H|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=61|visual=F172K|parsed=Fl 72K|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=62|visual=F172L|parsed=Fl 72L|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=63|visual=F172M|parsed=Fl 72M|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=64|visual=F172N|parsed=Fl 72N|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=67|visual=P172D|parsed=Pl 72D|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=68|visual=R172K|parsed=Rl 72K|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4",
+        "visual_ocr_model_cell_mismatch|modelIndex=115|visual=210G|parsed=2100|sourceDocumentId=asd_63da3892cf8b4124b49e4066c57858a0|pageNumber=4"
+      ]
+    }
+  ],
+  "affectedProducts": [],
+  "complianceActions": [],
+  "complianceIntervals": ["Within 12 months after the effective date of this AD"],
+  "supersedesAdNumbers": [],
+  "requirements": [
+    {
+      "requirementKey": "g-software-update",
+      "applicabilityGroupKeys": ["commander-aircraft-table-1", "daher-aerospace-table-1", "mooney-international-table-1", "piper-aircraft-table-1", "textron-aviation-table-1"],
+      "requirementType": "one_time",
+      "actionText": "Within 12 months after the effective date of this AD, update the Garmin GFC 500 Autopilot System software applicable to your airplane to a version that is not 8.01 or earlier for the G5, not version 9.01 or earlier for the G3X Touch, and not version 2.59 or earlier for the GI 275.",
+      "initialThresholds": [{"metric": "calendar", "value": 12, "unit": "months", "anchorKind": "effective_date", "sourceText": "Within 12 months after the effective date of this AD"}],
+      "recurringTriggers": [],
+      "combinationLogic": "all",
+      "conditions": ["unless already done"],
+      "terminatingAction": null,
+      "citations": [
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 5, "text": "Comply with this AD within the compliance times specified, unless already done."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 5, "text": "Within 12 months after the effective date of this AD, update the Garmin GFC 500 Autopilot System software applicable to your airplane to a version that is not 8.01 or earlier for the G5, not version 9.01 or earlier for the G3X Touch, and not version 2.59 or earlier for the GI 275."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 5, "text": "Note 1 to paragraph (g): The software update can be done using Garmin Mandatory STC Service Bulletin 22123, Rev A, dated January 3, 2023. This AD also allows the installation of versions other than those listed in Garmin Mandatory STC Service Bulletin 22123, Rev A, dated January 3, 2023, provided those versions are not listed in paragraph (g) of this AD."}
+      ],
+      "confidence": 0.88,
+      "uncertaintyReasons": ["Schema gap: Note 1 is a non-mandatory compliance method and permitted alternative, not a separate obligation; v3 has no dedicated method/reference object, so the exact cited note is retained here pending schema expansion."]
+    },
+    {
+      "requirementKey": "h-installation-prohibition",
+      "applicabilityGroupKeys": ["commander-aircraft-table-1", "daher-aerospace-table-1", "mooney-international-table-1", "piper-aircraft-table-1", "textron-aviation-table-1"],
+      "requirementType": "installation_prohibition",
+      "actionText": "As of the effective date of this AD, do not install Garmin GFC 500 Autopilot System Software that is version 8.01 or earlier for the G5, version 9.01 or earlier for the G3X Touch, or version 2.59 or earlier for the GI 275, on any airplane.",
+      "initialThresholds": [],
+      "recurringTriggers": [],
+      "combinationLogic": "all",
+      "conditions": [],
+      "terminatingAction": null,
+      "citations": [{"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 5, "text": "As of the effective date of this AD, do not install Garmin GFC 500 Autopilot System Software that is version 8.01 or earlier for the G5, version 9.01 or earlier for the G3X Touch, or version 2.59 or earlier for the GI 275, on any airplane."}],
+      "confidence": 0.98,
+      "uncertaintyReasons": []
+    }
+  ],
+  "amocProvisions": [
+    {
+      "provisionKey": "i-amoc",
+      "authorityText": "The Manager, Central Certification Branch, FAA, has the authority to approve AMOCs for this AD, if requested using the procedures found in 14 CFR 39.19.",
+      "approvingAuthority": "The Manager, Central Certification Branch, FAA",
+      "submissionInstructions": "In accordance with 14 CFR 39.19, send your request to your principal inspector or local Flight Standards District Office, as appropriate. If sending information directly to the manager of the Central Certification Branch, send it to the attention of the person identified in paragraph (j)(1) of this AD. Information may be emailed to wichita-cos@faa.gov.",
+      "conditions": ["Before using any approved AMOC, notify your appropriate principal inspector, or lacking a principal inspector, the manager of the local flight standards district office/certificate holding district office."],
+      "citations": [
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 5, "text": "The Manager, Central Certification Branch, FAA, has the authority to approve AMOCs for this AD, if requested using the procedures found in 14 CFR 39.19. In accordance with 14 CFR 39.19, send your request to your principal inspector or local Flight Standards District Office, as appropriate. If sending information directly to the manager of the Central Certification Branch, send it to the attention of the person identified in paragraph (j)(1) of this AD. Information may be emailed to wichita-cos@faa.gov."},
+        {"sourceDocumentId": "asd_63da3892cf8b4124b49e4066c57858a0", "pageNumber": 5, "text": "Before using any approved AMOC, notify your appropriate principal inspector, or lacking a principal inspector, the manager of the local flight standards district office/certificate holding district office."}
+      ],
+      "confidence": 0.98,
+      "uncertaintyReasons": []
+    }
+  ],
+  "sourceUrls": {
+    "html": "https://www.govinfo.gov/content/pkg/FR-2024-07-16/html/2024-15529.htm",
+    "pdf": "https://www.govinfo.gov/content/pkg/FR-2024-07-16/pdf/2024-15529.pdf",
+    "publicInspectionPdf": null
+  },
+  "confidence": 0.76,
+  "citations": [
+    {"field": "effectiveDate", "source": "federal_register_document_pdf_page_1", "text": "DATES: This AD is effective August 20, 2024."},
+    {"field": "publicationDate", "source": "federal_register_document_pdf_header", "text": "Tuesday, July 16, 2024"}
+  ],
+  "uncertaintyReasons": [
+    "Human calibration draft only: table-image OCR discrepancies and absent explicit serial-number wording remain unresolved.",
+    "No approval, publication, applicability materialization, matching, or due-state computation is authorized from this draft."
+  ]
+}

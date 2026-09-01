@@ -1,5 +1,7 @@
 from datetime import date
+from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,8 +22,79 @@ from app.models.core import (
 from app.services.ad_discovery import hash_json
 from app.services.ad_applicability import populate_applicability_from_extraction
 from app.services import ad_matching
-from app.services.ad_matching import match_aircraft_ads
+from app.services.ad_matching import (
+    evaluate_component_applicability,
+    evaluate_serial_scope,
+    match_aircraft_ads,
+)
 from tests.conftest import login
+
+
+@pytest.fixture(autouse=True)
+def allow_legacy_matching_fixtures(monkeypatch) -> None:
+    """Keep legacy factory tests isolated from the production v3 release gate."""
+
+    monkeypatch.setattr(
+        ad_matching,
+        "approved_current_extractions",
+        lambda db: db.scalars(
+            select(ADExtraction).where(ADExtraction.status == "approved")
+        ).all(),
+    )
+
+
+def test_serial_applicability_is_tri_state_and_honors_exclusions() -> None:
+    scope = {
+        "kind": "ranges",
+        "values": [],
+        "ranges": [{"start": "17280001", "end": "17280099"}],
+        "excludedValues": ["17280050"],
+        "sourceText": "serial numbers 17280001 through 17280099, except 17280050",
+    }
+
+    assert evaluate_serial_scope("17280001", scope) == "applicable"
+    assert evaluate_serial_scope("17280050", scope) == "not_applicable"
+    assert evaluate_serial_scope("17280100", scope) == "not_applicable"
+    assert evaluate_serial_scope(None, scope) == "uncertain"
+    assert evaluate_serial_scope("A-12", {
+        **scope,
+        "ranges": [{"start": "100", "end": "200"}],
+        "excludedValues": [],
+    }) == "uncertain"
+
+
+def test_component_applicability_fails_closed_for_unresolved_predicates() -> None:
+    component = SimpleNamespace(
+        role="engine",
+        make="Lycoming",
+        model="IO-360-L2A",
+        serial_number="L-12345-51A",
+    )
+    target = SimpleNamespace(
+        make="Lycoming",
+        model="IO-360-L2A",
+    )
+    applicability = SimpleNamespace(
+        target=target,
+        source_identity={"modelApplicability": {"kind": "listed"}},
+        serial_range={"kind": "all", "excludedValues": []},
+        equipment_conditions=[],
+        conditions=[],
+        source_payload={},
+    )
+
+    assert evaluate_component_applicability(component, applicability, "engine") == "applicable"
+    applicability.source_identity = {"modelApplicability": {"kind": "expression"}}
+    assert evaluate_component_applicability(component, applicability, "engine") == "uncertain"
+    applicability.source_identity = {"modelApplicability": {"kind": "listed"}}
+    applicability.equipment_conditions = [{"equipment": "specific magneto"}]
+    assert evaluate_component_applicability(component, applicability, "engine") == "uncertain"
+    applicability.equipment_conditions = []
+    applicability.conditions = [{"condition": "impulse coupling stop pin is missing"}]
+    assert evaluate_component_applicability(component, applicability, "engine") == "uncertain"
+    applicability.conditions = []
+    target.model = "O-320"
+    assert evaluate_component_applicability(component, applicability, "engine") == "not_applicable"
 
 
 def test_match_status_distinguishes_not_run_from_current_empty(
@@ -185,11 +258,15 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     db_session.commit()
 
     login(client, "owner.test@paprnav.local")
+    monkeypatch.setattr(
+        "app.api.routes.ads.extraction_has_signed_release",
+        lambda _: True,
+    )
     response = client.get(f"/api/v1/ads/aircraft/{aircraft.id}/matches")
     assert response.status_code == 200
     match_payload = response.json()
     assert match_payload["matcherStatus"] == "current"
-    assert match_payload["algorithmVersion"] == "0.5.0"
+    assert match_payload["algorithmVersion"] == "0.7.0"
     assert match_payload["reprocessingRequired"] is False
     matches = match_payload["matches"]
     assert len(matches) == 3
@@ -249,7 +326,7 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     current_results = db_session.scalars(
         select(ADMatchResult).where(
             ADMatchResult.aircraft_id == aircraft.id,
-            ADMatchResult.algorithm_version == "0.5.0",
+            ADMatchResult.algorithm_version == "0.7.0",
         )
     ).all()
     for result in current_results:
@@ -548,4 +625,13 @@ def create_approved_extraction(
     db.add(extraction)
     db.flush()
     populate_applicability_from_extraction(db, extraction)
+    for applicability in extraction.directive.target_applicabilities:
+        if applicability.source_extraction_id == extraction.id:
+            applicability.serial_range = {
+                "kind": "all",
+                "values": [],
+                "ranges": [],
+                "excludedValues": [],
+                "sourceText": "all serial numbers",
+            }
     return extraction
