@@ -1,0 +1,526 @@
+{
+  "proposal": {
+    "schemaVersion": "ad_extraction_v4",
+    "decisionKey": "calibration-2002-13-04",
+    "directiveIdentity": {
+      "directiveId": "ad-2002-13-04",
+      "adNumber": {
+        "state": "known",
+        "value": "2002-13-04",
+        "evidenceKeys": [
+          "ev-identity"
+        ]
+      }
+    },
+    "officialDocuments": [
+      {
+        "officialDocumentKey": "official-rule",
+        "documentRole": "ad_rule",
+        "sourceDocumentId": "{{sourceDocumentId:official-rule}}",
+        "sourceContentHash": "6abbb7724df98bf571ab84e9d58b18f5ef87a0e89aa29817670c17f4461714b7",
+        "publicationDocumentNumber": "02-16174",
+        "evidenceKeys": [
+          "ev-identity",
+          "ev-applicability-conflict",
+          "ev-compliance-time",
+          "ev-action-range",
+          "ev-pin-condition",
+          "ev-family-a",
+          "ev-family-b",
+          "ev-installation-prohibition",
+          "ev-amoc",
+          "ev-effective"
+        ]
+      }
+    ],
+    "evidenceBindings": {
+      "ev-identity": {
+        "fragmentId": "{{fragmentId:ev-identity}}",
+        "fragmentHash": "{{fragmentHash:ev-identity}}"
+      },
+      "ev-applicability-conflict": {
+        "fragmentId": "{{fragmentId:ev-applicability-conflict}}",
+        "fragmentHash": "{{fragmentHash:ev-applicability-conflict}}"
+      },
+      "ev-compliance-time": {
+        "fragmentId": "{{fragmentId:ev-compliance-time}}",
+        "fragmentHash": "{{fragmentHash:ev-compliance-time}}"
+      },
+      "ev-action-range": {
+        "fragmentId": "{{fragmentId:ev-action-range}}",
+        "fragmentHash": "{{fragmentHash:ev-action-range}}"
+      },
+      "ev-pin-condition": {
+        "fragmentId": "{{fragmentId:ev-pin-condition}}",
+        "fragmentHash": "{{fragmentHash:ev-pin-condition}}"
+      },
+      "ev-family-a": {
+        "fragmentId": "{{fragmentId:ev-family-a}}",
+        "fragmentHash": "{{fragmentHash:ev-family-a}}"
+      },
+      "ev-family-b": {
+        "fragmentId": "{{fragmentId:ev-family-b}}",
+        "fragmentHash": "{{fragmentHash:ev-family-b}}"
+      },
+      "ev-installation-prohibition": {
+        "fragmentId": "{{fragmentId:ev-installation-prohibition}}",
+        "fragmentHash": "{{fragmentHash:ev-installation-prohibition}}"
+      },
+      "ev-amoc": {
+        "fragmentId": "{{fragmentId:ev-amoc}}",
+        "fragmentHash": "{{fragmentHash:ev-amoc}}"
+      },
+      "ev-effective": {
+        "fragmentId": "{{fragmentId:ev-effective}}",
+        "fragmentHash": "{{fragmentHash:ev-effective}}"
+      }
+    },
+    "incorporatedDocuments": [],
+    "productScopes": [
+      {
+        "scopeKey": "scope-tcm-engine",
+        "productRole": "engine",
+        "manufacturer": {
+          "sourceValue": "Teledyne Continental Motors",
+          "normalizedIdentity": {
+            "state": "known",
+            "value": "Teledyne Continental Motors",
+            "evidenceKeys": [
+              "ev-applicability-conflict"
+            ]
+          }
+        },
+        "modelScope": {
+          "kind": "listed",
+          "sourceDesignations": [
+            "C-125",
+            "C145",
+            "O-300",
+            "IO-360",
+            "TSIO-360",
+            "LTSIO-520-AE"
+          ],
+          "evidenceKeys": [
+            "ev-applicability-conflict"
+          ]
+        },
+        "serialScope": {
+          "kind": "unknown",
+          "reason": "conflicting_evidence",
+          "evidenceKeys": [
+            "ev-applicability-conflict",
+            "ev-action-range"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "partNumberScope": {
+          "kind": "not_applicable",
+          "reason": "source_scope_not_by_part_number",
+          "evidenceKeys": [
+            "ev-applicability-conflict"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-applicability-conflict"
+        ]
+      }
+    ],
+    "conditionDefinitions": [
+      {
+        "conditionKey": "condition-magneto-installed",
+        "conditionType": "installed_equipment",
+        "operator": "is_installed",
+        "subject": {
+          "productRole": "appliance",
+          "manufacturer": {
+            "state": "known",
+            "value": "Unison Industries (Slick)",
+            "evidenceKeys": [
+              "ev-applicability-conflict"
+            ]
+          },
+          "modelOrSeries": {
+            "state": "known",
+            "value": "6314,6324,6364",
+            "evidenceKeys": [
+              "ev-applicability-conflict"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-applicability-conflict"
+        ]
+      },
+      {
+        "conditionKey": "condition-pin-missing",
+        "conditionType": "configuration_attribute",
+        "operator": "equals",
+        "subject": {
+          "attributeKey": "stop-pin-presence",
+          "attributeValue": {
+            "state": "known",
+            "value": "missing",
+            "evidenceKeys": [
+              "ev-pin-condition"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-pin-condition"
+        ]
+      },
+      {
+        "conditionKey": "condition-family-a",
+        "conditionType": "identity",
+        "operator": "identity_in",
+        "subject": {
+          "productRole": "engine",
+          "modelOrSeries": {
+            "state": "known",
+            "value": "C-125,C145,O-300,IO-360,TSIO-360",
+            "evidenceKeys": [
+              "ev-family-a"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-family-a"
+        ]
+      },
+      {
+        "conditionKey": "condition-family-b",
+        "conditionType": "identity",
+        "operator": "identity_in",
+        "subject": {
+          "productRole": "engine",
+          "modelOrSeries": {
+            "state": "known",
+            "value": "LTSIO-520-AE",
+            "evidenceKeys": [
+              "ev-family-b"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-family-b"
+        ]
+      }
+    ],
+    "applicabilityRules": [
+      {
+        "ruleKey": "rule-engine-magneto",
+        "scopeExpression": {
+          "nodeType": "scope_ref",
+          "scopeKey": "scope-tcm-engine"
+        },
+        "exclusionRuleKeys": [],
+        "evidenceKeys": [
+          "ev-applicability-conflict"
+        ],
+        "conditionExpression": {
+          "nodeType": "predicate_ref",
+          "conditionKey": "condition-magneto-installed"
+        }
+      }
+    ],
+    "requirements": [
+      {
+        "requirementKey": "req-replace",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-magneto"
+        },
+        "requirementType": "replacement",
+        "action": {
+          "actionType": "replace",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-action-range"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-action-range"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "10",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-compliance-time"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-compliance-time"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-action-range"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-action-range"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-action-range",
+          "ev-compliance-time"
+        ],
+        "sequence": "1"
+      },
+      {
+        "requirementKey": "req-pin-family-a",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-magneto"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-family-a"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "conditional",
+          "conditionExpression": {
+            "nodeType": "predicate_ref",
+            "conditionKey": "condition-family-a"
+          },
+          "evidenceKeys": [
+            "ev-pin-condition",
+            "ev-family-a"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "10",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-compliance-time"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-compliance-time"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-family-a"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-family-a"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-pin-condition",
+          "ev-family-a",
+          "ev-compliance-time"
+        ],
+        "sequence": "2"
+      },
+      {
+        "requirementKey": "req-pin-family-b",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-magneto"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-family-b"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "conditional",
+          "conditionExpression": {
+            "nodeType": "predicate_ref",
+            "conditionKey": "condition-family-b"
+          },
+          "evidenceKeys": [
+            "ev-pin-condition",
+            "ev-family-b"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "10",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-compliance-time"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-compliance-time"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-family-b"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-family-b"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-pin-condition",
+          "ev-family-b",
+          "ev-compliance-time"
+        ],
+        "sequence": "3"
+      },
+      {
+        "requirementKey": "req-prohibition",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-magneto"
+        },
+        "requirementType": "installation_prohibition",
+        "action": {
+          "actionType": "installation_prohibition",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-installation-prohibition"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-installation-prohibition"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "calendar",
+              "interval": "0",
+              "unit": "days",
+              "comparator": "at_or_after",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-installation-prohibition"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-installation-prohibition"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-installation-prohibition"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-installation-prohibition"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-installation-prohibition"
+        ],
+        "sequence": "4"
+      }
+    ],
+    "recurrenceGroups": [],
+    "applicabilitySearchHints": [
+      {
+        "hintKey": "hint-airframes",
+        "productRole": "airframe",
+        "manufacturer": "multiple",
+        "models": [
+          "170",
+          "172",
+          "SR20",
+          "SR22",
+          "PA-28R-201T",
+          "PA-34"
+        ],
+        "controlling": false,
+        "exhaustive": false,
+        "evidenceKeys": [
+          "ev-applicability-conflict"
+        ]
+      }
+    ],
+    "amocAuthorityProvisions": [
+      {
+        "provisionKey": "amoc-general",
+        "approvingAuthority": {
+          "state": "known",
+          "value": "FAA Chicago Aircraft Certification Office",
+          "evidenceKeys": [
+            "ev-amoc"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-amoc"
+        ]
+      }
+    ],
+    "supersessionRelations": [],
+    "authoritativeCorrections": []
+  },
+  "submissionContext": {
+    "relationships": []
+  }
+}

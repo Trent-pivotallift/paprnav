@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paprnav.local/schemas/ad_extraction_v4.schema.json",
+  "title": "Paprnav immutable AD extraction candidate V4",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["proposal", "submissionContext"],
+  "properties": {
+    "proposal": {"$ref": "#/$defs/proposal"},
+    "submissionContext": {"$ref": "#/$defs/submissionContext"}
+  },
+  "$defs": {
+    "stableKey": {"type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "evidenceKeys": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"$ref": "#/$defs/stableKey"}, "x-paprnav-array-kind": "set"
+    },
+    "stringSet": {
+      "type": "array", "uniqueItems": true,
+      "items": {"$ref": "#/$defs/identifier"}, "x-paprnav-array-kind": "set"
+    },
+    "keySet": {
+      "type": "array", "uniqueItems": true,
+      "items": {"$ref": "#/$defs/stableKey"}, "x-paprnav-array-kind": "set"
+    },
+    "temporalScope": {
+      "type": "object", "additionalProperties": false, "required": ["kind"],
+      "properties": {"kind": {"enum": ["directive_version", "publication_version", "at_applicability_evaluation", "at_compliance_evaluation", "source_observation"]}}
+    },
+    "knownString": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["state", "value", "evidenceKeys"], "properties": {"state": {"const": "known"}, "value": {"$ref": "#/$defs/identifier"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"$ref": "#/$defs/unknownValue"},
+        {"$ref": "#/$defs/notApplicableValue"}
+      ]
+    },
+    "unknownValue": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason", "temporalScope", "evidenceKeys"],
+      "properties": {
+        "state": {"const": "unknown"},
+        "reason": {"enum": ["not_observed", "unavailable", "not_obtained", "not_extracted", "not_yet_reviewed", "not_yet_verified", "conflicting_evidence", "source_ambiguous", "unsupported_expression"]},
+        "temporalScope": {"$ref": "#/$defs/temporalScope"},
+        "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "notApplicableValue": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason", "temporalScope", "evidenceKeys"],
+      "properties": {
+        "state": {"const": "not_applicable"}, "reason": {"$ref": "#/$defs/identifier"},
+        "temporalScope": {"$ref": "#/$defs/temporalScope"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "directiveIdentity": {
+      "type": "object", "additionalProperties": false, "required": ["directiveId", "adNumber"],
+      "properties": {
+        "directiveId": {"$ref": "#/$defs/identifier"}, "adNumber": {"$ref": "#/$defs/knownString"},
+        "amendment": {"$ref": "#/$defs/knownString"}, "revision": {"$ref": "#/$defs/knownString"},
+        "effectiveDate": {"$ref": "#/$defs/knownString"}, "regulatoryStatus": {"$ref": "#/$defs/knownString"}
+      }
+    },
+    "officialDocument": {
+      "type": "object", "additionalProperties": false,
+      "required": ["officialDocumentKey", "documentRole", "sourceDocumentId", "sourceContentHash", "publicationDocumentNumber", "evidenceKeys"],
+      "properties": {
+        "officialDocumentKey": {"$ref": "#/$defs/stableKey"}, "documentRole": {"enum": ["ad_rule", "official_correction"]},
+        "sourceDocumentId": {"$ref": "#/$defs/identifier"}, "sourceContentHash": {"$ref": "#/$defs/hash"},
+        "publicationDocumentNumber": {"$ref": "#/$defs/identifier"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "evidenceBinding": {
+      "type": "object", "additionalProperties": false, "required": ["fragmentId", "fragmentHash"],
+      "properties": {"fragmentId": {"$ref": "#/$defs/identifier"}, "fragmentHash": {"$ref": "#/$defs/hash"}}
+    },
+    "incorporatedDocument": {
+      "type": "object", "additionalProperties": false,
+      "required": ["documentRefKey", "documentType", "documentNumber", "revision", "retention", "evidenceKeys"],
+      "properties": {
+        "documentRefKey": {"$ref": "#/$defs/stableKey"},
+        "documentType": {"enum": ["service_bulletin", "service_letter", "service_instruction", "maintenance_manual", "approved_data", "other_reviewed"]},
+        "documentNumber": {"$ref": "#/$defs/knownString"}, "revision": {"$ref": "#/$defs/knownString"},
+        "retention": {"$ref": "#/$defs/unknownValue"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "manufacturerIdentity": {
+      "type": "object", "additionalProperties": false, "required": ["sourceValue", "normalizedIdentity"],
+      "properties": {"sourceValue": {"$ref": "#/$defs/identifier"}, "normalizedIdentity": {"$ref": "#/$defs/knownString"}}
+    },
+    "identifierRange": {
+      "type": "object", "additionalProperties": false, "required": ["lower", "upper", "lowerInclusive", "upperInclusive", "polarity"],
+      "properties": {
+        "lower": {"$ref": "#/$defs/identifier"}, "upper": {"$ref": "#/$defs/identifier"},
+        "lowerInclusive": {"type": "boolean"}, "upperInclusive": {"type": "boolean"}, "polarity": {"enum": ["included", "excluded"]}
+      }
+    },
+    "designationScope": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind", "evidenceKeys"], "properties": {"kind": {"const": "all"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "sourceDesignations", "evidenceKeys"], "properties": {"kind": {"const": "listed"}, "sourceDesignations": {"$ref": "#/$defs/stringSet"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "expression", "evidenceKeys"], "properties": {"kind": {"const": "series_expression"}, "expression": {"$ref": "#/$defs/identifier"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "ranges", "evidenceKeys"], "properties": {"kind": {"const": "ranges"}, "ranges": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identifierRange"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": ["lower", "upper", "lowerInclusive", "upperInclusive", "polarity"]}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "reason", "temporalScope", "evidenceKeys"], "properties": {"kind": {"const": "unknown"}, "reason": {"enum": ["not_observed", "unavailable", "not_obtained", "not_extracted", "not_yet_reviewed", "not_yet_verified", "conflicting_evidence", "source_ambiguous", "unsupported_expression"]}, "temporalScope": {"$ref": "#/$defs/temporalScope"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "reason", "temporalScope", "evidenceKeys"], "properties": {"kind": {"const": "not_applicable"}, "reason": {"$ref": "#/$defs/identifier"}, "temporalScope": {"$ref": "#/$defs/temporalScope"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}}
+      ]
+    },
+    "productScope": {
+      "type": "object", "additionalProperties": false, "required": ["scopeKey", "productRole", "evidenceKeys"],
+      "properties": {
+        "scopeKey": {"$ref": "#/$defs/stableKey"}, "productRole": {"enum": ["airframe", "engine", "propeller", "appliance", "installed_part", "modification"]},
+        "manufacturer": {"$ref": "#/$defs/manufacturerIdentity"}, "modelScope": {"$ref": "#/$defs/designationScope"},
+        "serialScope": {"$ref": "#/$defs/designationScope"}, "partNumberScope": {"$ref": "#/$defs/designationScope"},
+        "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "conditionSubject": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "productRole": {"enum": ["airframe", "engine", "propeller", "appliance", "installed_part", "modification"]},
+        "manufacturer": {"$ref": "#/$defs/knownString"}, "modelOrSeries": {"$ref": "#/$defs/knownString"},
+        "partNumber": {"$ref": "#/$defs/knownString"}, "serialNumber": {"$ref": "#/$defs/knownString"},
+        "stcNumber": {"$ref": "#/$defs/knownString"}, "attributeKey": {"$ref": "#/$defs/stableKey"},
+        "attributeValue": {"$ref": "#/$defs/knownString"}
+      }
+    },
+    "conditionDefinition": {
+      "type": "object", "additionalProperties": false, "required": ["conditionKey", "conditionType", "operator", "subject", "temporalBasis", "evidenceKeys"],
+      "properties": {
+        "conditionKey": {"$ref": "#/$defs/stableKey"},
+        "conditionType": {"enum": ["identity", "identifier_range", "installed_equipment", "modification_or_stc", "configuration_attribute", "temporal_overlap", "source_inclusion", "source_exclusion", "reviewed_manual_predicate"]},
+        "operator": {"enum": ["identity_equals", "identity_in", "identifier_in_range", "is_installed", "is_not_installed", "equals", "overlaps", "includes", "excludes", "requires_review"]},
+        "subject": {"$ref": "#/$defs/conditionSubject"}, "temporalBasis": {"$ref": "#/$defs/temporalScope"},
+        "comparatorVersion": {"$ref": "#/$defs/identifier"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "expression": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["nodeType", "scopeKey"], "properties": {"nodeType": {"const": "scope_ref"}, "scopeKey": {"$ref": "#/$defs/stableKey"}}},
+        {"type": "object", "additionalProperties": false, "required": ["nodeType", "conditionKey"], "properties": {"nodeType": {"const": "predicate_ref"}, "conditionKey": {"$ref": "#/$defs/stableKey"}}},
+        {"type": "object", "additionalProperties": false, "required": ["nodeType", "ruleKey"], "properties": {"nodeType": {"const": "rule_ref"}, "ruleKey": {"$ref": "#/$defs/stableKey"}}},
+        {"type": "object", "additionalProperties": false, "required": ["nodeType", "requirementKey", "requirementState"], "properties": {"nodeType": {"const": "requirement_state_ref"}, "requirementKey": {"$ref": "#/$defs/stableKey"}, "requirementState": {"enum": ["satisfied", "not_satisfied", "unknown"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["nodeType", "operand"], "properties": {"nodeType": {"const": "not"}, "operand": {"$ref": "#/$defs/expression"}}},
+        {"type": "object", "additionalProperties": false, "required": ["nodeType", "operands"], "properties": {"nodeType": {"enum": ["all", "any"]}, "operands": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/expression"}, "x-paprnav-array-kind": "sequence"}}}
+      ]
+    },
+    "applicabilityRule": {
+      "type": "object", "additionalProperties": false, "required": ["ruleKey", "scopeExpression", "exclusionRuleKeys", "evidenceKeys"],
+      "properties": {
+        "ruleKey": {"$ref": "#/$defs/stableKey"}, "scopeExpression": {"$ref": "#/$defs/expression"},
+        "conditionExpression": {"$ref": "#/$defs/expression"}, "exclusionRuleKeys": {"$ref": "#/$defs/keySet"},
+        "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "action": {
+      "type": "object", "additionalProperties": false, "required": ["actionType", "approvedDataDocumentRefKeys", "evidenceKeys"],
+      "properties": {
+        "actionType": {"enum": ["inspect", "replace", "repair", "modify", "software_update", "revise_limitation", "report", "installation_prohibition", "remove", "rework", "other_reviewed"]},
+        "approvedDataDocumentRefKeys": {"$ref": "#/$defs/keySet"}, "orderedSteps": {"type": "array", "items": {"$ref": "#/$defs/identifier"}, "x-paprnav-array-kind": "sequence"},
+        "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "branch": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind", "evidenceKeys"], "properties": {"kind": {"const": "required"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "conditionExpression", "evidenceKeys"], "properties": {"kind": {"enum": ["conditional", "exception"]}, "conditionExpression": {"$ref": "#/$defs/expression"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "alternativeGroupKey", "exclusive", "evidenceKeys"], "properties": {"kind": {"const": "alternative_member"}, "alternativeGroupKey": {"$ref": "#/$defs/stableKey"}, "exclusive": {"type": "boolean"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}}
+      ]
+    },
+    "timingTerm": {
+      "type": "object", "additionalProperties": false, "required": ["metric", "interval", "unit", "comparator", "anchor", "evidenceKeys"],
+      "properties": {
+        "metric": {"enum": ["calendar", "aircraft_time", "component_time", "cycles", "other_reviewed"]},
+        "interval": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]*[1-9])?$"},
+        "unit": {"enum": ["days", "months", "years", "hours", "cycles", "source_defined"]},
+        "comparator": {"enum": ["within", "before", "at_or_before", "after", "at_or_after"]},
+        "anchor": {"enum": ["effective_date", "last_compliance", "installation", "manufacture", "source_defined"]},
+        "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "timingPlan": {
+      "type": "object", "additionalProperties": false, "required": ["logic", "terms", "evidenceKeys"],
+      "properties": {
+        "logic": {"enum": ["all", "whichever_first", "whichever_later"]},
+        "terms": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/timingTerm"}, "x-paprnav-array-kind": "sequence"},
+        "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "timing": {"oneOf": [{"$ref": "#/$defs/timingPlan"}, {"$ref": "#/$defs/unknownValue"}, {"$ref": "#/$defs/notApplicableValue"}]},
+    "recurrence": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind", "evidenceKeys"], "properties": {"kind": {"const": "none"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "timing", "evidenceKeys"], "properties": {"kind": {"const": "interval"}, "timing": {"$ref": "#/$defs/timingPlan"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "conditionExpression", "timing", "evidenceKeys"], "properties": {"kind": {"const": "conditioned"}, "conditionExpression": {"$ref": "#/$defs/expression"}, "timing": {"$ref": "#/$defs/timingPlan"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "reason", "temporalScope", "evidenceKeys"], "properties": {"kind": {"const": "unknown"}, "reason": {"enum": ["not_observed", "unavailable", "not_obtained", "not_extracted", "not_yet_reviewed", "not_yet_verified", "conflicting_evidence", "source_ambiguous", "unsupported_expression"]}, "temporalScope": {"$ref": "#/$defs/temporalScope"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}}
+      ]
+    },
+    "terminatingEffect": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind", "evidenceKeys"], "properties": {"kind": {"const": "none"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "requirementKeys", "evidenceKeys"], "properties": {"kind": {"const": "terminates"}, "requirementKeys": {"$ref": "#/$defs/keySet"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}}
+      ]
+    },
+    "requirement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requirementKey", "sequence", "activationExpression", "requirementType", "action", "prerequisiteRequirementKeys", "branch", "initialTiming", "recurrence", "terminatingEffect", "evidenceKeys"],
+      "properties": {
+        "requirementKey": {"$ref": "#/$defs/stableKey"}, "sequence": {"type": "string", "pattern": "^[1-9][0-9]*$"}, "activationExpression": {"$ref": "#/$defs/expression"},
+        "requirementType": {"enum": ["inspection", "replacement", "modification", "software_update", "limitation", "reporting", "installation_prohibition", "corrective_action", "other_reviewed"]},
+        "action": {"$ref": "#/$defs/action"}, "prerequisiteRequirementKeys": {"$ref": "#/$defs/keySet"},
+        "branch": {"$ref": "#/$defs/branch"}, "initialTiming": {"$ref": "#/$defs/timing"},
+        "recurrence": {"$ref": "#/$defs/recurrence"}, "recurrenceGroupKey": {"$ref": "#/$defs/stableKey"},
+        "terminatingEffect": {"$ref": "#/$defs/terminatingEffect"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "recurrenceGroup": {
+      "type": "object", "additionalProperties": false,
+      "required": ["recurrenceGroupKey", "requirementKeys", "completionPolicy", "initialTiming", "recurringTiming", "evidenceKeys"],
+      "properties": {
+        "recurrenceGroupKey": {"$ref": "#/$defs/stableKey"}, "requirementKeys": {"$ref": "#/$defs/keySet"},
+        "completionPolicy": {"const": "all_active_requirements"}, "initialTiming": {"$ref": "#/$defs/timing"},
+        "recurringTiming": {"$ref": "#/$defs/timing"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "searchHint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["hintKey", "productRole", "manufacturer", "models", "controlling", "exhaustive", "evidenceKeys"],
+      "properties": {
+        "hintKey": {"$ref": "#/$defs/stableKey"}, "productRole": {"enum": ["airframe", "engine", "propeller", "appliance", "installed_part", "modification"]},
+        "manufacturer": {"$ref": "#/$defs/identifier"}, "models": {"$ref": "#/$defs/stringSet"},
+        "controlling": {"const": false}, "exhaustive": {"const": false}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "amocProvision": {
+      "type": "object", "additionalProperties": false, "required": ["provisionKey", "approvingAuthority", "evidenceKeys"],
+      "properties": {"provisionKey": {"$ref": "#/$defs/stableKey"}, "approvingAuthority": {"$ref": "#/$defs/knownString"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}}
+    },
+    "supersessionRelation": {
+      "type": "object", "additionalProperties": false, "required": ["relationType", "predecessorAdNumber", "successorAdNumber", "evidenceKeys"],
+      "properties": {
+        "relationType": {"enum": ["supersedes", "partially_supersedes"]}, "predecessorAdNumber": {"$ref": "#/$defs/identifier"},
+        "successorAdNumber": {"$ref": "#/$defs/identifier"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "changedSemanticRef": {
+      "type": "object", "additionalProperties": false, "required": ["namespace", "key"],
+      "properties": {"namespace": {"enum": ["directiveIdentity", "productScopes", "conditionDefinitions", "applicabilityRules", "requirements", "recurrenceGroups", "amocAuthorityProvisions", "supersessionRelations"]}, "key": {"$ref": "#/$defs/stableKey"}}
+    },
+    "authoritativeCorrection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["correctionKey", "correctionType", "originalDocumentRefKey", "correctingDocumentRefKey", "changedSemanticRefs", "evidenceKeys"],
+      "properties": {
+        "correctionKey": {"$ref": "#/$defs/stableKey"}, "correctionType": {"const": "official_correction"},
+        "originalDocumentRefKey": {"$ref": "#/$defs/stableKey"}, "correctingDocumentRefKey": {"$ref": "#/$defs/stableKey"},
+        "changedSemanticRefs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/changedSemanticRef"}, "x-paprnav-array-kind": "set"},
+        "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "proposal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schemaVersion", "decisionKey", "directiveIdentity", "officialDocuments", "evidenceBindings", "incorporatedDocuments", "productScopes", "conditionDefinitions", "applicabilityRules", "requirements", "recurrenceGroups", "applicabilitySearchHints", "amocAuthorityProvisions", "supersessionRelations", "authoritativeCorrections"],
+      "properties": {
+        "schemaVersion": {"const": "ad_extraction_v4"}, "decisionKey": {"$ref": "#/$defs/stableKey"},
+        "directiveIdentity": {"$ref": "#/$defs/directiveIdentity"},
+        "officialDocuments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/officialDocument"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "officialDocumentKey"},
+        "evidenceBindings": {"type": "object", "minProperties": 1, "additionalProperties": false, "patternProperties": {"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$": {"$ref": "#/$defs/evidenceBinding"}}},
+        "incorporatedDocuments": {"type": "array", "items": {"$ref": "#/$defs/incorporatedDocument"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "documentRefKey"},
+        "productScopes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/productScope"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "scopeKey"},
+        "conditionDefinitions": {"type": "array", "items": {"$ref": "#/$defs/conditionDefinition"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "conditionKey"},
+        "applicabilityRules": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/applicabilityRule"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "ruleKey"},
+        "requirements": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/requirement"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "requirementKey"},
+        "recurrenceGroups": {"type": "array", "items": {"$ref": "#/$defs/recurrenceGroup"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "recurrenceGroupKey"},
+        "applicabilitySearchHints": {"type": "array", "items": {"$ref": "#/$defs/searchHint"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "hintKey"},
+        "amocAuthorityProvisions": {"type": "array", "items": {"$ref": "#/$defs/amocProvision"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "provisionKey"},
+        "supersessionRelations": {"type": "array", "items": {"$ref": "#/$defs/supersessionRelation"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": ["relationType", "predecessorAdNumber", "successorAdNumber"]},
+        "authoritativeCorrections": {"type": "array", "items": {"$ref": "#/$defs/authoritativeCorrection"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "correctionKey"}
+      }
+    },
+    "submissionRelationship": {
+      "type": "object", "additionalProperties": false,
+      "required": ["relationshipKey", "relationType", "predecessorProposalId", "reason", "evidenceKeys"],
+      "properties": {
+        "relationshipKey": {"$ref": "#/$defs/stableKey"}, "relationType": {"enum": ["corrects_candidate", "replaces_candidate"]},
+        "predecessorProposalId": {"$ref": "#/$defs/identifier"}, "reason": {"$ref": "#/$defs/identifier"}, "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"}
+      }
+    },
+    "submissionContext": {
+      "type": "object", "additionalProperties": false, "required": ["relationships"],
+      "properties": {"relationships": {"type": "array", "items": {"$ref": "#/$defs/submissionRelationship"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "relationshipKey"}}
+    }
+  }
+}

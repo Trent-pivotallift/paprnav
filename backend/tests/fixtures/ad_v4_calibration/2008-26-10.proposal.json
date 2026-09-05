@@ -1,0 +1,1090 @@
+{
+  "proposal": {
+    "schemaVersion": "ad_extraction_v4",
+    "decisionKey": "calibration-2008-26-10",
+    "directiveIdentity": {
+      "directiveId": "ad-2008-26-10",
+      "adNumber": {
+        "state": "known",
+        "value": "2008-26-10",
+        "evidenceKeys": [
+          "ev-identity"
+        ]
+      }
+    },
+    "officialDocuments": [
+      {
+        "officialDocumentKey": "official-rule",
+        "documentRole": "ad_rule",
+        "sourceDocumentId": "{{sourceDocumentId:official-rule}}",
+        "sourceContentHash": "177c3ed17897931c0dcb902e2e867fdc7348526441d2885f26f80974402e201f",
+        "publicationDocumentNumber": "E8-30465",
+        "evidenceKeys": [
+          "ev-identity",
+          "ev-effective",
+          "ev-related-ads",
+          "ev-applicability",
+          "ev-models-a",
+          "ev-models-b",
+          "ev-non-ifr",
+          "ev-ifr-initial",
+          "ev-ifr-followup",
+          "ev-obstruction",
+          "ev-installation",
+          "ev-report",
+          "ev-amoc",
+          "ev-ibr"
+        ]
+      },
+      {
+        "officialDocumentKey": "official-correction",
+        "documentRole": "official_correction",
+        "sourceDocumentId": "{{sourceDocumentId:official-correction}}",
+        "sourceContentHash": "676a282adba0fea1ef7ddb87787ce85746ea8eb08b43ac28cf059f7ccff39db2",
+        "publicationDocumentNumber": "2010-28579",
+        "evidenceKeys": [
+          "ev-correction-a",
+          "ev-correction-b"
+        ]
+      }
+    ],
+    "evidenceBindings": {
+      "ev-identity": {
+        "fragmentId": "{{fragmentId:ev-identity}}",
+        "fragmentHash": "{{fragmentHash:ev-identity}}"
+      },
+      "ev-effective": {
+        "fragmentId": "{{fragmentId:ev-effective}}",
+        "fragmentHash": "{{fragmentHash:ev-effective}}"
+      },
+      "ev-related-ads": {
+        "fragmentId": "{{fragmentId:ev-related-ads}}",
+        "fragmentHash": "{{fragmentHash:ev-related-ads}}"
+      },
+      "ev-applicability": {
+        "fragmentId": "{{fragmentId:ev-applicability}}",
+        "fragmentHash": "{{fragmentHash:ev-applicability}}"
+      },
+      "ev-models-a": {
+        "fragmentId": "{{fragmentId:ev-models-a}}",
+        "fragmentHash": "{{fragmentHash:ev-models-a}}"
+      },
+      "ev-models-b": {
+        "fragmentId": "{{fragmentId:ev-models-b}}",
+        "fragmentHash": "{{fragmentHash:ev-models-b}}"
+      },
+      "ev-non-ifr": {
+        "fragmentId": "{{fragmentId:ev-non-ifr}}",
+        "fragmentHash": "{{fragmentHash:ev-non-ifr}}"
+      },
+      "ev-ifr-initial": {
+        "fragmentId": "{{fragmentId:ev-ifr-initial}}",
+        "fragmentHash": "{{fragmentHash:ev-ifr-initial}}"
+      },
+      "ev-ifr-followup": {
+        "fragmentId": "{{fragmentId:ev-ifr-followup}}",
+        "fragmentHash": "{{fragmentHash:ev-ifr-followup}}"
+      },
+      "ev-obstruction": {
+        "fragmentId": "{{fragmentId:ev-obstruction}}",
+        "fragmentHash": "{{fragmentHash:ev-obstruction}}"
+      },
+      "ev-installation": {
+        "fragmentId": "{{fragmentId:ev-installation}}",
+        "fragmentHash": "{{fragmentHash:ev-installation}}"
+      },
+      "ev-report": {
+        "fragmentId": "{{fragmentId:ev-report}}",
+        "fragmentHash": "{{fragmentHash:ev-report}}"
+      },
+      "ev-amoc": {
+        "fragmentId": "{{fragmentId:ev-amoc}}",
+        "fragmentHash": "{{fragmentHash:ev-amoc}}"
+      },
+      "ev-ibr": {
+        "fragmentId": "{{fragmentId:ev-ibr}}",
+        "fragmentHash": "{{fragmentHash:ev-ibr}}"
+      },
+      "ev-correction-a": {
+        "fragmentId": "{{fragmentId:ev-correction-a}}",
+        "fragmentHash": "{{fragmentHash:ev-correction-a}}"
+      },
+      "ev-correction-b": {
+        "fragmentId": "{{fragmentId:ev-correction-b}}",
+        "fragmentHash": "{{fragmentHash:ev-correction-b}}"
+      }
+    },
+    "incorporatedDocuments": [
+      {
+        "documentRefKey": "doc-sb",
+        "documentType": "service_bulletin",
+        "documentNumber": {
+          "state": "known",
+          "value": "SB08-34-02",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "revision": {
+          "state": "known",
+          "value": "Revision 1",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "retention": {
+          "state": "unknown",
+          "reason": "not_obtained",
+          "evidenceKeys": [
+            "ev-ibr"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-ibr"
+        ]
+      },
+      {
+        "documentRefKey": "doc-cab",
+        "documentType": "service_bulletin",
+        "documentNumber": {
+          "state": "known",
+          "value": "CAB08-4",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "revision": {
+          "state": "known",
+          "value": "Revision 1",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "retention": {
+          "state": "unknown",
+          "reason": "not_obtained",
+          "evidenceKeys": [
+            "ev-ibr"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-ibr"
+        ]
+      },
+      {
+        "documentRefKey": "doc-seb",
+        "documentType": "service_bulletin",
+        "documentNumber": {
+          "state": "known",
+          "value": "SEB08-5",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "revision": {
+          "state": "known",
+          "value": "original",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "retention": {
+          "state": "unknown",
+          "reason": "not_obtained",
+          "evidenceKeys": [
+            "ev-ibr"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-ibr"
+        ]
+      },
+      {
+        "documentRefKey": "doc-meb",
+        "documentType": "service_bulletin",
+        "documentNumber": {
+          "state": "known",
+          "value": "MEB08-6",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "revision": {
+          "state": "known",
+          "value": "original",
+          "evidenceKeys": [
+            "ev-ibr"
+          ]
+        },
+        "retention": {
+          "state": "unknown",
+          "reason": "not_obtained",
+          "evidenceKeys": [
+            "ev-ibr"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-ibr"
+        ]
+      }
+    ],
+    "productScopes": [
+      {
+        "scopeKey": "scope-cessna",
+        "productRole": "airframe",
+        "manufacturer": {
+          "sourceValue": "Cessna Aircraft Company",
+          "normalizedIdentity": {
+            "state": "known",
+            "value": "Cessna Aircraft Company",
+            "evidenceKeys": [
+              "ev-models-a",
+              "ev-models-b"
+            ]
+          }
+        },
+        "modelScope": {
+          "kind": "listed",
+          "sourceDesignations": [
+            "172",
+            "172A",
+            "172B",
+            "172C",
+            "172D",
+            "172E",
+            "172F",
+            "172G",
+            "172H",
+            "172I",
+            "172K",
+            "172L",
+            "172M",
+            "172N",
+            "172P",
+            "172Q",
+            "172R",
+            "172S",
+            "F172D",
+            "F172E",
+            "F172F",
+            "F172G",
+            "F172H",
+            "182G",
+            "182H",
+            "182J",
+            "182K",
+            "182L",
+            "182M",
+            "182N",
+            "182P",
+            "182Q",
+            "182R",
+            "182S",
+            "182T",
+            "F182P",
+            "F182Q",
+            "FR182",
+            "R182",
+            "T182",
+            "T182T",
+            "TR182",
+            "185",
+            "185A",
+            "185B",
+            "185C",
+            "185D",
+            "185E",
+            "A185E",
+            "210-5A",
+            "T210F",
+            "T210G",
+            "T210H",
+            "T210J",
+            "T210K",
+            "T210L",
+            "T210M",
+            "T210N",
+            "T210R",
+            "T303",
+            "336",
+            "337",
+            "337A",
+            "F172K",
+            "F172L",
+            "F172M",
+            "F172N",
+            "F172P",
+            "FR172E",
+            "FR172F",
+            "FR172G",
+            "FR172H",
+            "FR172J",
+            "FR172K",
+            "P172D",
+            "R172E",
+            "R172F",
+            "R172G",
+            "R172H",
+            "R172J",
+            "R172K",
+            "172RG",
+            "175",
+            "175A",
+            "175B",
+            "175C",
+            "A185F",
+            "206",
+            "206H",
+            "P206",
+            "P206A",
+            "P206B",
+            "P206C",
+            "P206D",
+            "P206E",
+            "T206H",
+            "TP206A",
+            "TP206B",
+            "TP206C",
+            "TP206D",
+            "TP206E",
+            "TU206A",
+            "TU206B",
+            "TU206C",
+            "TU206D",
+            "TU206E",
+            "TU206F",
+            "TU206G",
+            "U206",
+            "U206A",
+            "U206B",
+            "U206C",
+            "FT337F",
+            "M337B",
+            "T337B",
+            "T337C",
+            "T337D",
+            "T337E",
+            "T337F",
+            "T337H",
+            "T337H-SP",
+            "177",
+            "177A",
+            "177B",
+            "177RG",
+            "F177RG",
+            "180",
+            "180A",
+            "180B",
+            "180C",
+            "180D",
+            "180E",
+            "180F",
+            "180G",
+            "180H",
+            "180J",
+            "180K",
+            "182",
+            "182A",
+            "182B",
+            "182C",
+            "182D",
+            "182E",
+            "182F",
+            "U206D",
+            "U206E",
+            "U206F",
+            "U206G",
+            "207",
+            "207A",
+            "T207",
+            "T207A",
+            "208",
+            "208B",
+            "210",
+            "210A",
+            "210B",
+            "210C",
+            "210D",
+            "210E",
+            "210F",
+            "210G",
+            "210H",
+            "210J",
+            "210K",
+            "210L",
+            "210M",
+            "210N",
+            "210R",
+            "210-5",
+            "337B",
+            "337C",
+            "337D",
+            "337E",
+            "337F",
+            "337G",
+            "337H",
+            "F337E",
+            "F337F",
+            "F337G",
+            "F337H",
+            "FT337E"
+          ],
+          "evidenceKeys": [
+            "ev-models-a",
+            "ev-models-b",
+            "ev-correction-b"
+          ]
+        },
+        "serialScope": {
+          "kind": "all",
+          "evidenceKeys": [
+            "ev-applicability"
+          ]
+        },
+        "partNumberScope": {
+          "kind": "not_applicable",
+          "reason": "source_scope_not_by_part_number",
+          "evidenceKeys": [
+            "ev-applicability"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-applicability",
+          "ev-models-a",
+          "ev-models-b",
+          "ev-correction-b"
+        ]
+      }
+    ],
+    "conditionDefinitions": [
+      {
+        "conditionKey": "condition-history",
+        "conditionType": "temporal_overlap",
+        "operator": "overlaps",
+        "subject": {
+          "attributeKey": "initial-delivery-window",
+          "attributeValue": {
+            "state": "known",
+            "value": "1993-01-01 through 2008-03-31",
+            "evidenceKeys": [
+              "ev-applicability"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-applicability"
+        ]
+      },
+      {
+        "conditionKey": "condition-part",
+        "conditionType": "installed_equipment",
+        "operator": "is_installed",
+        "subject": {
+          "productRole": "installed_part",
+          "partNumber": {
+            "state": "known",
+            "value": "2013142-18",
+            "evidenceKeys": [
+              "ev-applicability"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-applicability"
+        ]
+      },
+      {
+        "conditionKey": "condition-exception",
+        "conditionType": "reviewed_manual_predicate",
+        "operator": "requires_review",
+        "subject": {
+          "attributeKey": "prior-ad-exception",
+          "attributeValue": {
+            "state": "known",
+            "value": "AD 2008-10-02 rework completed and maintained",
+            "evidenceKeys": [
+              "ev-applicability"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-applicability"
+        ]
+      },
+      {
+        "conditionKey": "condition-ifr",
+        "conditionType": "configuration_attribute",
+        "operator": "equals",
+        "subject": {
+          "attributeKey": "ifr-equipped",
+          "attributeValue": {
+            "state": "known",
+            "value": "true",
+            "evidenceKeys": [
+              "ev-ifr-initial"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-ifr-initial"
+        ]
+      }
+    ],
+    "applicabilityRules": [
+      {
+        "ruleKey": "rule-history-part-exception",
+        "scopeExpression": {
+          "nodeType": "scope_ref",
+          "scopeKey": "scope-cessna"
+        },
+        "exclusionRuleKeys": [],
+        "evidenceKeys": [
+          "ev-applicability",
+          "ev-models-a",
+          "ev-models-b",
+          "ev-correction-b"
+        ],
+        "conditionExpression": {
+          "nodeType": "all",
+          "operands": [
+            {
+              "nodeType": "any",
+              "operands": [
+                {
+                  "nodeType": "predicate_ref",
+                  "conditionKey": "condition-history"
+                },
+                {
+                  "nodeType": "predicate_ref",
+                  "conditionKey": "condition-part"
+                }
+              ]
+            },
+            {
+              "nodeType": "not",
+              "operand": {
+                "nodeType": "predicate_ref",
+                "conditionKey": "condition-exception"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "requirements": [
+      {
+        "requirementKey": "req-non-ifr",
+        "activationExpression": {
+          "nodeType": "all",
+          "operands": [
+            {
+              "nodeType": "rule_ref",
+              "ruleKey": "rule-history-part-exception"
+            },
+            {
+              "nodeType": "not",
+              "operand": {
+                "nodeType": "predicate_ref",
+                "conditionKey": "condition-ifr"
+              }
+            }
+          ]
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-non-ifr"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "conditional",
+          "conditionExpression": {
+            "nodeType": "not",
+            "operand": {
+              "nodeType": "predicate_ref",
+              "conditionKey": "condition-ifr"
+            }
+          },
+          "evidenceKeys": [
+            "ev-non-ifr"
+          ]
+        },
+        "initialTiming": {
+          "logic": "whichever_first",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "100",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-non-ifr"
+              ]
+            },
+            {
+              "metric": "calendar",
+              "interval": "4",
+              "unit": "months",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-non-ifr"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-non-ifr"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-non-ifr"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-non-ifr"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-non-ifr"
+        ],
+        "sequence": "1"
+      },
+      {
+        "requirementKey": "req-ifr-inspect",
+        "activationExpression": {
+          "nodeType": "all",
+          "operands": [
+            {
+              "nodeType": "rule_ref",
+              "ruleKey": "rule-history-part-exception"
+            },
+            {
+              "nodeType": "predicate_ref",
+              "conditionKey": "condition-ifr"
+            }
+          ]
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "alternative_member",
+          "alternativeGroupKey": "alternative-ifr-initial",
+          "exclusive": true,
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "calendar",
+              "interval": "10",
+              "unit": "days",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-ifr-initial"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-ifr-initial"
+        ],
+        "sequence": "2"
+      },
+      {
+        "requirementKey": "req-ifr-placard",
+        "activationExpression": {
+          "nodeType": "all",
+          "operands": [
+            {
+              "nodeType": "rule_ref",
+              "ruleKey": "rule-history-part-exception"
+            },
+            {
+              "nodeType": "predicate_ref",
+              "conditionKey": "condition-ifr"
+            }
+          ]
+        },
+        "requirementType": "limitation",
+        "action": {
+          "actionType": "revise_limitation",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "alternative_member",
+          "alternativeGroupKey": "alternative-ifr-initial",
+          "exclusive": true,
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "calendar",
+              "interval": "0",
+              "unit": "days",
+              "comparator": "before",
+              "anchor": "source_defined",
+              "evidenceKeys": [
+                "ev-ifr-initial"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-ifr-initial"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-ifr-initial"
+        ],
+        "sequence": "3"
+      },
+      {
+        "requirementKey": "req-followup",
+        "activationExpression": {
+          "nodeType": "all",
+          "operands": [
+            {
+              "nodeType": "rule_ref",
+              "ruleKey": "rule-history-part-exception"
+            },
+            {
+              "nodeType": "requirement_state_ref",
+              "requirementKey": "req-ifr-placard",
+              "requirementState": "satisfied"
+            }
+          ]
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-ifr-followup"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-ifr-placard"
+        ],
+        "branch": {
+          "kind": "conditional",
+          "conditionExpression": {
+            "nodeType": "requirement_state_ref",
+            "requirementKey": "req-ifr-placard",
+            "requirementState": "satisfied"
+          },
+          "evidenceKeys": [
+            "ev-ifr-followup"
+          ]
+        },
+        "initialTiming": {
+          "logic": "whichever_first",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "100",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-ifr-followup"
+              ]
+            },
+            {
+              "metric": "calendar",
+              "interval": "4",
+              "unit": "months",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-ifr-followup"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-ifr-followup"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-ifr-followup"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-ifr-followup"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-ifr-followup"
+        ],
+        "sequence": "4"
+      },
+      {
+        "requirementKey": "req-clear",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-history-part-exception"
+        },
+        "requirementType": "corrective_action",
+        "action": {
+          "actionType": "repair",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-obstruction"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "conditional",
+          "conditionExpression": {
+            "nodeType": "predicate_ref",
+            "conditionKey": "condition-ifr"
+          },
+          "evidenceKeys": [
+            "ev-obstruction"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "calendar",
+              "interval": "0",
+              "unit": "days",
+              "comparator": "before",
+              "anchor": "source_defined",
+              "evidenceKeys": [
+                "ev-obstruction"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-obstruction"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-obstruction"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-obstruction"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-obstruction"
+        ],
+        "sequence": "5"
+      },
+      {
+        "requirementKey": "req-report",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-history-part-exception"
+        },
+        "requirementType": "reporting",
+        "action": {
+          "actionType": "report",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-report",
+            "ev-correction-b"
+          ],
+          "orderedSteps": [
+            "report-to-corrected-1801-airport-road"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "conditional",
+          "conditionExpression": {
+            "nodeType": "predicate_ref",
+            "conditionKey": "condition-ifr"
+          },
+          "evidenceKeys": [
+            "ev-report",
+            "ev-correction-b"
+          ]
+        },
+        "initialTiming": {
+          "logic": "whichever_later",
+          "terms": [
+            {
+              "metric": "calendar",
+              "interval": "10",
+              "unit": "days",
+              "comparator": "within",
+              "anchor": "source_defined",
+              "evidenceKeys": [
+                "ev-report",
+                "ev-correction-b"
+              ]
+            },
+            {
+              "metric": "calendar",
+              "interval": "10",
+              "unit": "days",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-report",
+                "ev-correction-b"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-report",
+            "ev-correction-b"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-report",
+            "ev-correction-b"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-report",
+            "ev-correction-b"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-report",
+          "ev-correction-b"
+        ],
+        "sequence": "6"
+      }
+    ],
+    "recurrenceGroups": [],
+    "applicabilitySearchHints": [],
+    "amocAuthorityProvisions": [
+      {
+        "provisionKey": "amoc-general",
+        "approvingAuthority": {
+          "state": "known",
+          "value": "FAA Wichita Aircraft Certification Office",
+          "evidenceKeys": [
+            "ev-amoc"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-amoc"
+        ]
+      }
+    ],
+    "supersessionRelations": [],
+    "authoritativeCorrections": [
+      {
+        "correctionKey": "correction-2010",
+        "correctionType": "official_correction",
+        "originalDocumentRefKey": "official-rule",
+        "correctingDocumentRefKey": "official-correction",
+        "changedSemanticRefs": [
+          {
+            "namespace": "productScopes",
+            "key": "scope-cessna"
+          },
+          {
+            "namespace": "requirements",
+            "key": "req-report"
+          }
+        ],
+        "evidenceKeys": [
+          "ev-correction-a",
+          "ev-correction-b"
+        ]
+      }
+    ]
+  },
+  "submissionContext": {
+    "relationships": []
+  }
+}

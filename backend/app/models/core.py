@@ -3,7 +3,7 @@ from datetime import date as PythonDate
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, ForeignKeyConstraint, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, ForeignKeyConstraint, Index, Integer, JSON, LargeBinary, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -773,6 +773,129 @@ class ADEvidenceFragmentLifecycleEvent(Base):
 
     fragment = relationship("ADEvidenceFragment", back_populates="lifecycle_events")
     actor = relationship("User")
+
+
+class ADV4CandidateProposal(Base):
+    """Immutable candidate-only canonical V4 content; never a released decision."""
+
+    __tablename__ = "ad_v4_candidate_proposals"
+    __table_args__ = (
+        CheckConstraint("schema_version = 'ad_extraction_v4'", name="ck_ad_v4_proposal_schema"),
+        CheckConstraint("gate = 'candidate_only'", name="ck_ad_v4_proposal_gate"),
+        CheckConstraint("length(canonical_hash) = 64", name="ck_ad_v4_proposal_hash"),
+        CheckConstraint("length(evidence_binding_hash) = 64", name="ck_ad_v4_binding_hash"),
+        UniqueConstraint(
+            "directive_id", "canonicalization_version", "canonical_hash",
+            name="uq_ad_v4_proposal_content",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("avp"))
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False, index=True)
+    schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonicalization_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    validator_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    parsed_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    evidence_binding_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    evidence_binding_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    binding_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    gate: Mapped[str] = mapped_column(String(32), nullable=False, default="candidate_only")
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateEvidenceBinding(Base):
+    __tablename__ = "ad_v4_candidate_evidence_bindings"
+    __table_args__ = (
+        UniqueConstraint("proposal_id", "evidence_key", name="uq_ad_v4_binding_key"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("avb"))
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False, index=True)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False)
+    evidence_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    fragment_id: Mapped[str] = mapped_column(ForeignKey("ad_evidence_fragments.id"), nullable=False, index=True)
+    fragment_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    admitted_event_id: Mapped[str] = mapped_column(ForeignKey("ad_evidence_fragment_lifecycle_events.id"), nullable=False)
+    admitted_event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateSubmission(Base):
+    __tablename__ = "ad_v4_candidate_submissions"
+    __table_args__ = (
+        CheckConstraint("actor_kind = 'platform_admin'", name="ck_ad_v4_submission_actor"),
+        CheckConstraint("actor_role = 'platform_admin'", name="ck_ad_v4_submission_role"),
+        CheckConstraint("actor_status = 'active'", name="ck_ad_v4_submission_status"),
+        UniqueConstraint(
+            "actor_user_id", "authorizing_membership_id", "endpoint_action",
+            "auth_policy_version", "idempotency_key", name="uq_ad_v4_submission_idempotency",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("avs"))
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False, index=True)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False)
+    actor_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    authorizing_membership_id: Mapped[str] = mapped_column(ForeignKey("organization_memberships.id"), nullable=False)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    auth_policy_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    auth_policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    auth_claims_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    endpoint_action: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    raw_transport_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateSubmissionRelationship(Base):
+    __tablename__ = "ad_v4_candidate_submission_relationships"
+    __table_args__ = (
+        CheckConstraint(
+            "relation_type IN ('corrects_candidate', 'replaces_candidate')",
+            name="ck_ad_v4_relationship_type",
+        ),
+        UniqueConstraint("submission_id", "relationship_key", name="uq_ad_v4_relationship_key"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("avr"))
+    submission_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_submissions.id"), nullable=False, index=True)
+    relationship_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    relation_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    predecessor_proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_keys: Mapped[list] = mapped_column(JSON, nullable=False)
+    canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    relationship_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateProposalEvent(Base):
+    __tablename__ = "ad_v4_candidate_proposal_events"
+    __table_args__ = (
+        CheckConstraint("event_type = 'candidate_created'", name="ck_ad_v4_event_type"),
+        CheckConstraint("sequence_number = 0", name="ck_ad_v4_event_sequence"),
+        UniqueConstraint("proposal_id", "sequence_number", name="uq_ad_v4_event_sequence"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: new_id("ave"))
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False, index=True)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False)
+    created_by_submission_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_submissions.id"), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    proposal_canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_binding_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    predecessor_event_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    event_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    occurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class AirworthinessDirective(TimestampMixin, Base):

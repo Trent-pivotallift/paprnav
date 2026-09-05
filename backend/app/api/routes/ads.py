@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import Response
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
@@ -31,6 +31,8 @@ from app.models.core import (
     ADMatchEvidence,
     ADMatchResult,
     ADTargetApplicability,
+    ADV4CandidateProposal,
+    ADV4CandidateSubmission,
     AircraftADDueState,
     AirworthinessDirective,
     ApplicabilityTarget,
@@ -45,6 +47,10 @@ from app.schemas.ads import (
     ADExtractionReviewResponse,
     ADEvidenceFragmentCreateRequest,
     ADEvidenceFragmentResponse,
+    ADV4CandidateListResponse,
+    ADV4CandidateResponse,
+    ADV4SubmissionAuditResponse,
+    ADV4SubmissionRelationshipAuditResponse,
     ADProposalProvenanceResponse,
     ADSourcePageEvidenceResponse,
     ADSourcePageMaterializeRequest,
@@ -98,6 +104,14 @@ from app.services.ad_evidence import (
     admit_evidence_fragment,
     get_materialized_source_page,
     materialize_source_page,
+)
+from app.services.ad_v4_candidates import (
+    ADV4Error,
+    MAX_REQUEST_BYTES,
+    parse_v4_request_bytes,
+    store_v4_candidate,
+    verified_candidate,
+    verified_submission,
 )
 from app.services.ad_recurrence import due_state_payload
 from app.services.installed_components import component_display_name
@@ -160,6 +174,235 @@ def evidence_http_error(exc: ADEvidenceError) -> HTTPException:
     }:
         return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc))
+
+
+def v4_http_error(exc: ADV4Error) -> HTTPException:
+    return HTTPException(
+        status_code=exc.http_status,
+        detail={"code": exc.code, "jsonPointer": exc.pointer, "message": str(exc)},
+    )
+
+
+def serialize_v4_candidate(
+    proposal: ADV4CandidateProposal,
+    submission: ADV4CandidateSubmission,
+    *,
+    db: Session | None = None,
+    content_reused: bool = False,
+    idempotent_retry: bool = False,
+    submission_limit: int = 25,
+    submission_offset: int = 0,
+) -> ADV4CandidateResponse:
+    submission_rows = [submission]
+    submission_count = 1
+    if db is not None:
+        submission_count = db.scalar(
+            select(func.count()).select_from(ADV4CandidateSubmission)
+            .where(ADV4CandidateSubmission.proposal_id == proposal.id)
+        ) or 0
+        submission_rows = db.scalars(
+            select(ADV4CandidateSubmission)
+            .where(ADV4CandidateSubmission.proposal_id == proposal.id)
+            .order_by(ADV4CandidateSubmission.created_at, ADV4CandidateSubmission.id)
+            .offset(submission_offset)
+            .limit(submission_limit)
+        ).all()
+    audits = []
+    for row in submission_rows:
+        relationships = verified_submission(db, row) if db is not None else []
+        audits.append(ADV4SubmissionAuditResponse(
+            submissionId=row.id,
+            actorUserId=row.actor_user_id,
+            authorizingMembershipId=row.authorizing_membership_id,
+            organizationId=row.organization_id,
+            actorRole=row.actor_role,
+            actorStatus=row.actor_status,
+            authPolicyName=row.auth_policy_name,
+            authPolicyVersion=row.auth_policy_version,
+            authClaimsHash=row.auth_claims_hash,
+            endpointAction=row.endpoint_action,
+            idempotencyKey=row.idempotency_key,
+            requestHash=row.request_hash,
+            rawTransportHash=row.raw_transport_hash,
+            relationships=[ADV4SubmissionRelationshipAuditResponse(
+                relationshipKey=relationship.relationship_key,
+                relationType=relationship.relation_type,
+                predecessorProposalId=relationship.predecessor_proposal_id,
+                reason=relationship.reason,
+                evidenceKeys=relationship.evidence_keys,
+                relationshipHash=relationship.relationship_hash,
+                createdAt=relationship.created_at,
+            ) for relationship in relationships],
+            createdAt=row.created_at,
+        ))
+    return ADV4CandidateResponse(
+        proposalId=proposal.id,
+        submissionId=submission.id,
+        directiveId=proposal.directive_id,
+        schemaVersion=proposal.schema_version,
+        canonicalizationVersion=proposal.canonicalization_version,
+        validatorVersion=proposal.validator_version,
+        canonicalHash=proposal.canonical_hash,
+        evidenceBindingHash=proposal.evidence_binding_hash,
+        bindingCount=proposal.binding_count,
+        gate=proposal.gate,
+        contentReused=content_reused,
+        idempotentRetry=idempotent_retry,
+        canonicalProposal=proposal.parsed_json,
+        submissions=audits,
+        submissionCount=submission_count,
+        submissionLimit=submission_limit,
+        submissionOffset=submission_offset,
+        createdAt=proposal.created_at,
+    )
+
+
+async def bounded_v4_request_bytes(request: Request) -> bytes:
+    payload = bytearray()
+    async for chunk in request.stream():
+        payload.extend(chunk)
+        if len(payload) > MAX_REQUEST_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="V4 request body exceeds the byte limit",
+            )
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="V4 request body is empty",
+        )
+    return bytes(payload)
+
+
+@router.post(
+    "/directives/{directive_id}/v4/candidate-proposals",
+    response_model=ADV4CandidateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_v4_candidate_proposal(
+    directive_id: str,
+    request: Request,
+    response: Response,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=255),
+    acting_membership_id: str = Header(alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4CandidateResponse:
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json" or request.headers.get("content-encoding", "identity") not in {"", "identity"}:
+        raise HTTPException(status_code=415, detail="Strict application/json without content encoding is required")
+    length = request.headers.get("content-length")
+    if length is not None:
+        try:
+            if int(length) < 1 or int(length) > MAX_REQUEST_BYTES:
+                raise ValueError
+        except ValueError as exc:
+            raise HTTPException(status_code=413, detail="V4 request body exceeds the byte limit") from exc
+    raw = await bounded_v4_request_bytes(request)
+    try:
+        parsed = parse_v4_request_bytes(raw)
+        stored = store_v4_candidate(
+            db,
+            directive_id=directive_id,
+            parsed=parsed,
+            actor=current_user,
+            membership_id=acting_membership_id,
+            idempotency_key=idempotency_key,
+        )
+        db.commit()
+        db.refresh(stored.proposal)
+        db.refresh(stored.submission)
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+    if stored.idempotent_retry or stored.content_reused:
+        response.status_code = status.HTTP_200_OK
+    return serialize_v4_candidate(
+        stored.proposal,
+        stored.submission,
+        db=db,
+        content_reused=stored.content_reused,
+        idempotent_retry=stored.idempotent_retry,
+    )
+
+
+@router.get(
+    "/directives/{directive_id}/v4/candidate-proposals",
+    response_model=ADV4CandidateListResponse,
+)
+def list_v4_candidate_proposals(
+    directive_id: str,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    submission_limit: int = Query(default=25, ge=1, le=100, alias="submissionLimit"),
+    submission_offset: int = Query(default=0, ge=0, alias="submissionOffset"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4CandidateListResponse:
+    ensure_platform_admin(current_user)
+    total = db.scalar(
+        select(func.count()).select_from(ADV4CandidateProposal)
+        .where(ADV4CandidateProposal.directive_id == directive_id)
+    ) or 0
+    proposals = db.scalars(
+        select(ADV4CandidateProposal)
+        .where(ADV4CandidateProposal.directive_id == directive_id)
+        .order_by(ADV4CandidateProposal.created_at.desc(), ADV4CandidateProposal.id.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    responses = []
+    for proposal in proposals:
+        proposal = verified_candidate(db, proposal.id)
+        submission = db.scalar(
+            select(ADV4CandidateSubmission)
+            .where(ADV4CandidateSubmission.proposal_id == proposal.id)
+            .order_by(ADV4CandidateSubmission.created_at.desc())
+        )
+        if submission is None:
+            raise v4_http_error(ADV4Error("candidate_integrity", "", "Candidate has no submission", http_status=409))
+        try:
+            responses.append(serialize_v4_candidate(
+                proposal, submission, db=db,
+                submission_limit=submission_limit, submission_offset=submission_offset,
+            ))
+        except ADV4Error as exc:
+            raise v4_http_error(exc) from exc
+    return ADV4CandidateListResponse(
+        candidates=responses, count=len(responses), total=total, limit=limit, offset=offset,
+    )
+
+
+@router.get(
+    "/v4/candidate-proposals/{proposal_id}",
+    response_model=ADV4CandidateResponse,
+)
+def get_v4_candidate_proposal(
+    proposal_id: str,
+    submission_limit: int = Query(default=25, ge=1, le=100, alias="submissionLimit"),
+    submission_offset: int = Query(default=0, ge=0, alias="submissionOffset"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4CandidateResponse:
+    ensure_platform_admin(current_user)
+    try:
+        proposal = verified_candidate(db, proposal_id)
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
+    submission = db.scalar(
+        select(ADV4CandidateSubmission)
+        .where(ADV4CandidateSubmission.proposal_id == proposal.id)
+        .order_by(ADV4CandidateSubmission.created_at.desc())
+    )
+    if submission is None:
+        raise v4_http_error(ADV4Error("candidate_integrity", "", "Candidate has no submission", http_status=409))
+    try:
+        return serialize_v4_candidate(
+            proposal, submission, db=db,
+            submission_limit=submission_limit, submission_offset=submission_offset,
+        )
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
 
 
 @router.get(

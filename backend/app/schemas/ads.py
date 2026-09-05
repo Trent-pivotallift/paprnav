@@ -134,6 +134,63 @@ class ADEvidenceFragmentResponse(BaseModel):
     created: bool
 
 
+class ADV4SubmissionRelationshipAuditResponse(BaseModel):
+    relationshipKey: str
+    relationType: str
+    predecessorProposalId: str
+    reason: str
+    evidenceKeys: list[str]
+    relationshipHash: str
+    createdAt: datetime
+
+
+class ADV4SubmissionAuditResponse(BaseModel):
+    submissionId: str
+    actorUserId: str
+    authorizingMembershipId: str
+    organizationId: str
+    actorRole: str
+    actorStatus: str
+    authPolicyName: str
+    authPolicyVersion: str
+    authClaimsHash: str
+    endpointAction: str
+    idempotencyKey: str
+    requestHash: str
+    rawTransportHash: str
+    relationships: list[ADV4SubmissionRelationshipAuditResponse]
+    createdAt: datetime
+
+
+class ADV4CandidateResponse(BaseModel):
+    proposalId: str
+    submissionId: str
+    directiveId: str
+    schemaVersion: str
+    canonicalizationVersion: str
+    validatorVersion: str
+    canonicalHash: str
+    evidenceBindingHash: str
+    bindingCount: int
+    gate: str
+    contentReused: bool = False
+    idempotentRetry: bool = False
+    canonicalProposal: dict[str, Any]
+    submissions: list[ADV4SubmissionAuditResponse] = Field(default_factory=list)
+    submissionCount: int
+    submissionLimit: int
+    submissionOffset: int
+    createdAt: datetime
+
+
+class ADV4CandidateListResponse(BaseModel):
+    candidates: list[ADV4CandidateResponse]
+    count: int
+    total: int
+    limit: int
+    offset: int
+
+
 class ADProposalProvenanceResponse(BaseModel):
     stagingDecisionId: str
     actorUserId: Optional[str]

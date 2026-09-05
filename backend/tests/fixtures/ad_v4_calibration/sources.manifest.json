@@ -1,0 +1,240 @@
+{
+  "version": "paprnav-ad-v4-calibration-sources-1",
+  "sourceRootEnvironment": "PAPRNAV_AD_CALIBRATION_SOURCE_ROOT",
+  "defaultSourceRoot": "backend/.data/ad-sources",
+  "packets": [
+    {
+      "packet": "1998-17-11",
+      "adNumber": "98-17-11",
+      "documents": [
+        {
+          "logicalKey": "official-rule",
+          "relativePath": "govinfo/e8/e86e204d59ad3464f31aac3945b73b03ad60adff6989ec3702a99f2d2fa06374/FR-1998-08-20.pdf",
+          "sha256": "e86e204d59ad3464f31aac3945b73b03ad60adff6989ec3702a99f2d2fa06374",
+          "byteLength": "2209868",
+          "pageCount": "248",
+          "relevantPages": [
+            "16",
+            "17",
+            "18",
+            "19",
+            "20",
+            "21",
+            "22",
+            "23"
+          ]
+        }
+      ],
+      "proposalTemplate": "1998-17-11.proposal.json",
+      "proposalTemplateSha256": "ed3223cf962a7efe97cfb67404db55a501ad508abe875893586b891895abf679",
+      "expectedSemantics": {
+        "engineScopes": "2",
+        "conditions": "2",
+        "requirements": "4"
+      },
+      "expectedCases": [
+        {
+          "caseKey": "positive-tcm-o-470-r-nelson-window",
+          "polarity": "positive",
+          "manufacturer": "Teledyne Continental Motors",
+          "model": "O-470-R",
+          "expected": "candidate"
+        },
+        {
+          "caseKey": "negative-documented-repair-before-window",
+          "polarity": "negative",
+          "manufacturer": "Teledyne Continental Motors",
+          "model": "O-470-R",
+          "expected": "no_further_action"
+        }
+      ]
+    },
+    {
+      "packet": "2002-13-04",
+      "adNumber": "2002-13-04",
+      "documents": [
+        {
+          "logicalKey": "official-rule",
+          "relativePath": "federal_register/6a/6abbb7724df98bf571ab84e9d58b18f5ef87a0e89aa29817670c17f4461714b7/02-16174.pdf",
+          "sha256": "6abbb7724df98bf571ab84e9d58b18f5ef87a0e89aa29817670c17f4461714b7",
+          "byteLength": "140610",
+          "pageCount": "3",
+          "relevantPages": [
+            "1",
+            "2",
+            "3"
+          ]
+        }
+      ],
+      "proposalTemplate": "2002-13-04.proposal.json",
+      "proposalTemplateSha256": "9c42d8afe4ab262e6a593d4e86bc7ef619363a85b858cecc861ac4527a609855",
+      "expectedSemantics": {
+        "engineScopes": "1",
+        "conditions": "4",
+        "requirements": "4",
+        "searchHints": "1"
+      },
+      "expectedCases": [
+        {
+          "caseKey": "positive-o-300-slick-6314-conflicting-serial",
+          "polarity": "positive",
+          "manufacturer": "Teledyne Continental Motors",
+          "model": "O-300",
+          "expected": "candidate_human_determination"
+        },
+        {
+          "caseKey": "negative-unlisted-lycoming-engine",
+          "polarity": "negative",
+          "manufacturer": "Lycoming",
+          "model": "O-360",
+          "expected": "not_listed"
+        }
+      ]
+    },
+    {
+      "packet": "2008-26-10",
+      "adNumber": "2008-26-10",
+      "documents": [
+        {
+          "logicalKey": "official-rule",
+          "relativePath": "federal_register/17/177c3ed17897931c0dcb902e2e867fdc7348526441d2885f26f80974402e201f/E8-30465.pdf",
+          "sha256": "177c3ed17897931c0dcb902e2e867fdc7348526441d2885f26f80974402e201f",
+          "byteLength": "252970",
+          "pageCount": "6",
+          "relevantPages": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6"
+          ]
+        },
+        {
+          "logicalKey": "official-correction",
+          "relativePath": "federal_register/67/676a282adba0fea1ef7ddb87787ce85746ea8eb08b43ac28cf059f7ccff39db2/2010-28579.pdf",
+          "sha256": "676a282adba0fea1ef7ddb87787ce85746ea8eb08b43ac28cf059f7ccff39db2",
+          "byteLength": "151890",
+          "pageCount": "2",
+          "relevantPages": [
+            "1",
+            "2"
+          ]
+        }
+      ],
+      "proposalTemplate": "2008-26-10.proposal.json",
+      "proposalTemplateSha256": "0c79c75f8902627f2234493120199925d39aa95f33a9f9b194ee10244aeb456e",
+      "expectedSemantics": {
+        "manufacturerScopes": "1",
+        "models": "182",
+        "requirements": "6",
+        "incorporatedDocumentsUnknown": "4",
+        "corrections": "1"
+      },
+      "expectedCases": [
+        {
+          "caseKey": "positive-cessna-172n-delivered-1999",
+          "polarity": "positive",
+          "manufacturer": "Cessna Aircraft Company",
+          "model": "172N",
+          "expected": "candidate"
+        },
+        {
+          "caseKey": "negative-corrected-model-188",
+          "polarity": "negative",
+          "manufacturer": "Cessna Aircraft Company",
+          "model": "188",
+          "expected": "not_listed"
+        }
+      ]
+    },
+    {
+      "packet": "2011-10-09",
+      "adNumber": "2011-10-09",
+      "documents": [
+        {
+          "logicalKey": "official-rule",
+          "relativePath": "federal_register/cd/cdcf75940451488e47858bd49c40615803325652ef3143d0df4178a95fe577fe/2011-10988.pdf",
+          "sha256": "cdcf75940451488e47858bd49c40615803325652ef3143d0df4178a95fe577fe",
+          "byteLength": "533698",
+          "pageCount": "8",
+          "relevantPages": [
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+          ]
+        }
+      ],
+      "proposalTemplate": "2011-10-09.proposal.json",
+      "proposalTemplateSha256": "b8993b0226655dc818ef29d69890134dba56e97ea06fe9a719856f8f28b24707",
+      "expectedSemantics": {
+        "manufacturerScopes": "1",
+        "models": "224",
+        "requirements": "10",
+        "recurrenceGroups": "1"
+      },
+      "expectedCases": [
+        {
+          "caseKey": "positive-cessna-172i",
+          "polarity": "positive",
+          "manufacturer": "Cessna Aircraft Company",
+          "model": "172I",
+          "expected": "candidate"
+        },
+        {
+          "caseKey": "negative-cessna-172s",
+          "polarity": "negative",
+          "manufacturer": "Cessna Aircraft Company",
+          "model": "172S",
+          "expected": "not_listed"
+        }
+      ]
+    },
+    {
+      "packet": "2024-14-03",
+      "adNumber": "2024-14-03",
+      "documents": [
+        {
+          "logicalKey": "official-rule",
+          "relativePath": "federal_register/c7/c7be1903331497057fb55faf9ed5994e61774d8acd287cbbc1cb0da5df423b89/2024-15529.pdf",
+          "sha256": "c7be1903331497057fb55faf9ed5994e61774d8acd287cbbc1cb0da5df423b89",
+          "byteLength": "418696",
+          "pageCount": "5",
+          "relevantPages": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        }
+      ],
+      "proposalTemplate": "2024-14-03.proposal.json",
+      "proposalTemplateSha256": "f3a1eb0d222623f94e2a8bd858e411f8e85c3ade39c331270d074e2057d374a3",
+      "expectedSemantics": {
+        "manufacturerScopes": "5",
+        "models": "182",
+        "requirements": "2",
+        "conditions": "1"
+      },
+      "expectedCases": [
+        {
+          "caseKey": "positive-piper-pa-28-181-full-garmin",
+          "polarity": "positive",
+          "manufacturer": "Piper Aircraft, Inc.",
+          "model": "PA-28-181",
+          "expected": "candidate"
+        },
+        {
+          "caseKey": "negative-piper-pa-28-181-missing-gsa28",
+          "polarity": "negative",
+          "manufacturer": "Piper Aircraft, Inc.",
+          "model": "PA-28-181",
+          "expected": "not_applicable"
+        }
+      ]
+    }
+  ],
+  "manifestVersion": "2"
+}

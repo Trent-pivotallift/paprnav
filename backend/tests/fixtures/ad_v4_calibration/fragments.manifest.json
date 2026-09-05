@@ -1,0 +1,2641 @@
+{
+  "manifestVersion": "2",
+  "textNormalization": "slice-1-pypdf-strip-v1",
+  "parser": {
+    "name": "pypdf-native-text",
+    "version": "6.15.0"
+  },
+  "fragmentHashAlgorithm": "paprnav-hash-parts-sha256-v1",
+  "packets": [
+    {
+      "packet": "1998-17-11",
+      "fragments": [
+        {
+          "evidenceKey": "ev-identity",
+          "sourceKey": "official-rule",
+          "pageNumber": "18",
+          "characterStart": "743",
+          "characterEnd": "844",
+          "pageTextHash": "5bb3d639154d565beb14e771e310c9468c884742dfde17e5a41a51d5bbd8cbb9",
+          "exactTextHash": "3038fbd1a559a03cc78dbae634362f34c36b4e53b6f25127a0b6959286ef7de5",
+          "selection": {
+            "startAnchor": "98±17±11 Textron",
+            "endAnchor": "Textron Lycoming (LYC)"
+          },
+          "claimKinds": [
+            "identity"
+          ],
+          "locators": {
+            "paragraph": "§39.13 rule heading"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-product-scope",
+          "sourceKey": "official-rule",
+          "pageNumber": "18",
+          "characterStart": "844",
+          "characterEnd": "2024",
+          "pageTextHash": "5bb3d639154d565beb14e771e310c9468c884742dfde17e5a41a51d5bbd8cbb9",
+          "exactTextHash": "c6ddd56eb1cb841874b99e6e044bcfcf330a52dd33112364977ee68154a1c81f",
+          "selection": {
+            "startAnchor": "Textron Lycoming (LYC)",
+            "endAnchor": "TABLE 1"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "paragraph": "applicability provision"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-work-orders-a",
+          "sourceKey": "official-rule",
+          "pageNumber": "18",
+          "characterStart": "2024",
+          "characterEnd": "6788",
+          "pageTextHash": "5bb3d639154d565beb14e771e310c9468c884742dfde17e5a41a51d5bbd8cbb9",
+          "exactTextHash": "ae4fb0ff1114c2503f7bcaad69dbfeb1798cef689018d98015f4a7a5c8735458",
+          "selection": {
+            "startAnchor": "TABLE 1",
+            "endAnchor": null
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, first segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-work-orders-b",
+          "sourceKey": "official-rule",
+          "pageNumber": "19",
+          "characterStart": "94",
+          "characterEnd": "7195",
+          "pageTextHash": "c2c59c9aa04a0579b67b0727e6bfcdb4d70554c4315bdce83381a2af730000ce",
+          "exactTextHash": "fc9a5f5a285cba704e38b884412d0105f74323f1f3d68dbd820fa020a8a3f9a1",
+          "selection": {
+            "startAnchor": "TABLE 1",
+            "endAnchor": null
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, continuation 1"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-work-orders-c",
+          "sourceKey": "official-rule",
+          "pageNumber": "20",
+          "characterStart": "93",
+          "characterEnd": "7166",
+          "pageTextHash": "eabe5ee193529c470adf8f781de48a09198c701f22baf84633e6f4a8f06a82b5",
+          "exactTextHash": "e765fad5dbd142d72b8afa4fe6561ae9f0111acdf48fe7d0874a5f0af70e262f",
+          "selection": {
+            "startAnchor": "TABLE 1",
+            "endAnchor": null
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, continuation 2"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-work-orders-d",
+          "sourceKey": "official-rule",
+          "pageNumber": "21",
+          "characterStart": "94",
+          "characterEnd": "7398",
+          "pageTextHash": "8154934e7898547714fbb01719e6cc2edc6018c4290a3a9f36ca58a591029766",
+          "exactTextHash": "27b66c26eb8587fdf4621948cbfd8c66fefbc914ef7a1333dece56eef2e79a7d",
+          "selection": {
+            "startAnchor": "TABLE 1",
+            "endAnchor": null
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, continuation 3"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-work-orders-e",
+          "sourceKey": "official-rule",
+          "pageNumber": "22",
+          "characterStart": "93",
+          "characterEnd": "2911",
+          "pageTextHash": "783aa56de222ec4b56af32fda7cbd7d0d222ca195aaae29c1f499163d1e90f77",
+          "exactTextHash": "d8e7555c8b446c528dd8eadd8e8d1430dd34100285d1a7dadfa17151534b8eca",
+          "selection": {
+            "startAnchor": "TABLE 1",
+            "endAnchor": "Note 1:"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, final segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-unknown-provenance",
+          "sourceKey": "official-rule",
+          "pageNumber": "22",
+          "characterStart": "5458",
+          "characterEnd": "5555",
+          "pageTextHash": "783aa56de222ec4b56af32fda7cbd7d0d222ca195aaae29c1f499163d1e90f77",
+          "exactTextHash": "b85f8115f6f0b4cb345e478e4f3f54581759969193cb243387b995fa4ed2e9d2",
+          "selection": {
+            "startAnchor": "(4) If it cannot be determined",
+            "endAnchor": "(5) If the engine"
+          },
+          "claimKinds": [
+            "branch",
+            "applicability"
+          ],
+          "locators": {
+            "paragraph": "paragraph (a)(4)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-determination",
+          "sourceKey": "official-rule",
+          "pageNumber": "22",
+          "characterStart": "3837",
+          "characterEnd": "5769",
+          "pageTextHash": "783aa56de222ec4b56af32fda7cbd7d0d222ca195aaae29c1f499163d1e90f77",
+          "exactTextHash": "b29062563f625c5033fc6d8c44f329b4dcd56bdac48c299ec383f4845074213c",
+          "selection": {
+            "startAnchor": "Compliance: Required as indicated",
+            "endAnchor": "(b) Within 10 hours"
+          },
+          "claimKinds": [
+            "timing",
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "compliance and paragraphs (a)(1)-(5)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-inspection-alternative",
+          "sourceKey": "official-rule",
+          "pageNumber": "22",
+          "characterStart": "5769",
+          "characterEnd": "6654",
+          "pageTextHash": "783aa56de222ec4b56af32fda7cbd7d0d222ca195aaae29c1f499163d1e90f77",
+          "exactTextHash": "5a9139ce6c3917da3bcfe1a68d1df78029364dfdd30e2ed6df74a2be3d85e044",
+          "selection": {
+            "startAnchor": "(b) Within 10 hours",
+            "endAnchor": "(3) Replace any crankshaft"
+          },
+          "claimKinds": [
+            "timing",
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraphs (b)(1)-(2)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-rework-alternative",
+          "sourceKey": "official-rule",
+          "pageNumber": "22",
+          "characterStart": "6654",
+          "characterEnd": "7294",
+          "pageTextHash": "783aa56de222ec4b56af32fda7cbd7d0d222ca195aaae29c1f499163d1e90f77",
+          "exactTextHash": "fec1b008a4074948c43be26f8973ea6444f72d03148bca87eccb0a7639066746",
+          "selection": {
+            "startAnchor": "(3) Replace any crankshaft",
+            "endAnchor": "Note 4:"
+          },
+          "claimKinds": [
+            "action",
+            "branch",
+            "terminating_action",
+            "service_information"
+          ],
+          "locators": {
+            "paragraph": "paragraphs (b)(3)-(4)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-amoc-a",
+          "sourceKey": "official-rule",
+          "pageNumber": "22",
+          "characterStart": "7439",
+          "characterEnd": "7520",
+          "pageTextHash": "783aa56de222ec4b56af32fda7cbd7d0d222ca195aaae29c1f499163d1e90f77",
+          "exactTextHash": "7a1e2e29b5636b6db99eba07d2d5a24d74ff3b2fbaabc131af17cedefdc9a151",
+          "selection": {
+            "startAnchor": "(c) An alternative method",
+            "endAnchor": null
+          },
+          "claimKinds": [
+            "amoc"
+          ],
+          "locators": {
+            "paragraph": "paragraph (c), first segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-amoc-b",
+          "sourceKey": "official-rule",
+          "pageNumber": "23",
+          "characterStart": "94",
+          "characterEnd": "681",
+          "pageTextHash": "375a9f44d2ed3d8e2f83cf4cd09a3a66e7d69ddc74f578c84ee01faed8dde352",
+          "exactTextHash": "5241aa1b1ddb2505b33dcdb07da1ff73026cb85e39e7a80c9f48254e3800a500",
+          "selection": {
+            "startAnchor": "provides an acceptable level",
+            "endAnchor": "(d) Special flight permits"
+          },
+          "claimKinds": [
+            "amoc"
+          ],
+          "locators": {
+            "paragraph": "paragraph (c), continuation"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-effective",
+          "sourceKey": "official-rule",
+          "pageNumber": "23",
+          "characterStart": "924",
+          "characterEnd": "982",
+          "pageTextHash": "375a9f44d2ed3d8e2f83cf4cd09a3a66e7d69ddc74f578c84ee01faed8dde352",
+          "exactTextHash": "06de8533a622bfb7c9ba3e83b5c44c0acfa96382d14cbcd2c278a91414717262",
+          "selection": {
+            "startAnchor": "(e) This amendment becomes effective",
+            "endAnchor": "Issued in Burlington"
+          },
+          "claimKinds": [
+            "effective_date"
+          ],
+          "locators": {
+            "paragraph": "paragraph (e)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        }
+      ]
+    },
+    {
+      "packet": "2002-13-04",
+      "fragments": [
+        {
+          "evidenceKey": "ev-identity",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "3270",
+          "characterEnd": "3360",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "17b42e6bb66e5f7b7922078aa0ac3e4648e2edd558cf7cce8193829090d25607",
+          "selection": {
+            "startAnchor": "2002–13–04 Teledyne",
+            "endAnchor": "Applicability"
+          },
+          "claimKinds": [
+            "identity"
+          ],
+          "locators": {
+            "paragraph": "§39.13 rule heading"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-applicability-conflict",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "3360",
+          "characterEnd": "3963",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "badb720f387fdc173c87ffd0abfb2dbd8e33887d88de365f942495a13db0c48e",
+          "selection": {
+            "startAnchor": "Applicability",
+            "endAnchor": "Note 1:"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "paragraph": "applicability provision"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-compliance-time",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "5015",
+          "characterEnd": "5354",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "f87a90f42049f7d80aedfdfe0b5b0b2b65aa837fdd6e0fc8e5baa936c1e0d9e6",
+          "selection": {
+            "startAnchor": "Compliance",
+            "endAnchor": "Replacement of Magneto"
+          },
+          "claimKinds": [
+            "timing"
+          ],
+          "locators": {
+            "paragraph": "compliance provision"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-action-range",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "5354",
+          "characterEnd": "5526",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "dda8a0baa9b9d9a5565e1976e2be4d97a5dd3334a5e5d1851a45a432a15324a0",
+          "selection": {
+            "startAnchor": "Replacement of Magneto",
+            "endAnchor": "Inspections"
+          },
+          "claimKinds": [
+            "action",
+            "applicability",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (a)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-pin-condition",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "5526",
+          "characterEnd": "5672",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "e387181b1e2172e58b6847158a60491b508057ff8e6067c991a3da44174f68c8",
+          "selection": {
+            "startAnchor": "Inspections",
+            "endAnchor": "(1) For C–125"
+          },
+          "claimKinds": [
+            "applicability",
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (b) predicate"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-family-a",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "5672",
+          "characterEnd": "6652",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "107d160dcfa3fb89a8a2b34d533ec9b91fe416df6fb22372f27b695ccfc62d13",
+          "selection": {
+            "startAnchor": "(1) For C–125",
+            "endAnchor": "(2) For LTSIO"
+          },
+          "claimKinds": [
+            "applicability",
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (b)(1)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-family-b",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "6652",
+          "characterEnd": "7403",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "5b2dad79a90f4cd02437a9a21a5794adedfd7f64c0464623dffc0e8152a5bd73",
+          "selection": {
+            "startAnchor": "(2) For LTSIO",
+            "endAnchor": "(c) After the effective date"
+          },
+          "claimKinds": [
+            "applicability",
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (b)(2)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-installation-prohibition",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "7403",
+          "characterEnd": "7591",
+          "pageTextHash": "335aff05b478e9389a033520a2e6ba2674a1209a8b79878ae12b693e7f8371b6",
+          "exactTextHash": "8a471d572b6ca62667631b8e16de31e7ebecb696717e56503186f0b5a8b6c927",
+          "selection": {
+            "startAnchor": "(c) After the effective date",
+            "endAnchor": "Note 3:"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (c)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-amoc",
+          "sourceKey": "official-rule",
+          "pageNumber": "3",
+          "characterStart": "168",
+          "characterEnd": "749",
+          "pageTextHash": "da43b9788c3a1b71d5a6c46422fca72f86fb84346624be390f592f4bf5c7a887",
+          "exactTextHash": "22b7ec8b99a87efa2f10a44d9994fda61e4576095233e12124f7f139d6506f8f",
+          "selection": {
+            "startAnchor": "Alternative Methods of Compliance",
+            "endAnchor": "Special Flight Permits"
+          },
+          "claimKinds": [
+            "amoc"
+          ],
+          "locators": {
+            "paragraph": "paragraph (d)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-effective",
+          "sourceKey": "official-rule",
+          "pageNumber": "3",
+          "characterStart": "1008",
+          "characterEnd": "1077",
+          "pageTextHash": "da43b9788c3a1b71d5a6c46422fca72f86fb84346624be390f592f4bf5c7a887",
+          "exactTextHash": "f2b8328c6babfb8afd440ba908b4b92faf464c02891901c6a9ebfeb727dad78b",
+          "selection": {
+            "startAnchor": "Effective Date",
+            "endAnchor": "Issued in Burlington"
+          },
+          "claimKinds": [
+            "effective_date"
+          ],
+          "locators": {
+            "paragraph": "paragraph (f)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        }
+      ]
+    },
+    {
+      "packet": "2008-26-10",
+      "fragments": [
+        {
+          "evidenceKey": "ev-identity",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "6463",
+          "characterEnd": "6588",
+          "pageTextHash": "eb311bad073fffb41a2db6c984861ce0fdd343361cc47a13946a2825f30f7d5f",
+          "exactTextHash": "4c45e5a218229c064aab47542cbbf93583b38cef401e045dea8326fa20f1e078",
+          "selection": {
+            "startAnchor": "2008–26–10 Cessna",
+            "endAnchor": "Effective Date"
+          },
+          "claimKinds": [
+            "identity"
+          ],
+          "locators": {
+            "paragraph": "§39.13 rule heading"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-effective",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "6588",
+          "characterEnd": "6656",
+          "pageTextHash": "eb311bad073fffb41a2db6c984861ce0fdd343361cc47a13946a2825f30f7d5f",
+          "exactTextHash": "5660be130af3efe056a5c7f6ed53c29f9578f39eea08b2b4d3cb97bb61b2391d",
+          "selection": {
+            "startAnchor": "Effective Date",
+            "endAnchor": "Affected ADs"
+          },
+          "claimKinds": [
+            "effective_date"
+          ],
+          "locators": {
+            "paragraph": "paragraph (a)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-related-ads",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "6656",
+          "characterEnd": "6856",
+          "pageTextHash": "eb311bad073fffb41a2db6c984861ce0fdd343361cc47a13946a2825f30f7d5f",
+          "exactTextHash": "18589d7f111a110abadf491c05450ff58eaa76aadc94475845577f9a28df8023",
+          "selection": {
+            "startAnchor": "Affected ADs",
+            "endAnchor": "VerDate"
+          },
+          "claimKinds": [
+            "supersession_status"
+          ],
+          "locators": {
+            "paragraph": "paragraph (b)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-applicability",
+          "sourceKey": "official-rule",
+          "pageNumber": "3",
+          "characterStart": "98",
+          "characterEnd": "692",
+          "pageTextHash": "4e55c79cc95430526d9d1f7bd072e7297f1a633e8c5060e4c217896d6a6623b8",
+          "exactTextHash": "7e051e799cefbd945fed00ab216ea0fe4e9fbb98b2df4e950a0189c9d1823817",
+          "selection": {
+            "startAnchor": "Applicability",
+            "endAnchor": "Note 1:"
+          },
+          "claimKinds": [
+            "applicability",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (c)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-models-a",
+          "sourceKey": "official-rule",
+          "pageNumber": "3",
+          "characterStart": "879",
+          "characterEnd": "2065",
+          "pageTextHash": "4e55c79cc95430526d9d1f7bd072e7297f1a633e8c5060e4c217896d6a6623b8",
+          "exactTextHash": "646421a6e8063b71d23ef25813e1276120c35b90dfe828a74004ed63a42142a4",
+          "selection": {
+            "startAnchor": "TABLE 1",
+            "endAnchor": "VerDate"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, first segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-models-b",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "98",
+          "characterEnd": "223",
+          "pageTextHash": "d588b6929fa0cf07b07e161e677a50bda93e25736425ffc68b8f650574c2265a",
+          "exactTextHash": "ec3a5d6b0e86573c5398a6c0f955ff0de140d7412e1162d6320a0dd8e3550935",
+          "selection": {
+            "startAnchor": "TABLE 1",
+            "endAnchor": "Unsafe Condition"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, final segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-non-ifr",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "957",
+          "characterEnd": "1775",
+          "pageTextHash": "d588b6929fa0cf07b07e161e677a50bda93e25736425ffc68b8f650574c2265a",
+          "exactTextHash": "784087ece9355d4221145729ffec4252b7efab8df8deb5d8042dab92060cb7d8",
+          "selection": {
+            "startAnchor": "(1) For all affected airplanes",
+            "endAnchor": "(2) For all affected airplanes"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch",
+            "service_information"
+          ],
+          "locators": {
+            "table": "actions table paragraph (e)(1)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-ifr-initial",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "1775",
+          "characterEnd": "2865",
+          "pageTextHash": "d588b6929fa0cf07b07e161e677a50bda93e25736425ffc68b8f650574c2265a",
+          "exactTextHash": "31e54fa5ad189cb69a6ae8d8818b588cdd7ca8fb807bc901446311dbc6a997c7",
+          "selection": {
+            "startAnchor": "(2) For all affected airplanes",
+            "endAnchor": "(3) For all affected airplanes"
+          },
+          "claimKinds": [
+            "applicability",
+            "action",
+            "timing",
+            "branch",
+            "service_information"
+          ],
+          "locators": {
+            "table": "actions table paragraph (e)(2)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-ifr-followup",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "2865",
+          "characterEnd": "3878",
+          "pageTextHash": "d588b6929fa0cf07b07e161e677a50bda93e25736425ffc68b8f650574c2265a",
+          "exactTextHash": "2a2772d3ca89125ffbd64eed73775839f161e3cc6a6a8a125ffef3e3f94331d9",
+          "selection": {
+            "startAnchor": "(3) For all affected airplanes",
+            "endAnchor": "(4) For all affected airplanes"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch",
+            "service_information"
+          ],
+          "locators": {
+            "table": "actions table paragraph (e)(3)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-obstruction",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "3878",
+          "characterEnd": "4705",
+          "pageTextHash": "d588b6929fa0cf07b07e161e677a50bda93e25736425ffc68b8f650574c2265a",
+          "exactTextHash": "3b3a43a391caef28f5627b07fac2597853d25793ec3402b5649e2bf179cc5ead",
+          "selection": {
+            "startAnchor": "(4) For all affected airplanes",
+            "endAnchor": "VerDate"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch",
+            "service_information"
+          ],
+          "locators": {
+            "table": "actions table paragraph (e)(4)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-installation",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "129",
+          "characterEnd": "600",
+          "pageTextHash": "d80d3fa9a23a0001e0c86767e5f148e843f5d7de9be155538f2d5c75ed452c17",
+          "exactTextHash": "85faf4cd78e0f726e0578a291363f5c0df526010179e5efd08a37991cfd24f6b",
+          "selection": {
+            "startAnchor": "(5) For all affected airplanes",
+            "endAnchor": "(f) Report to the FAA"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch"
+          ],
+          "locators": {
+            "table": "actions table paragraph (e)(5)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-report",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "600",
+          "characterEnd": "1051",
+          "pageTextHash": "d80d3fa9a23a0001e0c86767e5f148e843f5d7de9be155538f2d5c75ed452c17",
+          "exactTextHash": "0dadcc050c4fc2542956a1af7a50a3ba1351386c641e6446f0647d949b56f477",
+          "selection": {
+            "startAnchor": "(f) Report to the FAA",
+            "endAnchor": "(3) The Office of Management"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraphs (f)(1)-(2)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-amoc",
+          "sourceKey": "official-rule",
+          "pageNumber": "6",
+          "characterStart": "98",
+          "characterEnd": "813",
+          "pageTextHash": "7d3cb64ed0c97d8a858e172354519bf118884e31feb786455efb945ad4755d56",
+          "exactTextHash": "edc873dcc62d71cedea3124c225b32f4519f7028256ff64c02945011e000d200",
+          "selection": {
+            "startAnchor": "Alternative Methods of Compliance",
+            "endAnchor": "Material Incorporated by Reference"
+          },
+          "claimKinds": [
+            "amoc"
+          ],
+          "locators": {
+            "paragraph": "paragraphs (g)-(h)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-ibr",
+          "sourceKey": "official-rule",
+          "pageNumber": "6",
+          "characterStart": "813",
+          "characterEnd": "1257",
+          "pageTextHash": "7d3cb64ed0c97d8a858e172354519bf118884e31feb786455efb945ad4755d56",
+          "exactTextHash": "341b828a265c1771bfec895105f43de77b0699e14bb5c6ff6bd0b43b7286ac8d",
+          "selection": {
+            "startAnchor": "Material Incorporated by Reference",
+            "endAnchor": "(1) The Director"
+          },
+          "claimKinds": [
+            "service_information"
+          ],
+          "locators": {
+            "paragraph": "paragraph (i)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-correction-a",
+          "sourceKey": "official-correction",
+          "pageNumber": "1",
+          "characterStart": "0",
+          "characterEnd": "1284",
+          "pageTextHash": "6e2e3318cf88bfd519f453791060732a059c82d00b02559babaa23210bc2db3f",
+          "exactTextHash": "3bc7e1a3aabc3c23ab18c94311039099a5eda21b51300cedfe98ab40355c2d25",
+          "selection": {
+            "startAnchor": "14 CFR Part 39",
+            "endAnchor": "ADDRESSES:"
+          },
+          "claimKinds": [
+            "correction",
+            "effective_date"
+          ],
+          "locators": {
+            "paragraph": "correction identity, summary, and dates"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-correction-b",
+          "sourceKey": "official-correction",
+          "pageNumber": "2",
+          "characterStart": "1445",
+          "characterEnd": "3018",
+          "pageTextHash": "422d977b547115cf4de410f294666f938d899c995a3d22d88b33f80026d3a0ee",
+          "exactTextHash": "1d828366ee34c535f297f369198e5c9287b5bac7b5224b15c85aea67e533581a",
+          "selection": {
+            "startAnchor": "As published, the Information",
+            "endAnchor": "Issued in Kansas City"
+          },
+          "claimKinds": [
+            "correction",
+            "applicability",
+            "action"
+          ],
+          "locators": {
+            "paragraph": "correction diagnosis and instructions"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        }
+      ]
+    },
+    {
+      "packet": "2011-10-09",
+      "fragments": [
+        {
+          "evidenceKey": "ev-identity",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "3791",
+          "characterEnd": "3916",
+          "pageTextHash": "1eabcadc8d84f9595e13716d3d5becd9ca1ed92a56b0ad32ad15c4a5533a8c64",
+          "exactTextHash": "fb1957d772f0809606174e2f3f3b6802e8bc52a6cece34b729dae243e5eaa396",
+          "selection": {
+            "startAnchor": "2011–10–09 Cessna",
+            "endAnchor": "Effective Date"
+          },
+          "claimKinds": [
+            "identity"
+          ],
+          "locators": {
+            "paragraph": "§39.13 rule heading"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-effective",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "3916",
+          "characterEnd": "4000",
+          "pageTextHash": "1eabcadc8d84f9595e13716d3d5becd9ca1ed92a56b0ad32ad15c4a5533a8c64",
+          "exactTextHash": "61d977efd91794cad30d11411fe76a4138fad103889ea0217562770e21236cc2",
+          "selection": {
+            "startAnchor": "Effective Date",
+            "endAnchor": "Affected ADs"
+          },
+          "claimKinds": [
+            "effective_date"
+          ],
+          "locators": {
+            "paragraph": "paragraph (a)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-supersession",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "4000",
+          "characterEnd": "4074",
+          "pageTextHash": "1eabcadc8d84f9595e13716d3d5becd9ca1ed92a56b0ad32ad15c4a5533a8c64",
+          "exactTextHash": "7a98bbac63d19d8afb5f6c5a4f1bfe4353b8319a14f9f1b17fa479cf34e60f23",
+          "selection": {
+            "startAnchor": "Affected ADs",
+            "endAnchor": "Applicability"
+          },
+          "claimKinds": [
+            "supersession_status"
+          ],
+          "locators": {
+            "paragraph": "paragraph (b)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-models-a",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "4074",
+          "characterEnd": "4492",
+          "pageTextHash": "1eabcadc8d84f9595e13716d3d5becd9ca1ed92a56b0ad32ad15c4a5533a8c64",
+          "exactTextHash": "2cb5f1ace9c1bd5c4999f6e40d004707ad8b7de72602a8a8f5dce677ace91bec",
+          "selection": {
+            "startAnchor": "Applicability",
+            "endAnchor": "VerDate"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "paragraph (c), model groups (1)-(3)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-models-b",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "97",
+          "characterEnd": "1598",
+          "pageTextHash": "07031935fa89b813f9d691a033bae29e78b59cc7351bdee3e39696dde59b4c21",
+          "exactTextHash": "0e216bf3de24486c7f0d1843e38abc778e9ea18cbc02e0eec44813d8443c473d",
+          "selection": {
+            "startAnchor": "(4) 172",
+            "endAnchor": "Subject"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "paragraph (c), model groups (4)-(18)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-cycle",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "2269",
+          "characterEnd": "3011",
+          "pageTextHash": "07031935fa89b813f9d691a033bae29e78b59cc7351bdee3e39696dde59b4c21",
+          "exactTextHash": "931d8bc8dffab1c310031f3bcb0400e111bcd7d99d38fbe2b812458293d4bf05",
+          "selection": {
+            "startAnchor": "Compliance",
+            "endAnchor": "(1) Visually inspect"
+          },
+          "claimKinds": [
+            "timing",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraphs (f)-(g), shared cycle"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g1",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "3011",
+          "characterEnd": "3253",
+          "pageTextHash": "07031935fa89b813f9d691a033bae29e78b59cc7351bdee3e39696dde59b4c21",
+          "exactTextHash": "72ababee18183d7c2d5718c8dabfb9dc44c47267c2354ecb1f254dc5e011808b",
+          "selection": {
+            "startAnchor": "(1) Visually inspect",
+            "endAnchor": "(2) Remove the seat"
+          },
+          "claimKinds": [
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(1)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g2",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "3253",
+          "characterEnd": "3586",
+          "pageTextHash": "07031935fa89b813f9d691a033bae29e78b59cc7351bdee3e39696dde59b4c21",
+          "exactTextHash": "bc0af3a788d45279a33baef61cd7e0bcbadbc8ce7fe90064f70eae6346e451e4",
+          "selection": {
+            "startAnchor": "(2) Remove the seat",
+            "endAnchor": "(3) Inspect the diameter"
+          },
+          "claimKinds": [
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(2)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g3-a",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "3586",
+          "characterEnd": "4108",
+          "pageTextHash": "07031935fa89b813f9d691a033bae29e78b59cc7351bdee3e39696dde59b4c21",
+          "exactTextHash": "fd2c40cd918613e9598c584d83334a0b5c4bd6b1c6d83fc2d9617547c6c46863",
+          "selection": {
+            "startAnchor": "(3) Inspect the diameter",
+            "endAnchor": "VerDate"
+          },
+          "claimKinds": [
+            "action",
+            "branch",
+            "terminating_action"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(3), first segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g3-b",
+          "sourceKey": "official-rule",
+          "pageNumber": "6",
+          "characterStart": "113",
+          "characterEnd": "218",
+          "pageTextHash": "add79957150a6278c474ed67c96bfae4ba9c85f482c5e2c8dc8d02903b150108",
+          "exactTextHash": "93d07c93a5e2e3e62dee92d6ee9ce8cb8c4f4088497a057c923b4d79e7d30482",
+          "selection": {
+            "startAnchor": "(ii) Rail replacement",
+            "endAnchor": "(4) Visually inspect"
+          },
+          "claimKinds": [
+            "terminating_action"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(3)(ii)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g4",
+          "sourceKey": "official-rule",
+          "pageNumber": "6",
+          "characterStart": "218",
+          "characterEnd": "803",
+          "pageTextHash": "add79957150a6278c474ed67c96bfae4ba9c85f482c5e2c8dc8d02903b150108",
+          "exactTextHash": "89535cfc4b976c0be59f2df456542b1f3050bb31bc206857ebb1a17d66c9da42",
+          "selection": {
+            "startAnchor": "(4) Visually inspect",
+            "endAnchor": "(5) Inspect the thickness"
+          },
+          "claimKinds": [
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(4)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g5",
+          "sourceKey": "official-rule",
+          "pageNumber": "6",
+          "characterStart": "803",
+          "characterEnd": "1244",
+          "pageTextHash": "add79957150a6278c474ed67c96bfae4ba9c85f482c5e2c8dc8d02903b150108",
+          "exactTextHash": "76f7e0a2c7f7fb63591f11bd606a19cbd8916965a02e82e18b478ee552312514",
+          "selection": {
+            "startAnchor": "(5) Inspect the thickness",
+            "endAnchor": "VerDate"
+          },
+          "claimKinds": [
+            "action",
+            "branch",
+            "terminating_action"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(5)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g6",
+          "sourceKey": "official-rule",
+          "pageNumber": "7",
+          "characterStart": "89",
+          "characterEnd": "721",
+          "pageTextHash": "0fe6c8ed77a6698d730656e0b37784a70ec64be43aede3fe52260a4f86543121",
+          "exactTextHash": "b849f1205a940b6fbcc175f4ab1046d65b5e0261c01a410a804a0fe3927e2aa2",
+          "selection": {
+            "startAnchor": "(6) Due to wear",
+            "endAnchor": "(7) Inspect the springs"
+          },
+          "claimKinds": [
+            "action",
+            "branch",
+            "terminating_action"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(6)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g7",
+          "sourceKey": "official-rule",
+          "pageNumber": "7",
+          "characterStart": "721",
+          "characterEnd": "921",
+          "pageTextHash": "0fe6c8ed77a6698d730656e0b37784a70ec64be43aede3fe52260a4f86543121",
+          "exactTextHash": "840eaae5ee8dd6052106dae9644d4636ee77acbe7f46b82ef46911bdb20ba019",
+          "selection": {
+            "startAnchor": "(7) Inspect the springs",
+            "endAnchor": "(8) Visually inspect"
+          },
+          "claimKinds": [
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(7)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g8",
+          "sourceKey": "official-rule",
+          "pageNumber": "7",
+          "characterStart": "921",
+          "characterEnd": "1214",
+          "pageTextHash": "0fe6c8ed77a6698d730656e0b37784a70ec64be43aede3fe52260a4f86543121",
+          "exactTextHash": "13fc4bf631a04c0763c04599106ddd14dffc1721d988b8ac792e36a338f508d8",
+          "selection": {
+            "startAnchor": "(8) Visually inspect",
+            "endAnchor": "VerDate"
+          },
+          "claimKinds": [
+            "action",
+            "branch",
+            "terminating_action"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(8)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g9",
+          "sourceKey": "official-rule",
+          "pageNumber": "8",
+          "characterStart": "89",
+          "characterEnd": "483",
+          "pageTextHash": "f1f2b2f437c22c7c930f7434021cece538afd624b05585931b0a35a6d20c9e7a",
+          "exactTextHash": "378185a6febc6981d2f4caf36f5251ef40a56c90e0159f4c8263949edc437aed",
+          "selection": {
+            "startAnchor": "(9) Reinstall the seat",
+            "endAnchor": "(10) Lift up"
+          },
+          "claimKinds": [
+            "action",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(9)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-g10",
+          "sourceKey": "official-rule",
+          "pageNumber": "8",
+          "characterStart": "483",
+          "characterEnd": "1170",
+          "pageTextHash": "f1f2b2f437c22c7c930f7434021cece538afd624b05585931b0a35a6d20c9e7a",
+          "exactTextHash": "08d28c058f5f1c939e27468176a6beaede0afac8036878acca4aa805af861038",
+          "selection": {
+            "startAnchor": "(10) Lift up",
+            "endAnchor": "Paperwork Reduction"
+          },
+          "claimKinds": [
+            "action",
+            "branch",
+            "terminating_action"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)(10)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-amoc",
+          "sourceKey": "official-rule",
+          "pageNumber": "8",
+          "characterStart": "2140",
+          "characterEnd": "2623",
+          "pageTextHash": "f1f2b2f437c22c7c930f7434021cece538afd624b05585931b0a35a6d20c9e7a",
+          "exactTextHash": "2e71d86fcedacf3b8ce5716aee8586d18b058f203682ed8d71d88f8dc592c7da",
+          "selection": {
+            "startAnchor": "Alternative Methods of Compliance",
+            "endAnchor": "Related Information"
+          },
+          "claimKinds": [
+            "amoc"
+          ],
+          "locators": {
+            "paragraph": "paragraph (i)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        }
+      ]
+    },
+    {
+      "packet": "2024-14-03",
+      "fragments": [
+        {
+          "evidenceKey": "ev-identity",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "5444",
+          "characterEnd": "5561",
+          "pageTextHash": "fbeab414bdcbd8aa2ea68eafc018c8e1330933b794af57fec4d1b9672769e9cf",
+          "exactTextHash": "5d8011db171e8cb9d17d29d6cc543a86e243234b18256f0b13a0bd2a9d951d68",
+          "selection": {
+            "startAnchor": "2024–14–03 Various",
+            "endAnchor": "(a) Effective Date"
+          },
+          "claimKinds": [
+            "identity"
+          ],
+          "locators": {
+            "paragraph": "§39.13 rule heading"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-effective",
+          "sourceKey": "official-rule",
+          "pageNumber": "2",
+          "characterStart": "5561",
+          "characterEnd": "5647",
+          "pageTextHash": "fbeab414bdcbd8aa2ea68eafc018c8e1330933b794af57fec4d1b9672769e9cf",
+          "exactTextHash": "52cb7863f419e90550acb75e1afac4a4a3f976387632f4d409f14f48a0a7e474",
+          "selection": {
+            "startAnchor": "(a) Effective Date",
+            "endAnchor": "(b) Affected ADs"
+          },
+          "claimKinds": [
+            "effective_date"
+          ],
+          "locators": {
+            "paragraph": "paragraph (a)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-applicability",
+          "sourceKey": "official-rule",
+          "pageNumber": "3",
+          "characterStart": "92",
+          "characterEnd": "451",
+          "pageTextHash": "742e65c324eff085cba4dc5abc05198469680c4a1fe41aadc57c82e10eae78e7",
+          "exactTextHash": "6a6dcac5c1bd1260a427253f67c7538c2115598dbed4c81416f924b6db46d7b7",
+          "selection": {
+            "startAnchor": "(c) Applicability",
+            "endAnchor": "BILLING CODE"
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "paragraph": "paragraph (c)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-models-a",
+          "sourceKey": "official-rule",
+          "pageNumber": "3",
+          "characterStart": "475",
+          "characterEnd": "2138",
+          "pageTextHash": "742e65c324eff085cba4dc5abc05198469680c4a1fe41aadc57c82e10eae78e7",
+          "exactTextHash": "e77182e3ce56165ea6d1eb5439e0e7f93c693cffc15b0d7afdb76fc926c5d855",
+          "selection": {
+            "startAnchor": "Table 1 to Paragraph",
+            "endAnchor": null
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, first segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-models-b",
+          "sourceKey": "official-rule",
+          "pageNumber": "4",
+          "characterStart": "288",
+          "characterEnd": "1919",
+          "pageTextHash": "cc445841bb54a80780f6f8280f097feabe4c4b9401dac2cc66e5a8137b596cab",
+          "exactTextHash": "820f8f4d4f5b61a41b298119b4eec2ce62a0e1d406b4d46ac5dac37b961ea747",
+          "selection": {
+            "startAnchor": "Type certificate holder",
+            "endAnchor": null
+          },
+          "claimKinds": [
+            "applicability"
+          ],
+          "locators": {
+            "table": "Table 1, final segment"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-software-update",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "701",
+          "characterEnd": "1011",
+          "pageTextHash": "1460fab80b7a1423afecd33ffe724f965e355a19b7eacdc7a760c1b5e47f82c1",
+          "exactTextHash": "cfd094e28ec285d5c8ea8afdd20a90f91addfdbfe53176ed34c88c3dae11c057",
+          "selection": {
+            "startAnchor": "(g) Required Action",
+            "endAnchor": "Note 1 to paragraph"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (g)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-update-method",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "1011",
+          "characterEnd": "1377",
+          "pageTextHash": "1460fab80b7a1423afecd33ffe724f965e355a19b7eacdc7a760c1b5e47f82c1",
+          "exactTextHash": "90fc4af5d2d8214351b3ca42aa428de7d8006ee99aba4136c22cca7cee7e043a",
+          "selection": {
+            "startAnchor": "Note 1 to paragraph",
+            "endAnchor": "(h) Installation Prohibition"
+          },
+          "claimKinds": [
+            "service_information"
+          ],
+          "locators": {
+            "note": "note 1 to paragraph (g)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-installation-prohibition",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "1377",
+          "characterEnd": "1653",
+          "pageTextHash": "1460fab80b7a1423afecd33ffe724f965e355a19b7eacdc7a760c1b5e47f82c1",
+          "exactTextHash": "e794d8777fa52fdc285fdb4df59f6334e8628faf792ca331846ca6724de12e0d",
+          "selection": {
+            "startAnchor": "(h) Installation Prohibition",
+            "endAnchor": "(i) Alternative Methods"
+          },
+          "claimKinds": [
+            "action",
+            "timing",
+            "branch"
+          ],
+          "locators": {
+            "paragraph": "paragraph (h)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        },
+        {
+          "evidenceKey": "ev-amoc",
+          "sourceKey": "official-rule",
+          "pageNumber": "5",
+          "characterStart": "1653",
+          "characterEnd": "2442",
+          "pageTextHash": "1460fab80b7a1423afecd33ffe724f965e355a19b7eacdc7a760c1b5e47f82c1",
+          "exactTextHash": "25e1e06dd001b533ffdd2e9ac4f3aa9aec38999de78b2b9100b3d5ae7afb2d74",
+          "selection": {
+            "startAnchor": "(i) Alternative Methods",
+            "endAnchor": "(j) Additional Information"
+          },
+          "claimKinds": [
+            "amoc"
+          ],
+          "locators": {
+            "paragraph": "paragraph (i)"
+          },
+          "fragmentHashInputs": [
+            "directiveId",
+            "sourceDocumentId",
+            "sourceContentHash",
+            "renditionId",
+            "pageTextVersionId",
+            "pageStart",
+            "pageEnd",
+            "characterStart",
+            "characterEnd",
+            "paragraphLocator",
+            "tableLocator",
+            "rowLocator",
+            "noteLocator",
+            "regionMapHash",
+            "exactText",
+            "parserName",
+            "parserVersion"
+          ]
+        }
+      ]
+    }
+  ]
+}

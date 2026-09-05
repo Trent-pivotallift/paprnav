@@ -1,0 +1,498 @@
+{
+  "taskId": "T081-V4-SCHEMA-SLICE-2",
+  "stage": "closure",
+  "generatedAt": "2026-09-05T02:08:57+00:00",
+  "baseRef": "HEAD",
+  "head": "608abb8f452352a049ee45be372089f295a4c757",
+  "scopePaths": [],
+  "scopeFingerprint": "ca2b01992b095e637a63a25624c9e76e3eeac0cd18f123db18c94d5c842ad83a",
+  "files": [
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": "M ",
+      "size": 63802,
+      "sha256": "cf7ebd7f6e54bdb9c76466000eae3a710d26b84109b3a2117bb626afc5f8f0f2",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260901_0026_add_ad_v4_candidates.py",
+      "status": "A ",
+      "size": 28995,
+      "sha256": "811efe67991359f70cd853444a00c9dd741407469a99634bc8ee4e8eee886633",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": "M ",
+      "size": 92638,
+      "sha256": "aa52a43be4ed7eb0328d31dbbac469ef55a50861e65da701d19c026cd1bbad10",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ad_extraction_v4.schema.json",
+      "status": "A ",
+      "size": 23722,
+      "sha256": "6e9cb33ae608e632f7f44b60c28f67c5e0781677b85ab41c4edf9ffd6baa54be",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": "M ",
+      "size": 9318,
+      "sha256": "226ec002f1f1cc5f0fd8e4cd275b60efd5c74036ba86d62fdf5f047221bf222a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_evidence.py",
+      "status": "M ",
+      "size": 21916,
+      "sha256": "92b6c2ca9e11bc0ea5a7b279f71cedb02aaaa4fb1b3695cfa9a990a6317f3f9d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_candidates.py",
+      "status": "A ",
+      "size": 56282,
+      "sha256": "052a89f35ceb6940d6c6fd05e0c81af9055633f026c98963e1919880c5cb4d9f",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/1998-17-11.proposal.json",
+      "status": "A ",
+      "size": 17957,
+      "sha256": "06e50a8e6e7b5e161bbf105a233b22b93596b2313d1e271ada5ff69b591f914d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2002-13-04.proposal.json",
+      "status": "A ",
+      "size": 14080,
+      "sha256": "3f06819ffbf2a8e20f80ebfc583a9ed7b9c3c712eda3205a457377289c52785d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2008-26-10.proposal.json",
+      "status": "A ",
+      "size": 27643,
+      "sha256": "407c4c45dd22fb71c3ab4b2b24740888676a98e400d3befeae373c22d6a072be",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2011-10-09.proposal.json",
+      "status": "A ",
+      "size": 25560,
+      "sha256": "57b30bf5e497c24974443218b059143c880fd715a7b879a5b77df8960d2035c9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2024-14-03.proposal.json",
+      "status": "A ",
+      "size": 18282,
+      "sha256": "8115381f0054f7f3950e8126ad8595f8945a702c485fd384094b1488d1056647",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/fragments.manifest.json",
+      "status": "A ",
+      "size": 82137,
+      "sha256": "e2c3bdb515474ee3cef6bc7a682fd278db3540cb4846a522f3ece09809a43d70",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/rebuild_bounded_fragments.py",
+      "status": "A ",
+      "size": 14155,
+      "sha256": "87e21d67cb1fe5642f124123b07f3219122fc0338bfecfb6de5ba91b5d681180",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/sources.manifest.json",
+      "status": "A ",
+      "size": 7529,
+      "sha256": "f8b51116f5c6e860f320de868967fd9a0b010368fe015734518d7f4b719b97f1",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_api.py",
+      "status": "A ",
+      "size": 13820,
+      "sha256": "7684c31e90241221135ce58e1c345771847002687602cf85f7d690f1ea7d0af9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_calibration.py",
+      "status": "A ",
+      "size": 26699,
+      "sha256": "eb549595b8d7acf285818f5f8d046a1a7bf6bfa9170f114ff24e61a5b6c41f37",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_candidates.py",
+      "status": "A ",
+      "size": 24921,
+      "sha256": "9e1ee42b43e4023478ec6f4b11ed6b65a8dd7aca301a5e1cf96c96a55c39542a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_postgres.py",
+      "status": "A ",
+      "size": 41827,
+      "sha256": "cc85347826b5dbaf41561beb7d01fb70e66640d08cd94aa46257bc7fb70fd856",
+      "readStatus": "readable"
+    }
+  ],
+  "reviewInputs": [
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md",
+      "status": "review_input",
+      "size": 44625,
+      "sha256": "ee7877b3fc329aaceb58e0964cdd5bf146f5318e5d49c84da664f9ceff149c68",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/findings.json",
+      "status": "review_input",
+      "size": 49040,
+      "sha256": "71a4cffa1beeb9022dee1c4d34341a1ee268a9ede062c03df81315d6f1c3baf2",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/implementation-slice-2.md",
+      "status": "review_input",
+      "size": 10939,
+      "sha256": "2360ab77f7eecab5e658b198c4a1c0517bc1356e16076e9ffbebe479b58fb06a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-design-closure-2.md",
+      "status": "review_input",
+      "size": 2497,
+      "sha256": "4622aa738a365ffc6d9d8f1009753fadb8ee76ae8f66e6a4012917eeec173218",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": "review_input",
+      "size": 92638,
+      "sha256": "aa52a43be4ed7eb0328d31dbbac469ef55a50861e65da701d19c026cd1bbad10",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_candidates.py",
+      "status": "review_input",
+      "size": 56282,
+      "sha256": "052a89f35ceb6940d6c6fd05e0c81af9055633f026c98963e1919880c5cb4d9f",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": "review_input",
+      "size": 63802,
+      "sha256": "cf7ebd7f6e54bdb9c76466000eae3a710d26b84109b3a2117bb626afc5f8f0f2",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": "review_input",
+      "size": 9318,
+      "sha256": "226ec002f1f1cc5f0fd8e4cd275b60efd5c74036ba86d62fdf5f047221bf222a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ad_extraction_v4.schema.json",
+      "status": "review_input",
+      "size": 23722,
+      "sha256": "6e9cb33ae608e632f7f44b60c28f67c5e0781677b85ab41c4edf9ffd6baa54be",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260901_0026_add_ad_v4_candidates.py",
+      "status": "review_input",
+      "size": 28995,
+      "sha256": "811efe67991359f70cd853444a00c9dd741407469a99634bc8ee4e8eee886633",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_candidates.py",
+      "status": "review_input",
+      "size": 24921,
+      "sha256": "9e1ee42b43e4023478ec6f4b11ed6b65a8dd7aca301a5e1cf96c96a55c39542a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_api.py",
+      "status": "review_input",
+      "size": 13820,
+      "sha256": "7684c31e90241221135ce58e1c345771847002687602cf85f7d690f1ea7d0af9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_postgres.py",
+      "status": "review_input",
+      "size": 41827,
+      "sha256": "cc85347826b5dbaf41561beb7d01fb70e66640d08cd94aa46257bc7fb70fd856",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_calibration.py",
+      "status": "review_input",
+      "size": 26699,
+      "sha256": "eb549595b8d7acf285818f5f8d046a1a7bf6bfa9170f114ff24e61a5b6c41f37",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/sources.manifest.json",
+      "status": "review_input",
+      "size": 7529,
+      "sha256": "f8b51116f5c6e860f320de868967fd9a0b010368fe015734518d7f4b719b97f1",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/fragments.manifest.json",
+      "status": "review_input",
+      "size": 82137,
+      "sha256": "e2c3bdb515474ee3cef6bc7a682fd278db3540cb4846a522f3ece09809a43d70",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/1998-17-11.proposal.json",
+      "status": "review_input",
+      "size": 17957,
+      "sha256": "06e50a8e6e7b5e161bbf105a233b22b93596b2313d1e271ada5ff69b591f914d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2002-13-04.proposal.json",
+      "status": "review_input",
+      "size": 14080,
+      "sha256": "3f06819ffbf2a8e20f80ebfc583a9ed7b9c3c712eda3205a457377289c52785d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2008-26-10.proposal.json",
+      "status": "review_input",
+      "size": 27643,
+      "sha256": "407c4c45dd22fb71c3ab4b2b24740888676a98e400d3befeae373c22d6a072be",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2011-10-09.proposal.json",
+      "status": "review_input",
+      "size": 25560,
+      "sha256": "57b30bf5e497c24974443218b059143c880fd715a7b879a5b77df8960d2035c9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/2024-14-03.proposal.json",
+      "status": "review_input",
+      "size": 18282,
+      "sha256": "8115381f0054f7f3950e8126ad8595f8945a702c485fd384094b1488d1056647",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/AD_EXTRACTION_DOMAIN_CONTRACT.md",
+      "status": "review_input",
+      "size": 25813,
+      "sha256": "64a85e93a17a0afb12525c0216de2b4887d4fabc23a2de0c071cca2a3939eb2a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md",
+      "status": "review_input",
+      "size": 67240,
+      "sha256": "c864afb79d0e0dd2576b1a497dd44ba8df21bc4d40852820feca053d80c7cf62",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/implementation-slice-1.md",
+      "status": "review_input",
+      "size": 8219,
+      "sha256": "214f294cdd32a3938f06eb117f80f5bb79f22585a116b26233da8ce5a09a161f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/closure.md",
+      "status": "review_input",
+      "size": 9868,
+      "sha256": "f6f498e074d09351f42e18bce13ca0322495a49cbb792942a9d49c6bae0ebbd1",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/adversarial-closure-slice-1-staged-state-final.md",
+      "status": "review_input",
+      "size": 2528,
+      "sha256": "f01b2420f69fc635f106087e16bbf4932947675406128c05a21946aed8b5931c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/state.json",
+      "status": "review_input",
+      "size": 54,
+      "sha256": "3907588bbb6e20c5e9164c06d2b8916ef2eb238eec2fa111f335589a9e811b2a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/findings.json",
+      "status": "review_input",
+      "size": 37586,
+      "sha256": "0bfbe9e4a21e798cd9cf42b0898763c53669a1b5f8868a5053cc862ea0dee522",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/reviews.json",
+      "status": "review_input",
+      "size": 6033,
+      "sha256": "7370ba1829c932504517cee12ec6ad99b2946015e24e598ab8e6a239f815c81d",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/manifest.json",
+      "status": "review_input",
+      "size": 33502,
+      "sha256": "383d1f02dc9a2995a3f5a0ca7236d40cd3e986197e02bc7c5e5338011b71dee1",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/review-packet.sha256",
+      "status": "review_input",
+      "size": 65,
+      "sha256": "854f55ef7eecac9b08b9fa668b031e13ccb80a5428850cbd5f3f70234e240c33",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/calibration/INDEX.md",
+      "status": "review_input",
+      "size": 8657,
+      "sha256": "d6781bcfd7748b63c353959183f1ff4ba3edfc09170b5d4db5a93962c80cae3f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/calibration/1998-17-11.md",
+      "status": "review_input",
+      "size": 6326,
+      "sha256": "342720667bc077fd31502c5f36dd88b8117a43dcecb66e9f1f99c7d238c710ce",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/calibration/2002-13-04.md",
+      "status": "review_input",
+      "size": 6168,
+      "sha256": "1148fe7f28560749795dd4af9ad8e77473ab3668a3e6b67604dbc3be0fd71366",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/calibration/2008-26-10.md",
+      "status": "review_input",
+      "size": 9976,
+      "sha256": "fb6e6764703d7fbf72d1055bea9b98fb2fc4e9dd74c99ae98519409a2f70e23b",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/calibration/2011-10-09.md",
+      "status": "review_input",
+      "size": 8969,
+      "sha256": "94144c560d1869778d8ed7d343bd932996729aba51483249fd26626048cb343a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA/calibration/2024-14-03.md",
+      "status": "review_input",
+      "size": 9607,
+      "sha256": "423c533987e0e55e12d297aa6b696434a90f24e232a88040b2e5c2928bbb2eb0",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/README.md",
+      "status": "review_input",
+      "size": 7901,
+      "sha256": "16723a1915b4f89d9d66c4ff326bad7b0730402aaff464f7b3b1ebdc5bdbd9a5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/1998-17-11.requirements.json",
+      "status": "review_input",
+      "size": 4467,
+      "sha256": "6380048e8728390feb8be612ec44909fee3ccab8e39989f653d6032cfc91088d",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2002-13-04.requirements.json",
+      "status": "review_input",
+      "size": 3269,
+      "sha256": "86c747eb7fc1e40e5d49bf67f234363823d94e5a746c30b0b737ef6390a7acac",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2008-26-10.requirements.json",
+      "status": "review_input",
+      "size": 9386,
+      "sha256": "9f94f62789ab120da20b295b063deca1f996424c8802547abfdefe021f089a32",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2011-10-09.requirements.json",
+      "status": "review_input",
+      "size": 4190,
+      "sha256": "7b6ae8b5b897b633c8feb728b5cd64a3647717c4235e30e4b7dce973d5111928",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/ad-calibration/2024-14-03.requirements.json",
+      "status": "review_input",
+      "size": 2199,
+      "sha256": "bcc539a3016ded3f07797068eae7fa553949db9dc4182453b3e6e037c9d2fad5",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_evidence.py",
+      "status": "review_input",
+      "size": 21916,
+      "sha256": "92b6c2ca9e11bc0ea5a7b279f71cedb02aaaa4fb1b3695cfa9a990a6317f3f9d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/fixtures/ad_v4_calibration/rebuild_bounded_fragments.py",
+      "status": "review_input",
+      "size": 14155,
+      "sha256": "87e21d67cb1fe5642f124123b07f3219122fc0338bfecfb6de5ba91b5d681180",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-implementation-initial.md",
+      "status": "review_input",
+      "size": 3899,
+      "sha256": "90bbf0751387a46646ff2bf956a742221c693efddbad60e5a62f70ec0286b353",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-implementation-closure-1.md",
+      "status": "review_input",
+      "size": 6852,
+      "sha256": "3ab1b49cd99397eb41b61a0fc9b19995cf0185e0235f9c515d9b4d387be57bb9",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-implementation-final.md",
+      "status": "review_input",
+      "size": 5784,
+      "sha256": "067b93b63db311ecb21e673dea11123b0e3f3bb3a2a8ce4d9b2187334aad3611",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/closure.md",
+      "status": "review_input",
+      "size": 8870,
+      "sha256": "7668773452d7ed521d55280c4de09055c721102167cf85c0874e6a23dc9f30c2",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-closure-final.md",
+      "status": "review_input",
+      "size": 6105,
+      "sha256": "f226cd1ac83a3156a4bf9470e986c6fb541043e43500e10a1308989af5d797fd",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [],
+  "outOfScopeReason": null
+}

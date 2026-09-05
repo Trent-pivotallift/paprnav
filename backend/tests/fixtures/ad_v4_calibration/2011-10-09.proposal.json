@@ -1,0 +1,1057 @@
+{
+  "proposal": {
+    "schemaVersion": "ad_extraction_v4",
+    "decisionKey": "calibration-2011-10-09",
+    "directiveIdentity": {
+      "directiveId": "ad-2011-10-09",
+      "adNumber": {
+        "state": "known",
+        "value": "2011-10-09",
+        "evidenceKeys": [
+          "ev-identity"
+        ]
+      }
+    },
+    "officialDocuments": [
+      {
+        "officialDocumentKey": "official-rule",
+        "documentRole": "ad_rule",
+        "sourceDocumentId": "{{sourceDocumentId:official-rule}}",
+        "sourceContentHash": "cdcf75940451488e47858bd49c40615803325652ef3143d0df4178a95fe577fe",
+        "publicationDocumentNumber": "2011-10988",
+        "evidenceKeys": [
+          "ev-identity",
+          "ev-effective",
+          "ev-supersession",
+          "ev-models-a",
+          "ev-models-b",
+          "ev-cycle",
+          "ev-g1",
+          "ev-g2",
+          "ev-g3-a",
+          "ev-g3-b",
+          "ev-g4",
+          "ev-g5",
+          "ev-g6",
+          "ev-g7",
+          "ev-g8",
+          "ev-g9",
+          "ev-g10",
+          "ev-amoc"
+        ]
+      }
+    ],
+    "evidenceBindings": {
+      "ev-identity": {
+        "fragmentId": "{{fragmentId:ev-identity}}",
+        "fragmentHash": "{{fragmentHash:ev-identity}}"
+      },
+      "ev-effective": {
+        "fragmentId": "{{fragmentId:ev-effective}}",
+        "fragmentHash": "{{fragmentHash:ev-effective}}"
+      },
+      "ev-supersession": {
+        "fragmentId": "{{fragmentId:ev-supersession}}",
+        "fragmentHash": "{{fragmentHash:ev-supersession}}"
+      },
+      "ev-models-a": {
+        "fragmentId": "{{fragmentId:ev-models-a}}",
+        "fragmentHash": "{{fragmentHash:ev-models-a}}"
+      },
+      "ev-models-b": {
+        "fragmentId": "{{fragmentId:ev-models-b}}",
+        "fragmentHash": "{{fragmentHash:ev-models-b}}"
+      },
+      "ev-cycle": {
+        "fragmentId": "{{fragmentId:ev-cycle}}",
+        "fragmentHash": "{{fragmentHash:ev-cycle}}"
+      },
+      "ev-g1": {
+        "fragmentId": "{{fragmentId:ev-g1}}",
+        "fragmentHash": "{{fragmentHash:ev-g1}}"
+      },
+      "ev-g2": {
+        "fragmentId": "{{fragmentId:ev-g2}}",
+        "fragmentHash": "{{fragmentHash:ev-g2}}"
+      },
+      "ev-g3-a": {
+        "fragmentId": "{{fragmentId:ev-g3-a}}",
+        "fragmentHash": "{{fragmentHash:ev-g3-a}}"
+      },
+      "ev-g3-b": {
+        "fragmentId": "{{fragmentId:ev-g3-b}}",
+        "fragmentHash": "{{fragmentHash:ev-g3-b}}"
+      },
+      "ev-g4": {
+        "fragmentId": "{{fragmentId:ev-g4}}",
+        "fragmentHash": "{{fragmentHash:ev-g4}}"
+      },
+      "ev-g5": {
+        "fragmentId": "{{fragmentId:ev-g5}}",
+        "fragmentHash": "{{fragmentHash:ev-g5}}"
+      },
+      "ev-g6": {
+        "fragmentId": "{{fragmentId:ev-g6}}",
+        "fragmentHash": "{{fragmentHash:ev-g6}}"
+      },
+      "ev-g7": {
+        "fragmentId": "{{fragmentId:ev-g7}}",
+        "fragmentHash": "{{fragmentHash:ev-g7}}"
+      },
+      "ev-g8": {
+        "fragmentId": "{{fragmentId:ev-g8}}",
+        "fragmentHash": "{{fragmentHash:ev-g8}}"
+      },
+      "ev-g9": {
+        "fragmentId": "{{fragmentId:ev-g9}}",
+        "fragmentHash": "{{fragmentHash:ev-g9}}"
+      },
+      "ev-g10": {
+        "fragmentId": "{{fragmentId:ev-g10}}",
+        "fragmentHash": "{{fragmentHash:ev-g10}}"
+      },
+      "ev-amoc": {
+        "fragmentId": "{{fragmentId:ev-amoc}}",
+        "fragmentHash": "{{fragmentHash:ev-amoc}}"
+      }
+    },
+    "incorporatedDocuments": [],
+    "productScopes": [
+      {
+        "scopeKey": "scope-cessna",
+        "productRole": "airframe",
+        "manufacturer": {
+          "sourceValue": "Cessna Aircraft Company",
+          "normalizedIdentity": {
+            "state": "known",
+            "value": "Cessna Aircraft Company",
+            "evidenceKeys": [
+              "ev-models-a"
+            ]
+          }
+        },
+        "modelScope": {
+          "kind": "listed",
+          "sourceDesignations": [
+            "150A",
+            "150B",
+            "150C",
+            "150D",
+            "150E",
+            "150F",
+            "150G",
+            "150H",
+            "150J",
+            "150K",
+            "150L",
+            "150M",
+            "A150K",
+            "A150L",
+            "A150M",
+            "F150F",
+            "F150G",
+            "F150H",
+            "F150J",
+            "F150K",
+            "F150L",
+            "F150M",
+            "FA150K",
+            "FA150L",
+            "FA150M",
+            "FRA150L",
+            "FRA150M",
+            "152",
+            "A152",
+            "F152",
+            "FA152",
+            "170",
+            "170A",
+            "170B",
+            "172",
+            "172A",
+            "172B",
+            "172C",
+            "172D",
+            "172E",
+            "172F",
+            "172G",
+            "172H",
+            "172I",
+            "172K",
+            "172L",
+            "172M",
+            "172N",
+            "172P",
+            "172Q",
+            "172RG",
+            "F172D",
+            "F172E",
+            "F172F",
+            "F172G",
+            "F172H",
+            "F172K",
+            "F172L",
+            "F172M",
+            "F172N",
+            "F172P",
+            "FR172E",
+            "FR172F",
+            "FR172G",
+            "FR172H",
+            "FR172J",
+            "FR172K",
+            "P172D",
+            "R172E",
+            "R172F",
+            "R172G",
+            "R172H",
+            "R172J",
+            "R172K",
+            "175",
+            "175A",
+            "175B",
+            "175C",
+            "177",
+            "177A",
+            "177B",
+            "177RG",
+            "F177RG",
+            "180",
+            "180A",
+            "180B",
+            "180C",
+            "180D",
+            "180E",
+            "180F",
+            "180G",
+            "180H",
+            "180J",
+            "180K",
+            "182",
+            "182A",
+            "182B",
+            "182C",
+            "182D",
+            "182E",
+            "182F",
+            "182G",
+            "182H",
+            "182J",
+            "182K",
+            "182L",
+            "182M",
+            "182N",
+            "182P",
+            "182Q",
+            "182R",
+            "F182P",
+            "F182Q",
+            "FR182",
+            "R182",
+            "T182",
+            "TR182",
+            "185",
+            "185A",
+            "185B",
+            "185C",
+            "185D",
+            "185E",
+            "A185E",
+            "A185F",
+            "188",
+            "188A",
+            "A188",
+            "A188A",
+            "188B",
+            "A188B",
+            "T188C",
+            "190",
+            "195",
+            "195A",
+            "195B",
+            "206",
+            "P206",
+            "P206A",
+            "P206B",
+            "P206C",
+            "P206D",
+            "P206E",
+            "TP206A",
+            "TP206B",
+            "TP206C",
+            "TP206D",
+            "TP206E",
+            "TU206A",
+            "TU206B",
+            "TU206C",
+            "TU206D",
+            "TU206E",
+            "TU206F",
+            "TU206G",
+            "U206",
+            "U206A",
+            "U206B",
+            "U206C",
+            "U206D",
+            "U206E",
+            "U206F",
+            "U206G",
+            "207",
+            "207A",
+            "T207",
+            "T207A",
+            "210",
+            "210-5",
+            "210-5A",
+            "210A",
+            "210B",
+            "210C",
+            "210D",
+            "210E",
+            "210F",
+            "210G",
+            "210H",
+            "210J",
+            "210K",
+            "210L",
+            "210M",
+            "210N",
+            "210R",
+            "P210N",
+            "P210R",
+            "T210F",
+            "T210G",
+            "T210H",
+            "T210J",
+            "T210K",
+            "T210L",
+            "T210M",
+            "T210N",
+            "T210R",
+            "T303",
+            "336",
+            "337",
+            "337A",
+            "337B",
+            "337C",
+            "337D",
+            "337E",
+            "337F",
+            "337G",
+            "337H",
+            "F337E",
+            "F337F",
+            "F337G",
+            "F337H",
+            "FT337E",
+            "FT337F",
+            "FT337GP",
+            "FT337HP",
+            "M337B",
+            "P337H",
+            "T337B",
+            "T337C",
+            "T337D",
+            "T337E",
+            "T337F",
+            "T337G",
+            "T337H",
+            "T337H-SP"
+          ],
+          "evidenceKeys": [
+            "ev-models-a",
+            "ev-models-b"
+          ]
+        },
+        "serialScope": {
+          "kind": "all",
+          "evidenceKeys": [
+            "ev-models-a",
+            "ev-models-b"
+          ]
+        },
+        "partNumberScope": {
+          "kind": "not_applicable",
+          "reason": "source_scope_not_by_part_number",
+          "evidenceKeys": [
+            "ev-models-a",
+            "ev-models-b"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-models-a",
+          "ev-models-b"
+        ]
+      }
+    ],
+    "conditionDefinitions": [],
+    "applicabilityRules": [
+      {
+        "ruleKey": "rule-model-all-serials",
+        "scopeExpression": {
+          "nodeType": "scope_ref",
+          "scopeKey": "scope-cessna"
+        },
+        "exclusionRuleKeys": [],
+        "evidenceKeys": [
+          "ev-models-a",
+          "ev-models-b"
+        ]
+      }
+    ],
+    "requirements": [
+      {
+        "requirementKey": "req-g1",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g1"
+          ],
+          "orderedSteps": [
+            "inspect-rail-debris"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g1"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g1"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g1"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "1"
+      },
+      {
+        "requirementKey": "req-g2",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g2"
+          ],
+          "orderedSteps": [
+            "remove-seat"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g1"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g2"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g2"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g2"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "2"
+      },
+      {
+        "requirementKey": "req-g3",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g3-a",
+            "ev-g3-b"
+          ],
+          "orderedSteps": [
+            "inspect-locking-pin-holes"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g2"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g3-a",
+            "ev-g3-b"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g3-a",
+            "ev-g3-b"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g3-a",
+          "ev-g3-b"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "3"
+      },
+      {
+        "requirementKey": "req-g4",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g4"
+          ],
+          "orderedSteps": [
+            "inspect-rollers-and-washers"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g3"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g4"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g4"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g4"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "4"
+      },
+      {
+        "requirementKey": "req-g5",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g5"
+          ],
+          "orderedSteps": [
+            "inspect-tang-thickness"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g4"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g5"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g5"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g5"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "5"
+      },
+      {
+        "requirementKey": "req-g6",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g6"
+          ],
+          "orderedSteps": [
+            "inspect-tang-length"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g5"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g6"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g6"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g6"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "6"
+      },
+      {
+        "requirementKey": "req-g7",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g7"
+          ],
+          "orderedSteps": [
+            "inspect-lock-pin-springs"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g6"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g7"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g7"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g7"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "7"
+      },
+      {
+        "requirementKey": "req-g8",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g8"
+          ],
+          "orderedSteps": [
+            "inspect-seat-rails-for-cracks"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g7"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g8"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g8"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g8"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "8"
+      },
+      {
+        "requirementKey": "req-g9",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g9"
+          ],
+          "orderedSteps": [
+            "reinstall-seat"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g8"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g9"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g9"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g9"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "9"
+      },
+      {
+        "requirementKey": "req-g10",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-model-all-serials"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-g10"
+          ],
+          "orderedSteps": [
+            "inspect-locking-pin-engagement"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-g9"
+        ],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-g10"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-g10"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-g10"
+        ],
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "initialTiming": {
+          "state": "not_applicable",
+          "reason": "source_defines_no_inline_timing",
+          "evidenceKeys": [
+            "ev-cycle"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "sequence": "10"
+      }
+    ],
+    "recurrenceGroups": [
+      {
+        "recurrenceGroupKey": "recurrence-seat-rail",
+        "requirementKeys": [
+          "req-g1",
+          "req-g2",
+          "req-g3",
+          "req-g4",
+          "req-g5",
+          "req-g6",
+          "req-g7",
+          "req-g8",
+          "req-g9",
+          "req-g10"
+        ],
+        "completionPolicy": "all_active_requirements",
+        "initialTiming": {
+          "logic": "whichever_first",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "100",
+              "unit": "hours",
+              "anchor": "source_defined",
+              "comparator": "within",
+              "evidenceKeys": [
+                "ev-cycle"
+              ]
+            },
+            {
+              "metric": "calendar",
+              "interval": "12",
+              "unit": "months",
+              "anchor": "effective_date",
+              "comparator": "within",
+              "evidenceKeys": [
+                "ev-cycle"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "recurringTiming": {
+          "logic": "whichever_first",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "100",
+              "unit": "hours",
+              "anchor": "last_compliance",
+              "comparator": "within",
+              "evidenceKeys": [
+                "ev-cycle"
+              ]
+            },
+            {
+              "metric": "calendar",
+              "interval": "12",
+              "unit": "months",
+              "anchor": "last_compliance",
+              "comparator": "within",
+              "evidenceKeys": [
+                "ev-cycle"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-cycle"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-cycle"
+        ]
+      }
+    ],
+    "applicabilitySearchHints": [],
+    "amocAuthorityProvisions": [
+      {
+        "provisionKey": "amoc-general",
+        "approvingAuthority": {
+          "state": "known",
+          "value": "FAA Wichita Aircraft Certification Office",
+          "evidenceKeys": [
+            "ev-amoc"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-amoc"
+        ]
+      }
+    ],
+    "supersessionRelations": [
+      {
+        "relationType": "supersedes",
+        "predecessorAdNumber": "87-20-03-r2",
+        "successorAdNumber": "2011-10-09",
+        "evidenceKeys": [
+          "ev-supersession"
+        ]
+      }
+    ],
+    "authoritativeCorrections": []
+  },
+  "submissionContext": {
+    "relationships": []
+  }
+}

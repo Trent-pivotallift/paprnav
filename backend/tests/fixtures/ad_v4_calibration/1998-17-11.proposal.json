@@ -1,0 +1,661 @@
+{
+  "proposal": {
+    "schemaVersion": "ad_extraction_v4",
+    "decisionKey": "calibration-1998-17-11",
+    "directiveIdentity": {
+      "directiveId": "ad-1998-17-11",
+      "adNumber": {
+        "state": "known",
+        "value": "98-17-11",
+        "evidenceKeys": [
+          "ev-identity"
+        ]
+      }
+    },
+    "officialDocuments": [
+      {
+        "officialDocumentKey": "official-rule",
+        "documentRole": "ad_rule",
+        "sourceDocumentId": "{{sourceDocumentId:official-rule}}",
+        "sourceContentHash": "e86e204d59ad3464f31aac3945b73b03ad60adff6989ec3702a99f2d2fa06374",
+        "publicationDocumentNumber": "FR-1998-08-20",
+        "evidenceKeys": [
+          "ev-identity",
+          "ev-product-scope",
+          "ev-work-orders-a",
+          "ev-work-orders-b",
+          "ev-work-orders-c",
+          "ev-work-orders-d",
+          "ev-work-orders-e",
+          "ev-unknown-provenance",
+          "ev-determination",
+          "ev-inspection-alternative",
+          "ev-rework-alternative",
+          "ev-amoc-a",
+          "ev-amoc-b",
+          "ev-effective"
+        ]
+      }
+    ],
+    "evidenceBindings": {
+      "ev-identity": {
+        "fragmentId": "{{fragmentId:ev-identity}}",
+        "fragmentHash": "{{fragmentHash:ev-identity}}"
+      },
+      "ev-product-scope": {
+        "fragmentId": "{{fragmentId:ev-product-scope}}",
+        "fragmentHash": "{{fragmentHash:ev-product-scope}}"
+      },
+      "ev-work-orders-a": {
+        "fragmentId": "{{fragmentId:ev-work-orders-a}}",
+        "fragmentHash": "{{fragmentHash:ev-work-orders-a}}"
+      },
+      "ev-work-orders-b": {
+        "fragmentId": "{{fragmentId:ev-work-orders-b}}",
+        "fragmentHash": "{{fragmentHash:ev-work-orders-b}}"
+      },
+      "ev-work-orders-c": {
+        "fragmentId": "{{fragmentId:ev-work-orders-c}}",
+        "fragmentHash": "{{fragmentHash:ev-work-orders-c}}"
+      },
+      "ev-work-orders-d": {
+        "fragmentId": "{{fragmentId:ev-work-orders-d}}",
+        "fragmentHash": "{{fragmentHash:ev-work-orders-d}}"
+      },
+      "ev-work-orders-e": {
+        "fragmentId": "{{fragmentId:ev-work-orders-e}}",
+        "fragmentHash": "{{fragmentHash:ev-work-orders-e}}"
+      },
+      "ev-unknown-provenance": {
+        "fragmentId": "{{fragmentId:ev-unknown-provenance}}",
+        "fragmentHash": "{{fragmentHash:ev-unknown-provenance}}"
+      },
+      "ev-determination": {
+        "fragmentId": "{{fragmentId:ev-determination}}",
+        "fragmentHash": "{{fragmentHash:ev-determination}}"
+      },
+      "ev-inspection-alternative": {
+        "fragmentId": "{{fragmentId:ev-inspection-alternative}}",
+        "fragmentHash": "{{fragmentHash:ev-inspection-alternative}}"
+      },
+      "ev-rework-alternative": {
+        "fragmentId": "{{fragmentId:ev-rework-alternative}}",
+        "fragmentHash": "{{fragmentHash:ev-rework-alternative}}"
+      },
+      "ev-amoc-a": {
+        "fragmentId": "{{fragmentId:ev-amoc-a}}",
+        "fragmentHash": "{{fragmentHash:ev-amoc-a}}"
+      },
+      "ev-amoc-b": {
+        "fragmentId": "{{fragmentId:ev-amoc-b}}",
+        "fragmentHash": "{{fragmentHash:ev-amoc-b}}"
+      },
+      "ev-effective": {
+        "fragmentId": "{{fragmentId:ev-effective}}",
+        "fragmentHash": "{{fragmentHash:ev-effective}}"
+      }
+    },
+    "incorporatedDocuments": [
+      {
+        "documentRefKey": "doc-approved-rework-data",
+        "documentType": "approved_data",
+        "documentNumber": {
+          "state": "unknown",
+          "reason": "not_extracted",
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "revision": {
+          "state": "unknown",
+          "reason": "not_extracted",
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "retention": {
+          "state": "unknown",
+          "reason": "not_obtained",
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-rework-alternative"
+        ]
+      }
+    ],
+    "productScopes": [
+      {
+        "scopeKey": "scope-lycoming",
+        "productRole": "engine",
+        "manufacturer": {
+          "sourceValue": "Textron Lycoming",
+          "normalizedIdentity": {
+            "state": "known",
+            "value": "Textron Lycoming",
+            "evidenceKeys": [
+              "ev-product-scope"
+            ]
+          }
+        },
+        "modelScope": {
+          "kind": "listed",
+          "sourceDesignations": [
+            "O-235",
+            "O-235-C1",
+            "O-235-C2C",
+            "O-235-L2C",
+            "O-235-N2C",
+            "O-290",
+            "O-290-D2",
+            "O-320",
+            "O-320-A",
+            "O-320-A1A",
+            "O-320-A2B",
+            "O-320-B2B",
+            "O-320-B2C",
+            "O-320-D2J",
+            "O-320-D3G",
+            "O-320-E2A",
+            "O-320-E2D",
+            "O-320-E2G",
+            "O-320-E3D",
+            "O-320-H2AD",
+            "O-360",
+            "O-360A1A",
+            "O-360-A1D",
+            "O-360-A3A",
+            "O-360-A4A",
+            "O-360-A4K",
+            "O-360-B1B",
+            "IO-360-F1A6",
+            "AEIO-320-E1B",
+            "HIO-360-C1A",
+            "IO-320",
+            "IO-320-B1A",
+            "IO-360",
+            "IO-360-A1A",
+            "IO-360-A1B6",
+            "IO-360-B1E",
+            "IO-360-C",
+            "IO-360-C1C",
+            "IO-360-C1C6",
+            "IO-360-C1D6",
+            "IO-360-D",
+            "O-540-A1B5",
+            "O-540-A1D5",
+            "O-540-R2AD",
+            "IO-540",
+            "IO-540-C4B5",
+            "IO-540-S1A5",
+            "TIO-540-A2",
+            "LIO-320-C1A",
+            "LIO-360-C1E6",
+            "IO-720"
+          ],
+          "evidenceKeys": [
+            "ev-product-scope"
+          ]
+        },
+        "serialScope": {
+          "kind": "all",
+          "evidenceKeys": [
+            "ev-product-scope"
+          ]
+        },
+        "partNumberScope": {
+          "kind": "not_applicable",
+          "reason": "source_scope_not_by_part_number",
+          "evidenceKeys": [
+            "ev-product-scope"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-product-scope"
+        ]
+      },
+      {
+        "scopeKey": "scope-tcm",
+        "productRole": "engine",
+        "manufacturer": {
+          "sourceValue": "Teledyne Continental Motors",
+          "normalizedIdentity": {
+            "state": "known",
+            "value": "Teledyne Continental Motors",
+            "evidenceKeys": [
+              "ev-product-scope"
+            ]
+          }
+        },
+        "modelScope": {
+          "kind": "listed",
+          "sourceDesignations": [
+            "A-65",
+            "A65-3",
+            "A65-8",
+            "A75",
+            "A75-8",
+            "C75-12",
+            "C85",
+            "C85-8",
+            "C85-12",
+            "C90-8FJ",
+            "C90-12",
+            "O-200",
+            "O-200-A",
+            "O-300",
+            "O-300-D",
+            "IO-360-C",
+            "E-185-4",
+            "E-225-8",
+            "O-470",
+            "O-470-K",
+            "O-470-L",
+            "O-470-R",
+            "O-470-11",
+            "IO-470",
+            "IO-470-N",
+            "IO-470-S",
+            "IO-520",
+            "IO-520-D",
+            "GTSIO-520",
+            "TSIO-520-VB"
+          ],
+          "evidenceKeys": [
+            "ev-product-scope"
+          ]
+        },
+        "serialScope": {
+          "kind": "all",
+          "evidenceKeys": [
+            "ev-product-scope"
+          ]
+        },
+        "partNumberScope": {
+          "kind": "not_applicable",
+          "reason": "source_scope_not_by_part_number",
+          "evidenceKeys": [
+            "ev-product-scope"
+          ],
+          "temporalScope": {
+            "kind": "directive_version"
+          }
+        },
+        "evidenceKeys": [
+          "ev-product-scope"
+        ]
+      }
+    ],
+    "conditionDefinitions": [
+      {
+        "conditionKey": "condition-provenance",
+        "conditionType": "reviewed_manual_predicate",
+        "operator": "requires_review",
+        "subject": {
+          "productRole": "installed_part",
+          "attributeKey": "repair-provenance",
+          "attributeValue": {
+            "state": "known",
+            "value": "Nelson NB7R820J; 1995-02-01 through 1997-12-31; work-order evidence remains component-owned",
+            "evidenceKeys": [
+              "ev-work-orders-a",
+              "ev-work-orders-b",
+              "ev-work-orders-c",
+              "ev-work-orders-d",
+              "ev-work-orders-e"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-work-orders-a",
+          "ev-work-orders-b",
+          "ev-work-orders-c",
+          "ev-work-orders-d",
+          "ev-work-orders-e"
+        ]
+      },
+      {
+        "conditionKey": "condition-provenance-unknown",
+        "conditionType": "reviewed_manual_predicate",
+        "operator": "requires_review",
+        "subject": {
+          "productRole": "installed_part",
+          "attributeKey": "repairer-state",
+          "attributeValue": {
+            "state": "known",
+            "value": "unknown_requires_compliance",
+            "evidenceKeys": [
+              "ev-unknown-provenance"
+            ]
+          }
+        },
+        "temporalBasis": {
+          "kind": "at_applicability_evaluation"
+        },
+        "evidenceKeys": [
+          "ev-unknown-provenance"
+        ]
+      }
+    ],
+    "applicabilityRules": [
+      {
+        "ruleKey": "rule-engine-crankshaft",
+        "scopeExpression": {
+          "nodeType": "any",
+          "operands": [
+            {
+              "nodeType": "scope_ref",
+              "scopeKey": "scope-lycoming"
+            },
+            {
+              "nodeType": "scope_ref",
+              "scopeKey": "scope-tcm"
+            }
+          ]
+        },
+        "exclusionRuleKeys": [],
+        "evidenceKeys": [
+          "ev-product-scope",
+          "ev-work-orders-a",
+          "ev-work-orders-b",
+          "ev-work-orders-c",
+          "ev-work-orders-d",
+          "ev-work-orders-e",
+          "ev-unknown-provenance"
+        ],
+        "conditionExpression": {
+          "nodeType": "any",
+          "operands": [
+            {
+              "nodeType": "predicate_ref",
+              "conditionKey": "condition-provenance"
+            },
+            {
+              "nodeType": "predicate_ref",
+              "conditionKey": "condition-provenance-unknown"
+            }
+          ]
+        }
+      }
+    ],
+    "requirements": [
+      {
+        "requirementKey": "req-determine",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-crankshaft"
+        },
+        "requirementType": "other_reviewed",
+        "action": {
+          "actionType": "other_reviewed",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-determination"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "required",
+          "evidenceKeys": [
+            "ev-determination"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "10",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-determination"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-determination"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-determination"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-determination"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-determination"
+        ],
+        "sequence": "1"
+      },
+      {
+        "requirementKey": "req-inspect",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-crankshaft"
+        },
+        "requirementType": "inspection",
+        "action": {
+          "actionType": "inspect",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-inspection-alternative"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "alternative_member",
+          "alternativeGroupKey": "alternative-inspect-or-remove",
+          "exclusive": true,
+          "evidenceKeys": [
+            "ev-inspection-alternative"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "10",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-inspection-alternative"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-inspection-alternative"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-inspection-alternative"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-inspection-alternative"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-inspection-alternative"
+        ],
+        "sequence": "2"
+      },
+      {
+        "requirementKey": "req-remove-replace",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-crankshaft"
+        },
+        "requirementType": "replacement",
+        "action": {
+          "actionType": "replace",
+          "approvedDataDocumentRefKeys": [],
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "prerequisiteRequirementKeys": [],
+        "branch": {
+          "kind": "alternative_member",
+          "alternativeGroupKey": "alternative-inspect-or-remove",
+          "exclusive": true,
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "10",
+              "unit": "hours",
+              "comparator": "within",
+              "anchor": "effective_date",
+              "evidenceKeys": [
+                "ev-inspection-alternative"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-inspection-alternative"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-rework-alternative"
+        ],
+        "sequence": "3"
+      },
+      {
+        "requirementKey": "req-approved-rework",
+        "activationExpression": {
+          "nodeType": "rule_ref",
+          "ruleKey": "rule-engine-crankshaft"
+        },
+        "requirementType": "other_reviewed",
+        "action": {
+          "actionType": "rework",
+          "approvedDataDocumentRefKeys": [
+            "doc-approved-rework-data"
+          ],
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "prerequisiteRequirementKeys": [
+          "req-inspect"
+        ],
+        "branch": {
+          "kind": "conditional",
+          "conditionExpression": {
+            "nodeType": "requirement_state_ref",
+            "requirementKey": "req-inspect",
+            "requirementState": "not_satisfied"
+          },
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "initialTiming": {
+          "logic": "all",
+          "terms": [
+            {
+              "metric": "aircraft_time",
+              "interval": "0",
+              "unit": "hours",
+              "comparator": "before",
+              "anchor": "source_defined",
+              "evidenceKeys": [
+                "ev-inspection-alternative"
+              ]
+            }
+          ],
+          "evidenceKeys": [
+            "ev-inspection-alternative"
+          ]
+        },
+        "recurrence": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "terminatingEffect": {
+          "kind": "none",
+          "evidenceKeys": [
+            "ev-rework-alternative"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-rework-alternative"
+        ],
+        "sequence": "4"
+      }
+    ],
+    "recurrenceGroups": [],
+    "applicabilitySearchHints": [],
+    "amocAuthorityProvisions": [
+      {
+        "provisionKey": "amoc-general",
+        "approvingAuthority": {
+          "state": "known",
+          "value": "FAA New York or Atlanta Aircraft Certification Office",
+          "evidenceKeys": [
+            "ev-amoc-a",
+            "ev-amoc-b"
+          ]
+        },
+        "evidenceKeys": [
+          "ev-amoc-a",
+          "ev-amoc-b"
+        ]
+      }
+    ],
+    "supersessionRelations": [],
+    "authoritativeCorrections": []
+  },
+  "submissionContext": {
+    "relationships": []
+  }
+}

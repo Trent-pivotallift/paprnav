@@ -23,6 +23,7 @@ from app.models.core import (
 from app.services.ad_extraction import (
     bounded_source_document_pages,
     extract_full_text_pages,
+    retained_pdf_documents,
     verified_retained_document_bytes,
 )
 from app.services.page_images import (
@@ -98,29 +99,81 @@ def _source_document_for_directive(
     return directive, document
 
 
+def _bounded_page_identity_hash(pages: dict[tuple[str, int], str]) -> str:
+    return _canonical_hash({
+        "profile": TEXT_PROFILE,
+        "pages": [
+            {
+                "sourceDocumentId": document_id,
+                "pageNumber": page_number,
+                "textHash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+            }
+            for (document_id, page_number), text in sorted(pages.items())
+        ],
+    })
+
+
 def _bounded_page_text(
+    db: Session,
     directive: AirworthinessDirective,
     *,
     source_document_id: str,
     page_number: int,
 ) -> str:
-    pages = bounded_source_document_pages(
-        extract_full_text_pages(directive),
-        ad_number=directive.ad_number,
-        title=directive.title,
+    documents = sorted(retained_pdf_documents(directive), key=lambda item: item.id)
+    # Source bytes are reverified on every use. The cache avoids only repeated
+    # PDF parsing inside one SQLAlchemy Session; it cannot hide stored-byte
+    # tampering or cross a document/parser/configuration identity.
+    for document in documents:
+        try:
+            verified_retained_document_bytes(document)
+        except ValueError as exc:
+            raise ADEvidenceError(
+                "source_hash_mismatch",
+                "Retained source bytes failed hash verification",
+            ) from exc
+        except Exception as exc:
+            raise ADEvidenceError(
+                "source_unavailable",
+                "Retained source bytes are unavailable",
+            ) from exc
+    base_key = (
+        "ad-evidence-bounded-pages-v1",
+        getattr(pypdf, "__version__", "unknown"),
+        directive.id,
+        directive.ad_number,
+        directive.title,
+        tuple(
+            (document.id, document.content_hash, document.storage_bytes)
+            for document in documents
+        ),
     )
-    matches = [
-        str(page.get("text") or "")
-        for page in pages
-        if page.get("sourceDocumentId") == source_document_id
-        and page.get("pageNumber") == page_number
-    ]
-    if len(matches) != 1 or not matches[0].strip():
+    cache = db.info.setdefault("paprnav_ad_evidence_bounded_page_cache", {})
+    identity_hash = cache.get(("index", base_key))
+    page_map = cache.get((base_key, identity_hash)) if identity_hash is not None else None
+    if page_map is not None and _bounded_page_identity_hash(page_map) != identity_hash:
+        raise ADEvidenceError("page_text_hash_mismatch", "Cached bounded page identity failed verification")
+    if page_map is None:
+        pages = bounded_source_document_pages(
+            extract_full_text_pages(directive),
+            ad_number=directive.ad_number,
+            title=directive.title,
+        )
+        page_map = {
+            (str(page.get("sourceDocumentId")), int(page.get("pageNumber"))): str(page.get("text") or "")
+            for page in pages
+            if isinstance(page.get("pageNumber"), int) and str(page.get("text") or "").strip()
+        }
+        identity_hash = _bounded_page_identity_hash(page_map)
+        cache[("index", base_key)] = identity_hash
+        cache[(base_key, identity_hash)] = page_map
+    match = page_map.get((source_document_id, page_number))
+    if match is None or not match.strip():
         raise ADEvidenceError(
             "page_outside_directive",
             "Page is absent from the bounded official section for this directive",
         )
-    return matches[0]
+    return match
 
 
 def _verified_rendition_bytes(rendition: ADSourcePageRendition) -> bytes:
@@ -194,6 +247,7 @@ def materialize_source_page(
         raise ADEvidenceError("source_unavailable", "Retained source bytes are unavailable") from exc
 
     bounded_text = _bounded_page_text(
+        db,
         directive,
         source_document_id=document.id,
         page_number=page_number,
@@ -342,6 +396,7 @@ def get_materialized_source_page(
     except Exception as exc:
         raise ADEvidenceError("source_unavailable", "Retained source bytes are unavailable") from exc
     bounded_text = _bounded_page_text(
+        db,
         directive,
         source_document_id=document.id,
         page_number=page_number,

@@ -1,0 +1,393 @@
+[
+  {
+    "id": "T081-V4-S2-DA-001",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Duplicate keys, invalid Unicode, non-finite tokens, and non-NFC strings are rejected before a V4 proposal can be interpreted or persisted.",
+    "summary": "The proposed parser boundary cannot enforce its own guarantees because the service accepts already-decoded JSON.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:164-170 says the service accepts decoded JSON and then performs UTF-8 decoding and duplicate-key rejection.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:361-365 describes an ordinary JSON-body endpoint without reserving raw request bytes for the validator."
+    ],
+    "impact": "Framework decoding irreversibly collapses duplicate object keys and may transform or reject malformed Unicode before the V4 validator can produce the required stable result. The accepted canonical document can therefore depend on an unreviewed framework parser rather than the versioned contract.",
+    "requiredClosure": "Define one raw-byte ingress shared by HTTP and future writers: enforce byte limits, strict UTF-8 and Unicode-scalar validity (including escaped lone surrogates), reject duplicate keys and non-finite tokens with stable codes, then return the decoded value to schema validation. Make the core proposal service accept that parser result or raw bytes, and specify negative tests proving the normal FastAPI/Pydantic decoder cannot run first.",
+    "closureEvidence": [
+      "decision.md Validation pipeline now requires raw Request bytes, strict UTF-8/scalar/NFC and duplicate-key/numeric-token rejection before framework/Pydantic decoding, returning an opaque ParsedV4Request to the service.",
+      "Independent closure review verified decision.md:160-181 reserves the raw Request body, rejects every numeric token and escaped lone surrogate before framework decoding, and makes ParsedV4Request the only proposal-service input; the negative test matrix repeats that boundary."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-002",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Canonical bytes and both proposal and evidence-binding hashes are uniquely reproducible across processes and independently verifiable by PostgreSQL.",
+    "summary": "The canonicalization contract leaves normative ordering, decimal spelling, and evidence/event serialization undefined.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:221-239 uses open phrases such as 'other explicitly set-valued' and an unspecified 'typed identity tuple' rather than a closed JSON-pointer ordering registry.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:225-226 calls quantities canonical decimal strings but defines no grammar that distinguishes 1, 1.0, 01, exponent forms, signs, or trailing zeros.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:244-248 names an ordered evidence tuple but does not define its byte encoding; lines 287-301 likewise require a database-verifiable creation-event hash without defining the event payload serialization."
+    ],
+    "impact": "Two conforming implementations can assign different hashes to the same proposal, while PostgreSQL cannot reliably reproduce the binding/event hashes needed to reject direct-SQL corruption. Idempotency and audit identity would then be unstable.",
+    "requiredClosure": "Freeze a complete canonicalization profile: every array JSON pointer classified as set or sequence with total sort/tie-break keys, exact canonical decimal/date/identifier grammars, exact RFC 8785 dependency/version behavior, and length-prefixed or canonical-JSON byte layouts for binding and creation-event hashes. Add normative conformance vectors covering Unicode/property order, every set type, ordered sequences, decimal aliases, empty values, and Python/PostgreSQL parity.",
+    "closureEvidence": [
+      "decision.md Canonicalization and hashes freezes paprnav-jcs-subset-v1, schema-annotated set/sequence arrays, closed sort keys, decimal/date/hash grammar, exact binding/submission/event canonical JSON domains, and Python/PostgreSQL parity vectors.",
+      "Independent closure review found the byte contract still non-unique: decision.md:305-317 writes the proposal domain terminator as two literal backslashes plus zero (`\\\\0`) while all three other hash domains use one escaped NUL spelling (`\\0`), and the exact `version` values in creation/submission hash objects are not fixed. Python/PostgreSQL parity therefore still lacks one normative byte sequence.",
+      "decision.md now gives complete hex bytes for all five domain separators, defines the final byte as one 0x00, fixes every envelope version literal and exact field set, and requires positive/negative byte vectors plus Python/PostgreSQL digest parity.",
+      "Independent targeted closure review decoded all five normative hex separators and verified each equals its displayed ASCII domain plus exactly one 0x00 byte. decision.md fixes the proposal schemaVersion and all four non-root envelope version literals/field sets, requires separator/version negative vectors, and requires Python/PostgreSQL digest parity."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-003",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "A proposal binds only currently usable evidence, and a lifecycle transition cannot race proposal creation or be interpreted inconsistently.",
+    "summary": "The design invokes an undefined slice-1 lifecycle fold and an accepted successor that slice 1 cannot represent.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:89-99 requires a current fold and rejection of 'superseded-without-accepted-successor'; lines 181-183 say only that rows are locked 'as needed'.",
+      "backend/app/models/core.py:727-769 permits admitted, superseded, and quarantined events in a linear sequence but stores no successor-fragment identity and does not constrain terminal transitions.",
+      "backend/app/services/ad_evidence.py:391-412 validates only the admission root; no current-usability fold exists for slice 2 to reuse."
+    ],
+    "impact": "Implementations can disagree about whether admitted->quarantined->superseded is usable, cannot prove an accepted successor, and can admit a proposal while a concurrent lifecycle event makes the fragment unusable.",
+    "requiredClosure": "Specify the exact deterministic lifecycle fold over all permitted slice-1 sequences, define whether every post-admission event is terminal/ineligible, remove or model accepted-successor identity explicitly, and state the PostgreSQL lock order that blocks concurrent lifecycle INSERTs while the proposal commits. Add transition-table, malformed-chain, concurrent quarantine/supersession, and post-change read/decision-revalidation tests.",
+    "closureEvidence": [
+      "decision.md Append-only/idempotency section narrows admissibility to an exact singleton admitted root, removes accepted-successor semantics, and requires ordered fragment locks plus a lifecycle INSERT trigger locking the same parent row.",
+      "Independent closure review verified decision.md:398-421 defines one lock order, makes every lifecycle INSERT acquire the same parent-fragment lock, treats every second event as ineligible, and removes accepted-successor semantics without weakening slice-1 immutability."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-004",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Concurrent reuse of one idempotency key produces one durable submission and either an exact retry or a deterministic 409, never a uniqueness 500 or orphan proposal.",
+    "summary": "The advisory lock is keyed by content rather than the idempotency namespace, so conflicting concurrent payloads do not serialize.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:312-328 locks directive plus canonical hash, then claims different payloads using one key yield one success and one 409.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:118-123 defines retry equality by directive plus canonical hash, while lines 315-317 compare an undefined request hash."
+    ],
+    "impact": "Two different payloads with one key acquire different locks, both observe no submission, and race on the unique key. The loser can surface a database error instead of 409; if the error is caught incorrectly it can also leave misleading content/provenance. Raw-byte request hashes would additionally reject semantically identical canonical retries.",
+    "requiredClosure": "Define the writer-scope/idempotency namespace and acquire its transaction advisory lock before any content lock or insert. Define request identity as the versioned canonical request/proposal identity (and separately record raw transport hash if desired), specify total lock order and whole-transaction rollback/requery behavior, and test same-key same-content permutations, same-key different directive/content, and two-session races with no 500 or orphan rows.",
+    "closureEvidence": [
+      "decision.md defines the membership/policy/idempotency namespace, canonical semantic request hash, total user-membership-idempotency-fragment-content lock order, rollback/requery behavior, and deterministic retry/409 outcomes.",
+      "Independent closure review verified decision.md:393-434 locks the complete writer/idempotency namespace before lookup, separates raw transport hash from semantic request identity, orders later fragment/content locks, and requires whole-transaction rollback plus locked retry/409 mapping."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-005",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Immutable content identity and append-only correction/submission relationships remain separate and lossless under content deduplication.",
+    "summary": "Predecessor and correction reason are stored on deduplicated content even though they are not part of its canonical identity or API contract.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:260-269 puts one optional predecessor/reason on a proposal unique by directive, canonicalization version, and canonical hash.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:330-333 and 494-496 require append-only corrected submissions, but the POST contract at lines 361-366 accepts only the V4 document and idempotency key."
+    ],
+    "impact": "The first submission of shared content permanently chooses its predecessor. A later submission of identical content correcting another predecessor is silently collapsed, while a retry can change correction metadata without changing content identity. The promised append-only correction audit cannot be reconstructed.",
+    "requiredClosure": "Choose and document one model: either make predecessor/reason/evidence part of canonical proposal identity, or move correction edges to an immutable hash-bound submission/relationship table that permits multiple same-directive predecessors and participates in idempotency conflict checks. Define the request surface, same-directive/cycle constraints, dedup behavior, event identity, and concurrent tests.",
+    "closureEvidence": [
+      "decision.md removes predecessor metadata from deduplicated proposals and adds immutable hash-bound submission relationship rows included in canonical request identity, with same-directive/no-self/acyclic constraints.",
+      "Independent closure review verified decision.md:331-378 and 393-397 move correction edges off content, include relationships in submission identity, permit multiple submissions for one content hash, and require same-directive/no-self/acyclic constraints."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-006",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The closed canonical V4 surface can losslessly represent every positive assertion in the five approved calibration packets without copying or inventing semantics.",
+    "summary": "The declared root surface cannot represent required shared recurrence/search-hint/correction semantics in its own calibration matrix.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:195-209 lists the complete closed root collections; it has no shared timing-group, non-controlling applicability-search-hint, or authoritative-correction relation collection.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:538 requires ten 2011 requirements sharing one recurrence group; line 539 requires non-exhaustive 2002 search hints isolated from controlling applicability; line 541 requires original-plus-correction semantics.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:443-463 describes relational search hints and lines 904-910 shared timing rows only in later normalized storage, not in the canonical V4 envelope."
+    ],
+    "impact": "An implementation must either duplicate timing, drop searchable non-controlling evidence, misclassify a correction, or extend the supposedly closed schema during coding. Any choice invalidates the advertised gold hashes or loses reviewed meaning.",
+    "requiredClosure": "Provide the exact candidate schema shape for shared recurrence/completion groups, non-controlling search hints that cannot enter rule expressions, and authoritative correction identity/relationship—or explicitly revise the calibration expectations with domain-owner evidence. Add minimal canonical examples and negative reference/cycle tests for each shape before implementation begins.",
+    "closureEvidence": [
+      "decision.md canonical surface now requires recurrenceGroups, non-controlling/non-exhaustive applicabilitySearchHints, and authoritativeCorrections, with minimal shapes and negative reference/cycle controls.",
+      "Independent closure review verified recurrenceGroups and applicabilitySearchHints, but authoritativeCorrections remains unresolvable: decision.md:228-235 requires originalDocumentRefKey/correctingDocumentRefKey while the closed root defines no official-document namespace; the only documentRefKey collection is incorporatedDocuments, whose slice-2 retention is unknown-only and cannot represent the already-retained official AD/correction pair.",
+      "decision.md now requires a closed officialDocuments namespace with typed ad_rule/official_correction roles, retained source ID/hash and same-directive publication/evidence integrity; authoritativeCorrections resolve only there while incorporatedDocuments stays unknown-only.",
+      "Independent targeted closure review verified officialDocuments is a closed, uniquely keyed namespace with ad_rule/official_correction roles, same-directive ad_publications membership, retained-content-hash equality, and same-document admitted-fragment evidence. Both correction references resolve exactly once there with role constraints; cross-directive, wrong-role, incorporated-document, hash, and evidence mismatches are mandatory negative cases."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-007",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "A five-packet V4 proposal fixture is source-accounted through real retained bytes and admitted exact fragments; passing JSON assembled from summaries is not evidence proof.",
+    "summary": "The test plan requires five admitted-fragment fixtures but provides no portable, exact-source fixture construction path.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:155-158 acknowledges the packets are Markdown semantics rather than executable fixtures; lines 545-546 nevertheless require every fixture key to resolve to admitted fragments.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:465-467 forbids a calibration loader, and lines 586-589 exclude existing calibration Markdown/JSON from implementation scope.",
+      ".ai/review-runs/T081-V4-SCHEMA/calibration/INDEX.md:83-85 records retained-file checks but only says gold evidence-key resolution is expected; the calibration files contain logical evidence keys and prose, not slice-1 fragment IDs, hashes, exact offsets, or admitted-event identities.",
+      "Repository inspection found the official PDFs only in ignored local backend/.data paths, not in a hash-bound portable test-fixture manifest."
+    ],
+    "impact": "CI can pass with synthetic or paraphrased evidence that never came from the official PDF, or the five claimed golden fixtures can work only on one developer's local database. That would falsely certify the central regulatory-evidence invariant.",
+    "requiredClosure": "Define a portable, lawful, hash-verified calibration fixture pipeline: bind retained PDF artifacts or a reproducible approved fixture source manifest, server-derive page text and exact offsets, create admitted slice-1 fragments through the reviewed service, and independently review every logical evidence key/count against those IDs/hashes. If real bytes cannot be distributed, separate structural synthetic tests from explicitly unexecuted five-packet evidence tests and do not claim 5/5 gold proof.",
+    "closureEvidence": [
+      "decision.md Exact five-packet calibration matrix defines a lawful hash-pinned source/fragment manifest and slice-1 service bootstrap; absent real bytes is explicitly 0 passed out of 5 and 5 unexecuted, never gold.",
+      "Independent closure review verified decision.md:649-687 separates synthetic structure tests from the lawful retained-byte pipeline, mandates slice-1 service admission and exact manifest accounting, and reports the current source-complete gate honestly as 0 passed out of 5 with 5 unexecuted. This is a valid mandatory implementation gate, not claimed design proof."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-008",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "A retained incorporated document can be represented as known only when its source relationship and exact fragment chain are enforceable without masquerading as an AD publication.",
+    "summary": "The schema claims a known incorporated-document variant that the closed slice-1 evidence chain cannot attribute.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:204-209 says the schema fully defines referenced-document states, and its positive tests require every closed variant.",
+      "backend/app/models/core.py:655-659 requires every evidence fragment's directive/document pair to exist in ad_publications.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:41-45 excludes supporting-document admission from this slice, while the predecessor closure defers the administrator supporting-document workflow."
+    ],
+    "impact": "The implementation can only reject a legitimately retained service bulletin, falsely insert it as an AD publication, or accept a known retention assertion without a fragment chain. All three contradict the domain separation/fail-closed contract.",
+    "requiredClosure": "For slice 2, either constrain incorporated-document retention to the supported unknown/not-obtained states and mark known as structurally reserved but non-storable, or expand and separately review a typed directive-to-supporting-document attribution/admission path. Add negative tests proving an AD publication cannot be relabeled as a bulletin and no known bulletin state is stored without the typed retained chain.",
+    "closureEvidence": [
+      "decision.md constrains slice-2 incorporated-document retention to explicit unknown states, reserves known for a later schema version, and forbids relabeling an AD publication as a service bulletin.",
+      "Independent closure review verified decision.md:246-251 and 615-646 reject incorporated-document known retention and an AD-publication masquerade while preserving source-stated unknown/not-obtained identity candidate-only."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-009",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every candidate submission records the exact current authorization basis, and no future actor type is representable before its authorization contract is reviewed.",
+    "summary": "Writer scope and the authorization snapshot are optional/ambiguous, while provider-shaped provenance is pre-created outside scope.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:278-285 stores organization/membership snapshots only 'where applicable' and leaves writer scope undefined.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/decision.md:363 requires transaction-time platform-admin authorization, but lines 376-380 defer provider authorization while retaining nullable provider-origin columns.",
+      "backend/app/models/core.py:66-75 allows a user to have one membership per organization and therefore multiple active platform-admin memberships; an actor user ID alone does not identify the membership that authorized the global write."
+    ],
+    "impact": "Audit cannot prove which membership authorized a submission or define the idempotency namespace consistently. Direct SQL can also create provenance combinations that imply an unreviewed provider writer.",
+    "requiredClosure": "Define the slice-2 writer scope and deterministically select/lock one exact active platform-admin membership inside the transaction; persist membership ID, organization ID, role/status and policy-version snapshots with closed CHECK/FK rules. Restrict actor kind to the administrator path in this migration, or fully constrain every allowed origin combination; add multiple-admin-membership, role-change, inactive-user, and malformed-direct-SQL provenance tests.",
+    "closureEvidence": [
+      "decision.md API/concurrency/storage contracts require a caller-selected exact membership, transactional user/membership locks and complete authorization snapshot, platform_admin-only actor CHECK, and no provider-shaped provenance.",
+      "Independent closure review verified decision.md:348-359 and 393-406 require a caller-named exact membership, transactional user/membership validation and snapshot, platform_admin-only actor kind, and a closed idempotency namespace with no provider origin."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-DA-010",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The design gate is based on a current immutable packet that binds the actual predecessor closure and every calibration source used to justify the schema.",
+    "summary": "The packet omits the calibration corpus and binds a stale predecessor closure report that contradicts the actual closed run.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/manifest.json has five review inputs but omits the calibration INDEX/five packet files and the predecessor findings, reviews, state, and latest closure re-attestation artifact.",
+      ".ai/review-runs/T081-V4-SCHEMA/closure.md:60-62 and 164-169 say CA-002 is pending and closure PASS/re-attestation is unverified.",
+      ".ai/review-runs/T081-V4-SCHEMA/findings.json currently has 18 closed findings out of 18, state.json is closed, and reviews.json ends with the b777f2af closure PASS re-attestation; none of those current facts is hash-bound to the slice-2 packet."
+    ],
+    "impact": "The design review can remain 'current' after the calibration evidence or predecessor closure proof changes, and its own bound closure input states that the required predecessor proof did not occur.",
+    "requiredClosure": "Bind the calibration INDEX, all five packet documents and supporting requirements data used for fixture claims, plus the predecessor current state/findings/reviews and latest closure artifact (or a corrected current closure summary) as review inputs. Rebuild and verify the design packet before any re-review.",
+    "closureEvidence": [
+      "The rebuilt design packet binds the calibration INDEX/five packet contracts/supporting requirements plus predecessor current state/findings/reviews/manifest/fingerprint/latest closure artifact; predecessor stale closure.md is excluded.",
+      "Independent closure review verified the packet current at fingerprint 9b5d7735a7f30284a869509fc8c8dfb3e17fbfac30f4532d170023140b9a9a5c with 22 hash-bound inputs, including all named calibration and current predecessor state/review artifacts and excluding stale predecessor closure.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Every stable key and typed reference in an accepted V4 candidate is unique, resolves in the correct namespace, and participates in an acyclic, semantically valid graph.",
+    "summary": "The implementation performs schema-shape and evidence-key checks but omits most of the closed semantic/reference validator.",
+    "evidence": [
+      "backend/app/services/ad_v4_candidates.py:366-424 validates root shape, requirement sequence, evidence usage, and submission relationship shape, but does not build namespace registries or validate scope/rule/condition/requirement/document references, graph cycles, recurrence-group membership/timing conflicts, or duplicate stable keys.",
+      "backend/app/services/ad_v4_candidates.py:476-490 checks only that correction document keys exist and the correcting role is official_correction; it does not require correction evidence to come from the correcting document or resolve changedSemanticRefs.",
+      "Independent executable counterexamples against the 2002 fixture were accepted after changing rule-main.scopeExpression.scopeKey to scope-does-not-exist and after adding a second productScopes entry with the same scopeKey but a different productRole."
+    ],
+    "impact": "A structurally valid candidate can carry dangling or ambiguous applicability and obligation references, cyclic corrections, or evidence attributed to the wrong official document. Later review cannot safely interpret it as the closed V4 contract.",
+    "requiredClosure": "Implement the complete pure semantic phase from the decision packet: unique key registries, typed reference resolution, expression arity/typing/cycles, requirement and exclusion graphs, recurrence membership/timing rules, incorporated/official document references, correcting-document evidence, and authoritative-correction/supersession constraints. Add direct negative tests for every namespace, duplicate, cross-namespace edge, cycle, and calibration-specific failure.",
+    "closureEvidence": [
+      "backend/app/services/ad_v4_candidates.py now builds typed registries and rejects duplicate/dangling scope, condition, rule, requirement, recurrence, document, correction, supersession, prerequisite, and terminating references plus cycles before persistence.",
+      "backend/tests/test_ad_v4_candidates.py contains dangling-reference, duplicate-key, and cyclic graph counterexamples; the focused host suite is 39 passed out of 39 pending independent review.",
+      "Closure-1 remediation traverses conditioned recurrence expressions, rejects recurrence-group/inline timing conflicts, and runs full acyclic checks for multi-edge supersession, official-correction, and candidate correction/replacement graphs; the current candidate/API host suite passed 30 out of 30."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "All schema-declared sets have one byte-identical canonical representation independent of accepted input order, while sequences preserve order.",
+    "summary": "Canonicalization is keyed by selected property names rather than the checked-in schema annotations and omits several normative set orderings.",
+    "evidence": [
+      "backend/app/services/ad_v4_candidates.py:61-78 hard-codes SET_ARRAY_KEYS and SCALAR_SET_KEYS; supersessionRelations, models/stringSet aliases, and ranges are absent even though backend/app/schemas/ad_extraction_v4.schema.json marks them as sets.",
+      "backend/app/services/ad_v4_candidates.py:174-189 receives only parent_key and never reads x-paprnav-array-kind or x-paprnav-sort-key, so it cannot implement the reviewed JSON-pointer registry or tuple sort for ranges and supersession relations.",
+      "Independent executable counterexample reversed the six accepted 2002 applicabilitySearchHints[0].models values; canonical_bytes returned different bytes although the schema declares models through stringSet with set semantics."
+    ],
+    "impact": "Semantically equal accepted proposals can receive different canonical hashes, defeating content deduplication, idempotent equivalence, calibration gold hashes, and Python/PostgreSQL identity parity.",
+    "requiredClosure": "Drive normalization from the reviewed schema annotations or an exact pointer registry generated and parity-checked against them. Implement every scalar/object set sort and tie-break, reject duplicate stable keys, preserve only declared sequences, and add reorder vectors for every array definition plus expected canonical bytes/digests and PostgreSQL parity.",
+    "closureEvidence": [
+      "backend/app/services/ad_v4_candidates.py derives set/sequence and sort-key policies from backend/app/schemas/ad_extraction_v4.schema.json, including composite range and supersession identities; duplicate semantic set members fail closed.",
+      "backend/tests/test_ad_v4_candidates.py proves model, range, and supersession permutations canonicalize identically while requirements retain explicit contiguous sequence.",
+      "Closure-1 adds duplicate composite supersession identity rejection before sorting, eliminating caller-order tie behavior; the targeted canonicalization/graph regressions passed 3 out of 3."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Database constraints independently bind each immutable canonical/hash artifact to the exact relational proposal, evidence, submission, relationship, and event columns it purports to attest.",
+    "summary": "The migration verifies hashes of caller-supplied byte blobs but does not bind most byte-envelope contents to the associated relational rows.",
+    "evidence": [
+      "backend/app/db/migrations/versions/20260901_0026_add_ad_v4_candidates.py:153-168 compares proposal canonical bytes to parsed_json and hashes evidence_binding_bytes, but never parses the binding envelope or compares its evidence keys, fragment/event IDs and hashes to ad_v4_candidate_evidence_bindings.",
+      "backend/app/db/migrations/versions/20260901_0026_add_ad_v4_candidates.py:190-232 hashes request, relationship, and event canonical_bytes but does not compare their fixed version/field values to directive_id, proposal hash, relationship columns, evidence_keys, or event columns.",
+      "backend/app/db/migrations/versions/20260901_0026_add_ad_v4_candidates.py:234-244 checks only binding/event counts; a direct-SQL transaction can therefore insert self-consistently hashed bytes whose claimed bindings or relationship/event fields differ from the immutable rows."
+    ],
+    "impact": "The database can commit internally contradictory audit evidence that passes every current trigger. Hashes then attest only arbitrary bytes, not the regulatory provenance represented by the row graph.",
+    "requiredClosure": "Make each trigger parse and compare the exact closed envelope to its relational columns and referenced rows, including binding-envelope equality to the complete sorted binding set and submission relationship equality. Add direct-SQL positive/negative PostgreSQL tests that alter one field at a time while recomputing the hash and prove rejection.",
+    "closureEvidence": [
+      "Migration 20260901_0026 adds insert-time canonical-byte/hash/envelope-to-column validation for proposals, submissions, relationships, and events, exact binding/lifecycle validation, and deferred complete child-set checks.",
+      "backend/tests/test_ad_v4_postgres.py contains direct-SQL forged proposal, binding, submission, relationship, and event negatives. After explicit proposal -> bindings -> submission -> relationships/event flush ordering was added, the coordinator's fresh isolated PostgreSQL run passed 3 out of 3 in 2.86 seconds.",
+      "Closure-1 migration edits additionally bind fixed versions/gate, the exact declared fragment key/id/hash, active user/membership plus policy/action/auth-claims hash, relationship evidence/self/cycle fields, and late child sets through deferred parent completeness. The coordinator's fresh closure-2 PostgreSQL run passed 4 out of 4 against revision 0026."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-004",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Each of the five calibration proposals is constructed from verified retained PDF bytes through the reviewed Slice-1 rendition/text/fragment/admission chain and can be persisted as a real V4 candidate without invented evidence identity.",
+    "summary": "The calibration tests verify local PDF/page hashes but stop before Slice-1 admission and V4 persistence, using synthetic IDs and exact-text hashes as fragment hashes.",
+    "evidence": [
+      "backend/tests/test_ad_v4_calibration.py:45-55 rewrites fragmentId to a synthetic aef-cal value and fragmentHash to exactTextHash; a Slice-1 fragment hash is instead derived from directive/document/rendition/text/offset/locator/parser inputs.",
+      "backend/tests/test_ad_v4_calibration.py:177-226 reads PDFs and calls validate_v4_envelope only; it does not call materialize_source_page, admit_evidence_fragment, store_v4_candidate, or assert persisted binding/admission/event identity.",
+      "backend/tests/test_ad_v4_calibration.py:228-244 expects only _assert_packet_contract to raise. The five required negative mutations are not submitted to schema/semantic/evidence/storage validation, so their rejection is a self-assertion rather than pipeline proof.",
+      "Independent source inspection found most manifest fragments span an entire extracted Federal Register page; the test does not substantively compare each normalized action/timing assertion to a bounded exact regulatory clause."
+    ],
+    "impact": "The reported calibration pass can succeed even though none of the five proposals could pass real evidence admission or persistence, and even if a forbidden semantic mutation is accepted by the actual validator.",
+    "requiredClosure": "Bootstrap each packet through the reviewed Slice-1 services from hash-verified bytes, server-derived text and exact bounded fragments; use the resulting real IDs/hashes/events to persist all five candidates in an isolated upgraded database. Submit each negative case to the relevant actual validator/store boundary and prove rejection. Independently bind every action/timing/applicability assertion to its exact source clause.",
+    "closureEvidence": [
+      "backend/tests/fixtures/ad_v4_calibration/fragments.manifest.json is deterministically rebuilt from verified retained bytes and the exact Slice-1 bounded official-AD text boundary by rebuild_bounded_fragments.py.",
+      "test_calibration_packet_uses_real_admitted_evidence_and_persists_candidate retains each official PDF, creates real Slice-1 rendition/text/fragment/admitted lifecycle rows, then persists the V4 candidate; 5 passed out of 5, with 1998 completing under the 30-second bound in 26.90 seconds.",
+      "Closure-1 calibration remediation uses 67 clause-narrow fragments across six retained PDFs. Checks passed 6/6 PDF integrity, 5/5 claim integrity, 5/5 real admission plus candidate persistence, 5/5 schema-valid composed semantic negatives with calibration_semantic_mismatch, 5/5 structural validator negatives, and exact deterministic rebuild-hash parity."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-005",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "PostgreSQL proves atomic idempotency, lifecycle exclusion, immutable/hash integrity, correction consistency, and lossless occupied downgrade under real database concurrency.",
+    "summary": "The mandatory PostgreSQL implementation gate is unexecuted and the single draft test does not cover the reviewed integrity matrix.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/implementation-slice-2.md records PostgreSQL concurrency/integrity as 0 passed out of 1 and explicitly instructs that implementation PASS must not be recorded.",
+      "Independent host execution of backend/tests/test_ad_v4_postgres.py produced 0 passed out of 1; the test was skipped because PAPRNAV_TEST_POSTGRES_URL was absent.",
+      "backend/tests/test_ad_v4_postgres.py:77-121 covers two identical one-fragment retries and UPDATE rejection only. It omits same-key conflicting payload races, opposite multi-fragment lock order, concurrent lifecycle transition, direct-SQL binding/envelope corruption, correction relationships/cycles, occupied downgrade refusal/race, and empty downgrade/re-upgrade."
+    ],
+    "impact": "The highest-risk database and concurrency invariants remain assumptions; failures can surface as 500/deadlock, stale evidence admission, contradictory audit rows, or destructive rollback behavior.",
+    "requiredClosure": "Run a bounded fresh isolated PostgreSQL suite through revision 0026 covering the complete decision matrix and every database counterexample from implementation findings, including occupied/empty/concurrent downgrade. Report exact passed counts, clean up only the named temporary database, and independently inspect the assertions before closing.",
+    "closureEvidence": [
+      "backend/tests/test_ad_v4_postgres.py now defines three bounded phases: empty downgrade/upgrade, concurrent/idempotent/integrity/immutability/direct-SQL matrix, and occupied downgrade refusal with audit preservation.",
+      "The coordinator executed the current code/test through migration 0026 on exact disposable database paprnav_v4_slice2_finalproof: 3 passed out of 3 in 2.86 seconds, including empty roundtrip, concurrent idempotency/correction origins, all-table immutability, forged-envelope rejection, and occupied downgrade preservation; the exact database and container were removed and absence reverified.",
+      "Closure-1 expands the source to four bounded phases covering same-key/different-payload, concurrent lifecycle successor, reversed two-fragment order, candidate cycle, late child, and downgrade-wait races. The coordinator executed all 4 out of 4 successfully in 4.11 seconds on fresh disposable database paprnav_v4_slice2_closure2, then removed the database/container and reverified absence.",
+      "The finalized fifth PostgreSQL case deterministically pauses a candidate immediately after admitted-root validation and fragment row locking, observes the competing lifecycle session waiting on that lock, then proves candidate commit precedes transition commit and later stores reject the transitioned evidence. The coordinator ran 5 out of 5 successfully in 3.72 seconds on fresh paprnav_v4_slice2_closure3 and removed all disposable closure/finalproof databases and containers."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-006",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The reviewed total lock order is executable for every proposal and cannot deadlock merely because equivalent requests enumerate overlapping fragments differently.",
+    "summary": "Evidence fragments are locked in caller object order rather than lexicographic fragment-ID order.",
+    "evidence": [
+      "backend/app/services/ad_v4_candidates.py:445-459 iterates proposal[evidenceBindings].items() and locks each fragment immediately; raw JSON object insertion order is caller-controlled.",
+      "The design requires all referenced fragments to be locked in lexicographic fragment-ID order before lifecycle validation, but no sort/dedup step exists and the PostgreSQL test uses only one fragment."
+    ],
+    "impact": "Two valid concurrent submissions with overlapping fragments in opposite order can deadlock and return a database failure despite distinct idempotency namespaces.",
+    "requiredClosure": "Resolve and validate all binding identities first, deduplicate and lock fragment rows in one lexicographic ID order, then read lifecycle rows and construct evidence-key snapshots. Add a two-session reversed-order PostgreSQL test with bounded lock/statement timeouts and deterministic outcomes.",
+    "closureEvidence": [
+      "_binding_snapshot selects all unique requested fragment ids in lexical order in one SELECT ... ORDER BY id FOR UPDATE before validating caller evidence-key bindings.",
+      "The focused host counterexamples pass, and the coordinator's fresh isolated PostgreSQL suite passed its bounded same-key and distinct-origin concurrency paths as part of 3 passed out of 3 in 2.86 seconds; the independent reviewer must still inspect coverage of the required reversed multi-fragment order.",
+      "test_ad_v4_postgres.py admits two fragments and concurrently submits overlapping bindings in opposite JSON order while _binding_snapshot locks the unique sorted fragment-id set; this passed in the coordinator's fresh 4 out of 4 PostgreSQL run."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-007",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Platform administrators can retrieve the immutable submission provenance and correction relationships required to audit every origin of deduplicated candidate content.",
+    "summary": "The API exposes one latest submission ID but omits authorization provenance, relationships, and earlier submissions.",
+    "evidence": [
+      "backend/app/schemas/ads.py:137-151 contains no actor user, membership, organization, role/status, policy, request hash, raw hash, or relationship fields.",
+      "backend/app/api/routes/ads.py:269-285 and 302-309 select only the newest submission for a proposal. Distinct submissions that reuse one proposal remain in the database but are not reachable through any V4 audit route.",
+      "The implementation packet's user-visible contract says the response identifies submission provenance, while the current response returns only submissionId and proposal content/hash metadata."
+    ],
+    "impact": "An administrator cannot audit who authorized each submission or why a candidate corrected/replaced another; deduplication hides earlier origins precisely where append-only provenance was required.",
+    "requiredClosure": "Expose a closed platform-admin audit representation or dedicated submission endpoint containing every immutable submission authorization snapshot, hash identity, and relationship row for the proposal. Verify multiple-origin content reuse, ordering/pagination, authorization denial, and integrity failure behavior.",
+    "closureEvidence": [
+      "Admin list/detail serialization calls verified_submission for every origin and returns immutable actor, membership, organization, policy, endpoint, idempotency, request/raw hashes, timestamps, and relationship envelopes/hashes.",
+      "backend/tests/test_ad_v4_api.py creates two distinct origins and asserts both complete provenance snapshots are returned; non-admin reads remain denied.",
+      "Closure-1 adds stable proposal pagination and independently bounded nested submission pagination (maximum 100) with total/limit/offset metadata and deterministic created-at/id ordering; paged API assertions pass in the 30/30 host suite."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-008",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Versioned parser/validator resource limits reject oversized bodies and pathological schema/graph input before unbounded buffering or recursion.",
+    "summary": "Only the final raw-byte length is bounded; streaming, depth, node, edge, array and model limits from the design are absent.",
+    "evidence": [
+      "backend/app/api/routes/ads.py:225-234 trusts Content-Length when present but otherwise calls request.body(), buffering the complete stream before parse_v4_request_bytes checks its two-megabyte limit.",
+      "backend/app/services/ad_v4_candidates.py:231-317 recursively walks schema values without explicit depth/node/edge counters; the schema supplies no reviewed concrete maximums for the decision packet's required resource dimensions.",
+      "The focused tests cover wrong media/encoding and small parser tokens, but no missing/misleading Content-Length stream, depth/node/edge limit, maximum calibration size, or limit+1 case."
+    ],
+    "impact": "An authenticated caller can cause excess memory, CPU, or recursion failure and receive an uncontrolled 500 rather than a stable fail-closed validation error.",
+    "requiredClosure": "Read the request stream incrementally with a hard byte cap, implement versioned concrete limits for depth, strings, arrays, models, evidence bindings, AST nodes and graph edges, and add boundary/limit+1 tests above the 224-model calibration maximum with stable errors.",
+    "closureEvidence": [
+      "The POST route consumes request.stream() incrementally and rejects over 2,000,000 bytes before full accumulation even with a misleading Content-Length.",
+      "The validator enforces versioned depth, total-node, string, array, evidence-binding, AST-node, and graph-edge limits; tests cover misleading length, 2,001 array items, and depth 65 with stable 413 behavior.",
+      "Closure-1 catches decoder RecursionError at the raw-byte boundary and maps a valid 10,000-level nested JSON body to stable resource_limit / HTTP 413; both service and API regressions pass in the 30/30 host suite."
+    ]
+  },
+  {
+    "id": "T081-V4-S2-IA-009",
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Distinct immutable submission origins may retain the same semantic correction relationship without colliding or losing audit provenance.",
+    "summary": "relationship_hash is globally unique even though its canonical envelope does not include submission identity.",
+    "evidence": [
+      "backend/app/models/core.py:867-876 declares relationship_hash unique=True, and migration 0026 line 106 creates the same global unique constraint.",
+      "backend/app/services/ad_v4_candidates.py:569-576 hashes only version plus the caller relationship fields. Two distinct idempotency submissions reusing content with the same correction edge therefore compute the same relationship_hash.",
+      "The design explicitly allows multiple distinct origins to point to one deduplicated proposal; no test submits the same relationship through two distinct accepted submission origins."
+    ],
+    "impact": "The second legitimate origin fails with an integrity error instead of preserving append-only provenance, and the API catches no database exception to convert that conflict into a controlled outcome.",
+    "requiredClosure": "Remove global hash uniqueness in favor of submission-scoped identity, or include the immutable submission identity in the reviewed relationship hash domain/envelope. Add sequential and concurrent duplicate-origin tests proving both submissions and their relationship provenance persist without 500 or silent collapse.",
+    "closureEvidence": [
+      "The canonical relationship envelope/hash now includes immutable submissionId while preserving the submission-scoped key constraint, so distinct origins cannot collide globally.",
+      "Host tests persist two origins for one semantic relationship; the coordinator's isolated PostgreSQL matrix also passed the two concurrent distinct-origin path requiring three retained relationship rows as part of 3 passed out of 3 in 2.86 seconds."
+    ]
+  }
+]

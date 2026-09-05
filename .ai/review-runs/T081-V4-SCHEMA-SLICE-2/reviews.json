@@ -1,0 +1,112 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-01T01:52:43+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "a99f43e490c5b25d0e7c2b957565f3a3954bddbe855bb44f06655d30a8d57b72",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-design-initial.md",
+    "artifactSha256": "41abd9bbf237b786d1632ebebcea35525a2a8db4110109eef2afc1dae2ac5db5"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-01T02:05:34+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "e59bc71ae38296fc8e5baa8b03bc33ed082423923f1bba919eeeb9b219968f9a",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-design-closure-1.md",
+    "artifactSha256": "dd66a01bb71cf4f409ca1b0dc24af837359000e3d9bff457c1a08064ac8e7ebb"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-01T02:09:35+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "00f17d89814ff5fe8340479fa2b3d1857b153b2f9e5cf7da91e1d78ab054d9c0",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-design-closure-2.md",
+    "artifactSha256": "4622aa738a365ffc6d9d8f1009753fadb8ee76ae8f66e6a4012917eeec173218"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-01T23:56:08+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "c375bf76a73ec0485f0a36048d8ab283b82b8e90240f72842724390d1a41d5d2",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-implementation-initial.md",
+    "artifactSha256": "90bbf0751387a46646ff2bf956a742221c693efddbad60e5a62f70ec0286b353"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-04T02:01:23+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "cb7f5e5f362ac9f711336633a07f558513d287c3fc39a8f11533cc8bfc2110a9",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-implementation-closure-1.md",
+    "artifactSha256": "3ab1b49cd99397eb41b61a0fc9b19995cf0185e0235f9c515d9b4d387be57bb9"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/v4_schema_adversary",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-05T01:53:53+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "cb25d6f2788991ecff7c95f5811bb6bbb5ba162e529d3e69e6f4e386de8355cf",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-implementation-final.md",
+    "artifactSha256": "067b93b63db311ecb21e673dea11123b0e3f3bb3a2a8ce4d9b2187334aad3611"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/v4_slice2_closure_reviewer",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-05T02:02:01+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "dd6ac0866e78ba8177c792a442657c2b9941e7b4125b67be772993f692b2c4dd",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-closure-final.md",
+    "artifactSha256": "f226cd1ac83a3156a4bf9470e986c6fb541043e43500e10a1308989af5d797fd"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/v4_slice2_closure_reviewer",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-05T02:02:53+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "d0630255603c936599960c8b5c15b3b662903ece77920cd2aa50238d36ebb6c4",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-closure-reattestation.md",
+    "artifactSha256": "9cbddd56328daf5ec70e08e6630e68e937c2e4a65f934ea0b7ad450b0a74c7dc",
+    "reattest": true
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/v4_slice2_closure_reviewer",
+    "builder": "/root/v4_schema_builder",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-05T02:13:09+00:00",
+    "baseRef": "HEAD",
+    "head": "608abb8f452352a049ee45be372089f295a4c757",
+    "scopeFingerprint": "ca2b01992b095e637a63a25624c9e76e3eeac0cd18f123db18c94d5c842ad83a",
+    "artifact": ".ai/review-runs/T081-V4-SCHEMA-SLICE-2/adversarial-closure-staged-state-final.md",
+    "artifactSha256": "448075d514d8ebbabf43ee3c4bc2ca20e53174507a28e472c6761db0275d9520",
+    "reattest": true
+  }
+]
