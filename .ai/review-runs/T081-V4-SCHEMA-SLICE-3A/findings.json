@@ -1,0 +1,557 @@
+[
+  {
+    "id": "T081-V4-S3A-DA-001",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Every valid calibration candidate can be materialized deterministically, including every listed model, while model normalization remains explicit unknown and does not duplicate evidence.",
+    "summary": "The model identity-mapping cardinality allows only one mapping per designation scope, but every calibration designation scope contains multiple model values.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:381-388 requires each model mapping to reference its parent designation-scope node and declares UNIQUE (projection_id, identity_kind, source_semantic_node_id).",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:424-435 requires every model designation-value row to name its model identity-mapping node.",
+      "Independent enumeration found 10 listed designation scopes out of 10 with more than one model: counts are 51, 30, 6, 182, 224, 7, 2, 10, 33, and 130. The proposed uniqueness therefore conflicts on the second model in every scope and makes 0 of 5 calibration materializations feasible as written."
+    ],
+    "impact": "The positive 5/5 gate cannot execute. Any implementation must either omit required per-model mappings, violate its own uniqueness constraint, or collapse multiple exact source designations into one row and lose round-trip identity.",
+    "requiredClosure": "Define a nonconflicting identity for one mapping per exact designation occurrence, such as a composite including the designation-value node or exact source value, while retaining one parent-scope evidence inheritance edge and no per-model evidence copy. Provide a row/key/FK example for a multi-model scope and a static 5/5 cardinality proof.",
+    "closureEvidence": [
+      "decision.md Safety invariant 9 and section 2.3 make source_occurrence_node_id the exact designation-value/member node, require one mapping per occurrence, and inherit source support through one evidence_parent_node_id without per-model links.",
+      "decision.md section 2.4 gives the 5/5 static cardinality proof: [51,30], [6], [182], [224], and [7,2,10,33,130] exact value occurrences produce 81, 6, 182, 224, and 182 distinct mappings with 2,1,1,1,5 parent-scope inheritance edges.",
+      "Independent closure review recomputed 10 listed scopes out of 10 and verified that source_occurrence_node_id is now the per-value semantic node while evidence_parent_node_id remains the shared designation-scope node. UNIQUE (projection_id, identity_kind, source_occurrence_node_id) therefore permits every occurrence without per-model evidence links."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-002",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Splitting applicability from obligations preserves one exact, evidence-bound correction object and permits a later full relational round-trip without duplicate or disconnected authority.",
+    "summary": "The shared correction-generation boundary is deferred even though a current calibration correction spans Slice 3A and Slice 3B namespaces.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:306-324 creates per-applicability change-dependency nodes, reduces out-of-scope correction references to a count, and assigns their typed projection to Slice 3B.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:973-976 explicitly leaves the shared projection-generation root as a later design question.",
+      "backend/tests/fixtures/ad_v4_calibration/2008-26-10.proposal.json:1064-1083 contains one correction-2010 object whose changedSemanticRefs set includes both productScopes/scope-cessna and requirements/req-report under one document pair and one evidence-key set."
+    ],
+    "impact": "Slice 3A can neither prove nor preserve the future one-object correction identity. Slice 3B would have to duplicate correction provenance/evidence or invent an unreviewed merge convention, and the combined relational model could not prove an exact full-proposal correction round-trip.",
+    "requiredClosure": "Resolve the shared foundation before 3A: define one proposal-scoped immutable correction root keyed to the canonical correction object, with exact evidence/document identity and namespace edges that 3A and 3B can add under one completeness/generation contract. Alternatively defer the whole correction projection, but then remove 3A correction-derived state. Demonstrate exact reconstruction of correction-2010 after both slices without repeated evidence links or count-only placeholders.",
+    "closureEvidence": [
+      "decision.md section 2.1.1 defines one immutable proposal-scoped correction root, complete ordered refs for all current and future-3B namespaces, one correction evidence set, immutable generation bindings, and namespace ownership/completeness rules.",
+      "decision.md section 2.1.1 reconstructs correction-2010 as one root, two ordered refs (productScopes/scope-cessna and requirements/req-report), two evidence links once, one 3A binding, and one later 3B binding without duplicating correction/document/evidence identity.",
+      "Independent closure review traced correction-2010 against the canonical fixture: the foundation stores the complete two-ref set and one two-key evidence set at generation 1; 3A binds only scope-cessna and 3B can append only the req-report semantic binding without updating the root/ref/evidence authority or changing serialized correction JSON."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-003",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Regulatory or configuration uncertainty is an explicit unknown state with reason, temporal scope, and evidence; a known text value cannot stand in for uncertainty.",
+    "summary": "The mandatory 1998 calibration encodes an unknown repairer state as a known string, contradicting the contract and Slice 3A's own unknown invariant.",
+    "evidence": [
+      ".ai/AD_EXTRACTION_DOMAIN_CONTRACT.md:103-112 requires missing, ambiguous, or unsupported applicability facts to remain uncertain and requires explicit unknown with reason, evidence, and temporal scope.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:108-112 and 360-368 repeat that unknown cannot be represented as a known or null value.",
+      "backend/tests/fixtures/ad_v4_calibration/1998-17-11.proposal.json:334-352 stores condition-provenance-unknown.attributeValue as state known with value unknown_requires_compliance.",
+      "backend/tests/test_ad_v4_calibration.py:264-266 affirmatively locks that placeholder-as-known representation into the existing oracle; the source fragment is explicitly anchored by '(4) If it cannot be determined'."
+    ],
+    "impact": "A purportedly lossless 3A projection would persist uncertainty as affirmative known data. Later condition evaluation or review could treat the sentinel as an ordinary value, violating the fail-closed domain contract while still passing byte-for-byte reconstruction.",
+    "requiredClosure": "Correct the canonical calibration representation to an explicit unknown union with controlled reason, temporal scope, and evidence, and rerun the predecessor schema/canonical/evidence review needed for that fixture change. Add a negative gate rejecting semantic sentinels such as unknown_requires_compliance in known assertions when they encode uncertainty.",
+    "closureEvidence": [
+      "decision.md section 0 freezes validator-1 for immutable stored candidates and specifies validator-2 for new writes, with materializer refusal rather than mutation/invalidation of old sentinel-bearing candidates.",
+      "decision.md Explicit uncertainty subsection replaces unknown_requires_compliance with an unknown union carrying reason not_observed, temporal scope, and evidence; new schema/service/calibration and legacy-verification regressions are explicit implementation gates.",
+      "Independent closure review verified the corrected 1998 shape uses the already-existing V4 unknown union and retains ev-unknown-provenance plus at_applicability_evaluation. The legacy bytes remain validator-1 candidate-only and are refused for 3A rather than rewritten; implementation must still satisfy the separate validator-2 rollback/version finding DA-010."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-004",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Applicability relationships remain queryable as manufacturer, model, series, and installed-equipment identities without parsing flattened display strings.",
+    "summary": "Condition subjects and the search-hint fixture retain compound display strings rather than articulated identity relationships.",
+    "evidence": [
+      ".ai/AD_EXTRACTION_DOMAIN_CONTRACT.md:88-101 requires manufacturer, model, and series relationships to remain distinguishable; lines 346-355 require the search questions to be answerable without parsing flattened display strings.",
+      "backend/app/schemas/ad_extraction_v4.schema.json:118-123 defines conditionSubject.modelOrSeries as one knownString rather than a typed designation set.",
+      "backend/tests/fixtures/ad_v4_calibration/2002-13-04.proposal.json:135-153 stores 6314,6324,6364 in one value and lines 184-195 store five engine models in one comma-delimited value. backend/tests/test_ad_v4_calibration.py:251-253 must split the string to reason about membership.",
+      "backend/tests/fixtures/ad_v4_calibration/2024-14-03.proposal.json:504-511 similarly combines GFC 500 and GSA 28 in one modelOrSeries value.",
+      "backend/tests/fixtures/ad_v4_calibration/2002-13-04.proposal.json:485-503 uses manufacturer 'multiple' with models belonging to different manufacturers, so the hint cannot retain model-to-manufacturer relationships."
+    ],
+    "impact": "The relational projection is byte-lossless but not semantically articulated enough for safe future model/installed-equipment queries. A future reader would have to parse punctuation/conjunctions or infer manufacturer associations, exactly the behavior the domain contract prohibits.",
+    "requiredClosure": "Define source-faithful compound text separately from a typed, explicitly unreviewed designation/member relationship with evidence and unknown normalization, or revise the canonical schema through a separately reviewed predecessor change. Represent multi-manufacturer hints as source-preserving groups/pairs or explicit unknown associations. Prove the 2002 and 2024 examples can be queried without string parsing and without treating hints as controlling.",
+    "closureEvidence": [
+      "decision.md section 0 defines a closed sourceDisplayText/designationGroup/member representation and manufacturerModelGroups with explicit association or source_ambiguous unknown; display punctuation is never parsed.",
+      "decision.md records exact 2002 groups (3 magnetos, 5 engine families, atomic LTSIO, 7 manufacturer groups/27 models) and exact 2024 Garmin all_members GFC 500/GSA 28 representation while hints remain noncontrolling.",
+      "Independent closure review found the repair is not canonical-version safe: decision.md section 0 adds designationGroup.members and manufacturerModelGroups/member arrays while retaining paprnav-ad-v4-c14n-1, but the closed Slice-2 decision states that adding any array requires a new reviewed canonicalization version.",
+      "Independent source inspection of retained 2002 page 2 found the text '172A through 172H'. The remediation's Cessna count of 16 and overall 27 exact model members can be reached only by expanding that source series expression into eight model identities. That contradicts invariants 8/13 and the no-parsing/no-inferred-series rule; source-faithful representation would preserve the expression as an unevaluated series member rather than claim eight exact models.",
+      "Targeted remediation assigns all new closed designation/search-group objects and member arrays to paprnav-ad-v4-validator-2 and paprnav-ad-v4-c14n-2, specifies every new array key/order rule, and pins byte-exact v2 proposal/binding/event/submission/relationship hash domains and envelope literals.",
+      "The corrected retained-source oracle now has seven manufacturer groups, 19 exact model members, and one Cessna series_expression member with exact text '172A through 172H' and unknown/unsupported_expression; it explicitly forbids inferred exact 172A-H rows and tests absence of 172B and 172H.",
+      "Bounded closure-2 remediation replaces the model-only hint table with typed search_hint_members: model rows require source_designation, series_expression rows require exact expression_text plus unevaluated/unsupported_expression and source_only/unknown identity provenance, with canonical ordinal and one inherited evidence-parent edge. Exact reconstruction uses the discriminator and never parses text.",
+      "Independent closure-2 review verified the c14n-2 member one-of and relational discriminator are lossless: the retained phrase '172A through 172H' remains one series_expression occurrence, reconstruction emits its fixed canonical unknown/unsupported_expression branch from typed columns, and the 2002 oracle is exactly 19 model members plus 1 expression with no inferred 172B/172H rows. The 2024 Garmin pair remains an all_members group with no display-string parsing."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-005",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every source-to-normalized identity assertion has an honest, schema-representable origin and never implies candidate-supplied normalization where none exists.",
+    "summary": "The normalization-origin enum has no valid state for source-only manufacturers or model/series values in conditions and search hints.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:370-388 permits only candidate_payload or materializer_missing_model_mapping and says candidate_payload manufacturer mappings reconstruct canonical normalizedIdentity.",
+      "backend/app/schemas/ad_extraction_v4.schema.json:118-123 and 226-237 provide only source knownString/identifier values for condition and hint manufacturers/models; they contain no normalizedIdentity payload.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:459-463 and 503-515 nevertheless require identity mappings for those source-only fields. The 2002 fixture exercises both paths."
+    ],
+    "impact": "An implementation must mislabel a source-only manufacturer as payload-normalized, misuse a model-specific missing origin for a manufacturer, or omit a required mapping. Any choice corrupts provenance and makes normalized-token indexes/audit responses misleading.",
+    "requiredClosure": "Add explicit closed origins for source-only/no-normalized-identity assertions across manufacturer, model, and series, define their mandatory unknown reason/temporal/evidence inheritance, and give exact mapping rows for the 2002 condition and search hint. Candidate_payload must remain legal only where normalizedIdentity actually exists in canonical bytes.",
+    "closureEvidence": [
+      "decision.md section 2.3 closes origin to candidate_payload, source_only, or no_normalized_identity; candidate_payload is legal only for an actual normalizedIdentity property.",
+      "The same section requires unknown state, controlled reason, temporal scope, and single-parent evidence inheritance for the other origins and gives exact 2002 condition-member and hint-member examples.",
+      "Independent closure review verified candidate_payload is restricted to an actual normalizedIdentity occurrence, while source_only and no_normalized_identity are forced to explicit unknown without token/value and inherit one same-projection evidence parent."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-006",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "A candidate supersession signal is proposal-bound, causal, idempotent, and cannot stale another candidate based on an unrelated relation.",
+    "summary": "Supersession propagation neither binds the relation's successor to the materialized proposal nor records the dependency row as the stale event's causal identity.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:291-304 lists causing Slice-2 relationship, lifecycle-event, or projection IDs but no causing change-dependency ID, while also requiring every system event to name a deterministic causal row.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:306-318 stores the canonical supersession relation in a 3A change-dependency row, which is the missing causal row type.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:664-669 permits exact predecessor resolution to stale existing projections but never requires successorAdNumber to equal the current proposal's evidence-bound directive AD number.",
+      "backend/app/schemas/ad_extraction_v4.schema.json:240-243 permits any non-self predecessor/successor strings, and backend/app/services/ad_v4_candidates.py:605-613 checks only self/cycle structure, not binding to the proposal's own AD identity."
+    ],
+    "impact": "A valid candidate for AD C can carry an evidence-bound A-to-B relation and automatically append a stale signal to A's projection even though the proposal is not B. Multiple distinct dependency signals also lack an exact event-cause FK, weakening deduplication and audit reconstruction.",
+    "requiredClosure": "Require a supersession dependency to prove that its successor equals the proposal's known canonical AD number before any cross-projection signal; otherwise retain it as unresolved without side effects. Add a same-projection causing_dependency_id composite FK and closed event discriminator/causal uniqueness definition. Test unrelated-successor, multiple/contradictory relations, retry, and concurrent signal insertion.",
+    "closureEvidence": [
+      "decision.md sections 2.1 and 6 require successor byte-equality with this proposal's known evidence-bound canonical AD number before lookup; mismatch/unknown/ambiguous relations remain unresolved and have no side effect.",
+      "Target-local incoming dependency rows are the stale event's same-projection composite-FK cause, with closed event discriminators, causal uniqueness, deterministic hashes, sorted locks, retry and concurrency convergence tests.",
+      "Independent closure review verified unrelated/unknown successors remain outgoing unresolved rows with no target lookup, incoming row, or event; the incoming dependency ID is now the target-local composite-FK event cause and has a dedicated causal uniqueness key."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-007",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every materialize and audit call is authorized through one exact active platform-admin membership, rather than through any membership attached to the user.",
+    "summary": "The POST selects an acting membership, but the two audit GET contracts omit that selector while claiming the same exact-membership boundary.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:142-146 requires an exact active membership for materialize or audit endpoints.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:593-605 names Paprnav-Acting-Membership-Id only for POST and specifies no equivalent input for either GET.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:744-746 says GET uses the same role boundary without defining exact-membership selection/locking.",
+      "backend/app/api/routes/admin.py:19-26 and backend/app/api/routes/ads.py:330-395 show the current audit pattern authorizes when any loaded membership is active platform_admin, demonstrating that 'platform-admin-only' is not by itself the decision's stronger exact-membership contract."
+    ],
+    "impact": "Implementations can satisfy the endpoint prose using the existing any-membership helper while violating invariant 24. With multiple organizations/memberships, the audit authorization context is ambiguous and cannot be attributed or tested as specified.",
+    "requiredClosure": "Specify whether audit GETs require Paprnav-Acting-Membership-Id (recommended) and define exact user/membership/status/role validation under one transaction. If the domain intentionally permits any active global membership, revise invariant 24 and the audit contract explicitly rather than relying on the current helper. Add GET-specific multi-membership, inactive-selected-membership, shop/admin, and revocation-race tests.",
+    "closureEvidence": [
+      "decision.md section 5 requires Paprnav-Acting-Membership-Id for POST and both GET audit endpoints and transactionally locks/validates the exact selected membership's user, active status, and platform_admin role before candidate reads.",
+      "The contract denies selected inactive/shop/foreign memberships even when another valid admin membership exists and defines deterministic revocation-race and multi-membership tests.",
+      "Independent closure review verified both GET contracts now require the membership header and lock/revalidate that exact membership; another active platform-admin membership cannot rescue an invalid selected row."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-008",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every Slice-2-valid condition has one deterministic relational representation, and Slice 3A does not invent an unversioned semantic restriction after canonical persistence.",
+    "summary": "The proposed condition type/operator compatibility matrix is normative but never defined and is not present in the closed Slice-2 schema/validator.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:448-457 requires a checked type/operator compatibility matrix but provides no allowed pairs or version.",
+      "backend/app/schemas/ad_extraction_v4.schema.json:125-136 declares independent conditionType and operator enums without conditional pair constraints.",
+      "backend/app/services/ad_v4_candidates.py:475-615 validates keys/references/cycles but does not validate condition type/operator pairs.",
+      "The five packets cover only a small subset of possible enum combinations, so their 5/5 success cannot define the missing matrix."
+    ],
+    "impact": "Two conforming implementations can accept different Slice-2 candidates, or 3A can reject a previously valid immutable candidate based on an invented rule. Database CHECKs and reconstruction tests cannot be written against a unique contract.",
+    "requiredClosure": "Either enumerate and version every permitted type/operator/subject-shape combination and apply that rule at the Slice-2 canonical boundary through a separately reviewed change, or declare all currently schema-valid pairs representable but unevaluated in 3A and remove the undefined compatibility claim. Add one positive and one negative vector for every normative pair/shape rule.",
+    "closureEvidence": [
+      "decision.md invariants 14/16 and section 2.5 remove the undefined compatibility matrix and require every Slice-2-schema-valid enum pair to be represented with evaluation_state=unevaluated and evaluator_contract=none.",
+      "The test strategy requires 90 represented/reconstructed out of 90 current type/operator pairs plus closed-shape/enum negatives; evaluation and matching remain prohibited pending a separately reviewed future contract.",
+      "Independent closure review confirmed no semantic pair matrix is invented: every current enum cross-product is stored with evaluation_state unevaluated/evaluator_contract none, while schema shape and unknown enum validation remain at the canonical boundary."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-009",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Any index described as future aircraft-ID lookup support has a safe, reviewed identity join path and is not permanently empty under the only accepted canonical schema.",
+    "summary": "The model-token indexes are knowingly empty and have no future reviewed-identity bridge, so they do not support the claimed aircraft-ID lookup shape.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:381-393 requires all current model mappings to be unknown and requires a later reviewed mapping relation rather than updating these rows.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:563-585 creates model-token indexes and admits they are empty for current listed models.",
+      ".ai/review-runs/T081-V4-SCHEMA/codex-schema-proposal.md:830-859 defines the future hot path as a reviewed canonical model-identity ID join, not a source-string or unreviewed hash match.",
+      "No 3A table has an aircraft/canonical-registry FK, and the design explicitly defers the reviewed relation that would own the usable index."
+    ],
+    "impact": "The migration adds write/DDL cost and a misleading appearance of lookup readiness without a safe join path. A future matching slice must create different reviewed-relation indexes anyway, or risk joining aircraft identities to unreviewed candidate tokens.",
+    "requiredClosure": "Remove the vacuous token indexes and explicitly defer reviewed lookup indexes to the identity/matching slice, or define a stable non-authoritative designation-node bridge that the later reviewed identity relation will reference and state that the usable index belongs there. Do not claim current candidate-token indexes support aircraft-ID matching, and retain tests proving no reader uses them.",
+    "closureEvidence": [
+      "decision.md invariant 26 and section 4 remove source-spelling, normalized-token, aircraft-ID, make/model, search-hint, and product-role hot-path indexes and make no readiness claim.",
+      "Only integrity, reconstruction, audit, correction-completeness, dependency, and stale-fold indexes remain; the future reviewed identity/matching slice owns its bridge and usable indexes, with absence and released-reader isolation tests.",
+      "Independent closure review verified the decision removed the normalized/source/aircraft/matching index list and now requires PostgreSQL catalog negatives proving those indexes are absent; no readiness claim remains."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-DA-010",
+    "stage": "design",
+    "reviewer": "/root/v4_schema_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Validator-2/canonicalization evolution and physical or application rollback preserve the meaning and readability of every immutable Slice-2 candidate without leaving newer rows under an older schema contract.",
+    "summary": "The validator-2 proposal changes the existing Slice-2 storage boundary, but the downgrade checks only Slice-3A tables and can strand validator-2 candidates at revision 0026, whose database writer and application know only validator-1.",
+    "evidence": [
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:227-267 makes all new candidate submissions use validator-2 and retains those immutable rows in the existing ad_v4_candidate_proposals table.",
+      "backend/app/db/migrations/versions/20260901_0026_add_ad_v4_candidates.py:155-177 hardcodes paprnav-ad-v4-validator-1 in the proposal INSERT trigger; backend/app/services/ad_v4_candidates.py:33 likewise has only validator-1.",
+      ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md:1097-1112 says application rollback disables only 3A routes and physical downgrade checks only new 3A tables before returning to 0026. A validator-2 proposal can exist without a 3A projection, so those checks can pass while incompatible Slice-2 rows remain.",
+      "The closed Slice-2 decision's canonicalization section states that adding an array requires a new reviewed canonicalization version. The revised design adds multiple typed group/member arrays but keeps paprnav-ad-v4-c14n-1, compounding the rollback/hash-dispatch ambiguity."
+    ],
+    "impact": "An empty 3A schema could downgrade successfully while immutable validator-2/canonicalization rows remain. Revision 0026 and an old application cannot create, validate, or reliably attest those rows under their recorded contract; rollback therefore ceases to be truthful and mixed-version deployments can disagree about proposal identity.",
+    "requiredClosure": "Assign the added arrays a new canonicalization version and domain, define validator/canonicalizer dispatch for every stored proposal, and include validator/canonicalization version in all repeated projection envelopes. Define mixed-version deployment order. Physical downgrade must lock the Slice-2 proposal table and refuse while any validator-2/new-canonicalization proposal or dependent submission/event exists (or retain a backward verifier in an explicitly non-downgraded compatibility revision). Application rollback must preserve read verification for both versions. Add empty-3A/nonempty-validator2 downgrade refusal, old/new read parity, same-content reuse, and re-upgrade tests.",
+    "closureEvidence": [
+      "decision.md Validator-2 canonicalization and hash domains defines validator-2/c14n-2, byte-exact NUL-terminated domains, fixed v2 envelopes, version-scoped proposal/audit identity, and no cross-version content reuse.",
+      "decision.md Migration, compatibility, correction, and rollback requires migration 0027 to backfill explicit v1 version metadata on Slice-2 audit children without changing bytes/hashes, constrain all child rows to parent versions, deploy dual readers before v2 writers/3A, and prohibit pre-v2 applications while v2 rows exist.",
+      "The physical downgrade contract locks all 3A and Slice-2 proposal/submission/relationship/event/binding tables and refuses any v2 proposal or dependent audit row even with empty 3A; tests cover v1/v2 parity/distinct identity/retry, empty-3A nonempty-v2 refusal, races, immutable v2 rows, and v1-only downgrade/re-upgrade.",
+      "Bounded closure-2 remediation establishes one proposal-first global order: downgrade takes Slice-2 proposal ACCESS EXCLUSIVE before Slice-2 children and all 3A tables, while each materializer locks its proposal before any 3A row. The decision enumerates candidate-create/materialize/downgrade outcomes and removes the proposal/3A lock inversion.",
+      "Independent closure-2 review verified the global serialization boundary: candidate creation and materialization touch/lock the Slice-2 proposal before any 3A row, downgrade takes ACCESS EXCLUSIVE on that parent table before Slice-2 children and 3A tables, and the stated commit-first/wait-first outcomes cannot form the former parent/child lock cycle. Empty-3A v2 rows still refuse downgrade; v1-only downgrade/re-upgrade and dual-reader application rollback preserve immutable bytes and hashes."
+    ]
+  },
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3A-CC-001",
+    "stage": "external_critic",
+    "reviewer": "claude-external-critic-20260906T235706Z",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Every other safety/correctness invariant in this design is enforced by the database or application transaction rather than by operator discipline (e.g., invariant 2's 'creation-time validity is not trusted'); the staged validator-2/3A rollout should meet the same bar.",
+    "summary": "The mandatory deployment order (apply 0027 -> dual-reader app -> enable v2 writer -> enable 3A routes) has no concrete code-level gate. The codebase has no existing feature-flag mechanism, so nothing prevents a rolling deploy from serving v2 writes or 3A routes from an instance before all instances are dual-readers.",
+    "evidence": [
+      "review-packet.md:1262-1269 'Deployment order is mandatory: 1. apply 0027 ... 2. deploy the compatibility application ... 3. enable the v2 writer after all serving instances are dual readers; and 4. enable the 3A materializer/routes only after v2 writes are proven.'",
+      "grep for feature_flag/FEATURE_FLAG/ENABLE_*/settings.FEATURE across backend/app returned zero matches, confirming there is no existing toggle mechanism this design could rely on.",
+      "Every other invariant in the same document (e.g., invariant 2, invariant 24) is phrased as a transaction-enforced or trigger-enforced guarantee, not a manual rollout instruction."
+    ],
+    "impact": "A rolling/blue-green deploy that briefly runs mixed old/new application instances (a routine production pattern) could serve v2 candidate writes or 3A materialization from a not-yet-fully-rolled-out fleet, or could enable 3A routes before the v2 writer has been proven safe in production, silently violating the design's own stated sequencing without any error, log, or DB rejection.",
+    "requiredClosure": "Define a concrete, code-level gate (e.g., an environment/config flag read at router-registration or write-path time) that makes 'v2 writer enabled' and '3A routes enabled' explicit, independently togglable states rather than an implicit consequence of which code version is deployed. Add a test or startup check proving the 3A routes/v2 writer cannot activate merely because migration 0027 has run.",
+    "closureEvidence": [
+      "decision.md section 5.1 defines independent default-off PAPRNAV_AD_V4_VALIDATOR2_WRITES_ENABLED and PAPRNAV_AD_V4_SLICE3A_ROUTES_ENABLED settings, fixed compiled capabilities, and migration-0027 database capability checks at startup and again inside write transactions.",
+      "The deployment contract requires the dual-reader compatibility release with both flags false before any config enablement, states that the gate does not prove fleet-wide rollout, and adds default-off, independent-toggle, schema-mismatch, transactional recheck, and rollback tests.",
+      "Targeted correction requires the 3A materialization POST to observe both application flags and both database gates validator2_write_enabled/materializer3a_enabled, while audit GET requires only the 3A/read gate and cannot create a missing projection.",
+      "The four-combination matrix now proves that v2-write off plus 3A on rejects materialization of a preexisting v2 candidate with validator2_write_gate_disabled and zero request/projection/dependency/correction/event rows; proposal-before-gate locking defines both outcomes for concurrent disable versus materialization.",
+      "Independent external-critic closure review verified the gates are concrete and independently controlled rather than operator prose: both application flags and both deployment-role-controlled database gates default false; validator-2 POST requires its paired flag/gate; 3A POST requires both pairs; audit GET requires only the 3A/read pair and cannot create missing rows. Startup plus in-transaction capability checks, the exact four-state preexisting-v2 matrix, concurrent disable barriers, mixed-release false defaults, and rollback/drain order are all mandatory implementation tests."
+    ]
+  },
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3A-CC-002",
+    "stage": "external_critic",
+    "reviewer": "claude-external-critic-20260906T235706Z",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The design's stated in-scope/out-of-scope boundary (Objective section) and its 'Expected file scope' section should name every namespace and table Slice 3A is authorized to touch, so an implementer or later reviewer can verify boundary compliance without re-deriving it from a 1,500-line design body.",
+    "summary": "Section 2.1.1 requires Slice 3A to create a shared, proposal-scoped correction foundation that stores canonical `authoritativeCorrections` content and verified `officialDocuments` identity hashes -- two top-level V4 namespaces distinct from the four-field applicability subtree {productScopes, conditionDefinitions, applicabilityRules, applicabilitySearchHints}. Neither namespace is mentioned in the Objective's in/out-of-scope bullet list, nor explicitly named in the 'Expected file scope' section, even though the mandatory 2008-26-10 calibration assertion depends on it.",
+    "evidence": [
+      "review-packet.md:28-63 (Objective) lists what's out of scope for 3A/deferred to 3B but never mentions `authoritativeCorrections` or `officialDocuments`.",
+      "review-packet.md:581-655 (section 2.1.1) defines `ad_v4_candidate_corrections`, `_correction_refs`, `_correction_semantic_bindings`, `_correction_evidence_links` storing `officialDocuments reference keys`, their `verified document-identity hashes`, and namespace refs spanning `requirements|recurrenceGroups|amocAuthorityProvisions` (3B-owned) in addition to 3A-owned namespaces.",
+      "backend/app/schemas/ad_extraction_v4.schema.json $defs.proposal.properties includes `authoritativeCorrections` and `officialDocuments` as independent top-level arrays, confirming these are namespaces outside the four-field subtree definition in invariant 3.",
+      "review-packet.md:1458-1489 ('Expected file scope') mentions only 'the additive 3A tables' generically and never names the correction-foundation tables or namespaces, while the mandatory test for 2008-26-10 (review-packet.md:1369-1372) requires 'exact shared correction-2010 foundation with two ordered refs, two evidence links once, one 3A scope binding, and one explicit future-3B requirement ref'."
+    ],
+    "impact": "An implementer following the Objective/Expected-file-scope sections literally could reasonably treat the correction-foundation tables as unauthorized scope creep and omit them, causing the mandatory 2008-26-10 reconstruction test (and the whole DA-002 closure) to fail; conversely, a later reviewer auditing 'did 3A only touch what it said it would' has no single authoritative scope list to check against, since the two scope-defining sections disagree with the detailed design.",
+    "requiredClosure": "Update the Objective's out-of-scope list and the 'Expected file scope' section to explicitly name the correction-foundation tables and the `authoritativeCorrections`/`officialDocuments` namespaces they read/verify, so the document's own scope statement is internally consistent with section 2.1.1 and the mandatory calibration test.",
+    "closureEvidence": [
+      "decision.md Objective now explicitly authorizes the shared correction foundation, all four correction tables, and read/verification of authoritativeCorrections plus referenced officialDocuments identity/evidence while deferring 3B obligation/document semantics.",
+      "decision.md Expected file scope repeats the exact tables/namespaces and implementation boundary, eliminating the scope conflict with section 2.1.1 and the 2008 calibration gate.",
+      "Independent external-critic closure review verified both scope-defining sections now name the four shared correction-foundation tables and authorize only canonical authoritativeCorrections plus referenced officialDocuments identity/evidence fields. Complete ordered future-3B references are retained, but requirement, recurrence, AMOC, incorporated-document, and service-bulletin semantics remain explicitly deferred."
+    ]
+  },
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3A-CC-003",
+    "stage": "external_critic",
+    "reviewer": "claude-external-critic-20260906T235706Z",
+    "severity": "low",
+    "status": "closed",
+    "invariant": "'Write paths and administrative paths' asserts no new operational writer (job/CLI/seed/etc.) is added beyond the single platform-admin POST service.",
+    "summary": "The stale-fold section introduces 'a background repair function [that] may append missing deterministic events after a crash,' which reads as a new asynchronous/scheduled process, apparently in tension with the explicit claim elsewhere that no provider job, CLI, seed, or generic writer is added.",
+    "evidence": [
+      "review-packet.md:1081-1085 'A background repair function may append missing deterministic events after a crash; it uses the same locks and event identity and requires no human review.'",
+      "review-packet.md:1205-1213 ('Write paths and administrative paths') states 'No provider job, CLI, seed, V3 translator, calibration loader, frontend form, or generic ORM CRUD writer is added,' and that 'Its internal deterministic stale-event helper is part of the same service/repository boundary,' without clarifying whether the crash-repair helper is invoked synchronously (e.g., opportunistically on the next POST/GET) or via a new scheduled/background worker process."
+    ],
+    "impact": "If implementation interprets 'background repair function' as a new cron/worker process, that is new operational surface (deployment unit, scheduling, monitoring) not accounted for anywhere else in the design's operational sections, and could be missed by an implementation reviewer who only checks for 'no new job' against the explicit write-paths sentence.",
+    "requiredClosure": "Clarify in the design that the repair helper is invoked inline/opportunistically from existing request paths (not a new scheduled process), or, if a real background worker is intended, add it explicitly to the write-paths/operational sections and its own authorization/idempotency contract.",
+    "closureEvidence": [
+      "decision.md section 6 and Write paths now state the repair helper runs inline only inside an authorized materialization POST transaction; audit GET invokes detection-only mode and remains side-effect-free.",
+      "The design explicitly forbids cron, queue consumer, worker, scheduler, CLI, repair endpoint, startup sweep, or any new operational writer.",
+      "Independent external-critic closure review verified repair is inline only in the already-authorized materialization POST transaction and reuses its locks, capability gates, deterministic cause identity, and idempotent event key. GET executes detection-only logic and remains side-effect-free; no asynchronous or alternate writer surface is authorized."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-IA-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The implementation uses the approved typed relational design with database-enforced ownership, closed shapes, cardinality, order, references, arity, acyclicity, evidence, and unevaluated semantics.",
+    "summary": "Migration 0027 substitutes generic semantic-node and JSON-pointer datum tables for the approved typed applicability tables and constraints.",
+    "evidence": ["decision.md:663-924 specifies typed tables and constraints", "backend/app/db/migrations/versions/20260907_0027_add_ad_v4_applicability.py:93-208 creates generic semantic-node and datum tables", "backend/app/services/ad_v4_applicability.py:_flatten serializes arbitrary JSON shapes"],
+    "impact": "Malformed or executable-looking semantic graphs can be stored without the reviewed database guarantees, and the implementation differs materially from the approved design.",
+    "requiredClosure": "Implement the approved typed schema and PostgreSQL negative tests, or return to design review and prove an equivalent generic design.",
+    "closureEvidence": [
+      "Physical typed owners now cover every approved source/product/designation, condition/group/member, rule/expression, and search-hint family with exact PostgreSQL commit-time and verified-read comparisons.",
+      "The complete database and Python owner unions prove every semantic node, including outgoing and incoming change dependencies, has exactly one matching physical owner.",
+      "Independent Python and PostgreSQL typed-owner reconstruction produces the full four-field applicability subtree and must equal the generic datum graph, verified parent candidate, canonical bytes, and hashes.",
+      "Focused host/calibration passed 25/25, complete V4 host passed 75/75, and the freshly migrated disposable PostgreSQL suite passed 24/24 with direct-SQL corruption vectors.",
+      "Independent reviewer /root/v4_s3a_impl_adversary closed IA-001 at packet d78b4a257935f45ec161bcc3af99daac8d371871e0eb72ebcb6a1a4f03384748; see adversarial-implementation-ia001-final.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-IA-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "A projection root and its complete exact relational children are validated together at commit.",
+    "summary": "PostgreSQL permits a valid-looking projection root with zero or partial relational children.",
+    "evidence": ["Projection counts are ordinary root columns", "paprnav_v4_validate_app_projection is only a BEFORE INSERT root-envelope trigger", "No deferred child-graph constraint or decisive direct-SQL partial-graph test exists"],
+    "impact": "A direct writer can commit incomplete immutable derived state that only later application reads may detect.",
+    "requiredClosure": "Add deferred full-graph reconstruction/count/hash/evidence validation and direct-SQL empty, missing, extra, reordered, changed-value, and cross-reference tests.",
+    "closureEvidence": [
+      "Migration 0027 now installs recursive JSON-node expansion plus a deferred constraint trigger on every projection/child/correction table; it compares the exact relational datum graph, counts, semantic/evidence hash sets, materialized root event, and candidate subtree at commit.",
+      "PostgreSQL test 04 copies a byte-valid legitimate root, rolls back its children, inserts only the root, and proves deferred commit rejection; test 05 proves an extra direct-SQL child is rejected when constraints are forced immediate.",
+      "The expanded disposable PostgreSQL matrix passed 9 out of 9 in t081_blockers_l, which was dropped; paprnav_db was not targeted.",
+      "Independent targeted closure review adversarial-implementation-ia002-ia005-closure.md verified all residual semantic ownership/hash and listed-designation counterexamples and returned IA-002 PASS."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-IA-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Supersession stale state is proposal-bound, uniquely resolved, evidence-backed, and names the exact same-projection dependency cause.",
+    "summary": "Stale folding accepts the first predecessor relationship without successor-AD equality or unique resolution and emits events with no dependency cause.",
+    "evidence": ["backend/app/services/ad_v4_applicability.py:613 treats a matching predecessor relationship as stale", "backend/app/services/ad_v4_applicability.py:661 stores causing_dependency_id=None", "Materialized dependencies remain unresolved"],
+    "impact": "An unrelated candidate relationship can stale a projection and leave an incomplete audit chain.",
+    "requiredClosure": "Resolve dependencies under successor canonical AD equality and unique predecessor rules, require the exact dependency FK on stale events, and test positive and negative cases.",
+    "closureEvidence": [
+      "Application and deferred database verification require exact successor/candidate AD equality and exactly one predecessor projection; unknown, mismatched, missing, and ambiguous relations remain non-resolved without cross-projection effects.",
+      "Resolved outgoing dependencies create deterministic target-local incoming rows; stale events carry the exact same-projection dependency through a composite FK, canonical cause envelope, deterministic hash, and causal partial uniqueness key.",
+      "The application, projection BEFORE INSERT trigger, and deferred full-graph validator all invoke the same PostgreSQL helper, which locks sorted distinct canonical/predecessor/successor AD numbers and prevents application or direct-SQL phantom predecessor write-skew.",
+      "PostgreSQL tests 09-13 cover exact, mismatch, ambiguity, concurrent application orderings, forged cross-projection causes, and a raw projection INSERT blocked by the database-native lock; the clean matrix passed 14/14.",
+      "Independent targeted closure review adversarial-implementation-ia003-closure.md verified the original race and direct-SQL variant are closed and returned IA-003 PASS."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-IA-004",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Audit GET/list/reconstruction paths are detection-only and never write repair events.",
+    "summary": "Detail and list GET invoke mutating stale repair and commit events.",
+    "evidence": ["backend/app/services/ad_v4_applicability.py:596 invokes repair from projection_state", "backend/app/api/routes/ads.py:493 and :544 commit after GET serialization"],
+    "impact": "Viewing audit state becomes an alternate writer with unexpected locks and audit mutations.",
+    "requiredClosure": "Make GETs side-effect-free, keep repair inside authorized materialization POST, and test unchanged table/event counts for every GET.",
+    "closureEvidence": [
+      "backend/app/services/ad_v4_applicability.py separates non-mutating projection_state detection from repair and calls repair only within materialize_applicability after authorization and database gates, on both normal and idempotent POST paths.",
+      "backend/app/api/routes/ads.py detail and list GET paths no longer commit; reconstruction was already read-only.",
+      "backend/tests/test_ad_v4_applicability.py snapshots the projection-event count across detail, reconstruction, and list GET; the focused suite passed 40 out of 40.",
+      "Independent targeted closure review adversarial-implementation-ia004-closure.md by /root/v4_s3a_impl_adversary found no alternate repair caller and passed IA-004 with no residual finding."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-IA-005",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The shared correction foundation exactly reconstructs and verifies canonical corrections, official-document identities, ordered refs, and evidence at commit and read.",
+    "summary": "Correction rows are inserted without exact reconstruction, deferred completeness/identity checks, or verified-read validation.",
+    "evidence": ["_materialize_corrections has no corresponding exact reconstruction verifier", "Migration 0027 does not enforce expected child counts or official-document identity", "Calibration tests check selected counts/values rather than an independent correction round trip"],
+    "impact": "A projection can report verified while its cross-slice correction foundation is incomplete or disconnected.",
+    "requiredClosure": "Implement correction reconstruction and fail-closed verification, deferred completeness/identity enforcement, and direct-SQL negatives plus exact 2008 round trip.",
+    "closureEvidence": [
+      "Application verified reads now reconstruct each correction from ordered roots/refs/evidence and verify canonical equality, document identities, generation, owners, 3A bindings, and candidate evidence bindings.",
+      "Migration 0027 deferred completeness validates exact correction count/order/content/hash, official-document identity hashes, exact refs/evidence, generation, and owner-slice binding cardinality; correction rows cannot commit without a projection.",
+      "The 2008 real-evidence calibration round trip passes and deliberately removing one correction evidence link fails closed; the disposable PostgreSQL matrix passed 9 out of 9.",
+      "Independent targeted closure review adversarial-implementation-ia002-ia005-closure.md verified binding targets, document and row hashes, zero-based contiguous ordinals, append ordering, and SQL-null behavior and returned IA-005 PASS."
+    ]
+  }
+  ,
+  {
+    "id": "T081-V4-S3A-IA-006",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Exact designation occurrences are never relabeled as another identity kind.",
+    "summary": "Listed serial and part-number values were persisted as model identity mappings.",
+    "evidence": [
+      "The application identity loop previously handled every listed designation scope and defaulted non-model fields to model.",
+      "The deferred SQL comparison previously used a CASE whose two results were both model."
+    ],
+    "impact": "Audit and future identity work could treat serial or part-number strings as aircraft models.",
+    "requiredClosure": "Keep exact serial/part designation values mapping-free, retain model mappings only for modelScope, and cover all three listed fields plus wrong-kind tamper.",
+    "closureEvidence": [
+      "Application materialization now creates identity mappings only for listed modelScope occurrences; serial and part-number designation values carry a null mapping relation.",
+      "Migration count and exact typed comparison require model mappings only for modelScope and require mapping absence for other fields.",
+      "PostgreSQL test_16 covers two listed values in each of model, serial, and part-number scopes and asserts exactly two model mappings for six values."
+      ,"Independent closure review verified the decision, application, migration, read path, and PostgreSQL positive/wrong-kind vectors use the same model-only mapping discriminator; no residual IA-006 counterexample was found."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-IA-007",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Audit reconstruction fails closed on any typed identity, owner, provenance, or evidence drift.",
+    "summary": "Verified reads checked only a subset of manufacturer and designation owner fields and omitted exact mapping/evidence semantics.",
+    "evidence": [
+      "Manufacturer read verification omitted mapping semantic identity, evidence parent, provenance union, deterministic hash, and exact evidence links.",
+      "Designation read verification compared source strings/ranges but did not verify their mapping relations."
+    ],
+    "impact": "The reconstruction endpoint could report canonical applicability while the physical typed graph was corrupted.",
+    "requiredClosure": "Verify exact assertion/mapping nodes, parents, provenance union, hashes, absence cases, and inherited evidence on every reconstruction read, with endpoint corruption coverage.",
+    "closureEvidence": [
+      "_verify_source_scope_owners now verifies deterministic mapping and semantic identities, exact occurrence/evidence parents, every provenance field, review state, mapping evidence absence, and exact owner evidence keys/bindings/link hashes.",
+      "The reconstruction API regression mutates a persisted mapping identity hash and asserts an HTTP 409 projection_integrity response."
+      ,"The shared verify_node read helper now recomputes every bounded semantic node's deterministic ID/identity hash, node type/key, pointer, parent, canonical hash, ordinal, projection, and proposal; designation evaluator fields and exact assertion count are also checked."
+      ,"The reconstruction API corruption loop now includes product and designation-value identity hashes and designation-range canonical hash while canonical datum rows remain unchanged."
+      ,"Range verification now enumerates zipped stored/canonical rows, compares the stored ordinal before node verification, and never indexes canonical data using corrupted stored state; the endpoint corruption loop includes an out-of-range ordinal and requires HTTP 409."
+      ,"Independent final re-review verified the canonical enumerate/zip path and the HTTP 409 ordinal-corruption vector and found no residual IA-007 blocker."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-MA-001",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every deterministic identity has one exact, versioned canonical preimage across Python, SQL, reads, and migration history.",
+    "summary": "The matrix used sourceOccurrenceNodeId while the approved identity-mapping preimage uses occurrence.",
+    "evidence": ["Initial holistic matrix review at packet c010cdc417c332f799b078b9e91e1000377103d8980fcbc9fa134ec95f490742."],
+    "impact": "Following the matrix would change every identity-mapping row ID and full hash.",
+    "requiredClosure": "Select and freeze one property spelling with an exact golden preimage/hash parity vector.",
+    "closureEvidence": ["The matrix now retains occurrence, forbids the alternate spelling without a new contract version, and includes an exact preimage, full hash, and row-ID golden vector."]
+  },
+  {
+    "id": "T081-V4-S3A-MA-002",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The anti-drift artifact binds the selector, branch, identity, parent, column, evidence, identity, cardinality, and reference rules it claims to bind.",
+    "summary": "The initial matrix proposed hashing a manifest without a serializable DSL for its executable functions.",
+    "evidence": ["Initial holistic matrix review at packet c010cdc417c332f799b078b9e91e1000377103d8980fcbc9fa134ec95f490742."],
+    "impact": "A digest could pass while Python and generated PostgreSQL behavior drifted.",
+    "requiredClosure": "Define a closed data-only DSL, generator/version contract, golden outputs, and precise boundary for independently implemented algorithms.",
+    "closureEvidence": ["Matrix section 5.1 now defines closed selector and expression operators, required occurrence/relationship records, recursive-expression representation, generator provenance, byte-for-byte generated output checks, and the two named independent algorithms."]
+  },
+  {
+    "id": "T081-V4-S3A-MA-003",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Identity audit verifies the exact source-occurrence and contextual evidence without substituting one for the other.",
+    "summary": "The initial matrix did not define evidence_parent_node_id when occurrence and enclosing-context evidence differ.",
+    "evidence": ["Initial holistic matrix review at packet c010cdc417c332f799b078b9e91e1000377103d8980fcbc9fa134ec95f490742."],
+    "impact": "Implementations could attribute identity support to broader context while ignoring distinct occurrence evidence.",
+    "requiredClosure": "Define evidence_parent semantics for each mapping family and add divergent-evidence positive/corruption vectors.",
+    "closureEvidence": ["The matrix now defines evidence_parent as contextual provenance, requires the independently verified ordered pair of occurrence and context evidence, enumerates the pair for every mapping family, and mandates deliberately divergent evidence vectors."]
+  },
+  {
+    "id": "T081-V4-S3A-MA-004",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Every validator-2-valid canonical value fits the typed physical owner losslessly.",
+    "summary": "The initial matrix omitted a full physical type/width/nullability contract and hid a 64-versus-512-character reason mismatch.",
+    "evidence": ["Initial holistic matrix review at packet c010cdc417c332f799b078b9e91e1000377103d8980fcbc9fa134ec95f490742."],
+    "impact": "Valid long not-applicable reasons could be rejected or truncated and layers could choose incompatible field vocabularies.",
+    "requiredClosure": "Define all physical domains and columns, a closed field-code registry, and boundary vectors through 512 characters.",
+    "closureEvidence": ["Matrix section 7 now defines reusable domains, every typed table's columns/nullability/checks/uniqueness, the closed field-code vocabulary, UNION_REASON width, and 1/64/65/511/512 plus invalid 0/513 boundary vectors."]
+  },
+  {
+    "id": "T081-V4-S3A-MA-005",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Every schema-valid designation member union, including all-series groups, is representable.",
+    "summary": "C8 incorrectly required a model member and H3 did not explicitly define union cardinality.",
+    "evidence": ["Initial holistic matrix review at packet c010cdc417c332f799b078b9e91e1000377103d8980fcbc9fa134ec95f490742."],
+    "impact": "A schema-valid all-series condition group could not satisfy the typed contract.",
+    "requiredClosure": "Require at least one member across the model/series union and add model-only, series-only, and mixed vectors for both group families.",
+    "closureEvidence": ["C8 and H3 now require exact nonempty union counts with contiguous ordinals, and both positive vector families explicitly cover model-only, series-only, and mixed groups."]
+  },
+  {
+    "id": "T081-V4-S3A-MA-006",
+    "stage": "design",
+    "reviewer": "/root",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The typed identity owner preserves every branch of the required canonical product normalizedIdentity union.",
+    "summary": "The initial matrix collapsed product normalizedIdentity unknown/not-applicable payload branches into a fixed no_normalized_identity unknown mapping.",
+    "evidence": ["Schema manufacturerIdentity always requires normalizedIdentity, whose knownString union permits known, unknown, and not_applicable."],
+    "impact": "Typed reconstruction could not recover the exact discriminator, reason, or temporal scope for a schema-valid product manufacturer.",
+    "requiredClosure": "Keep candidate_payload for every present canonical normalizedIdentity branch and store its exact state/value or reason/temporal tuple losslessly.",
+    "closureEvidence": ["P4 and the identity physical domain now preserve exact known/unknown/not_applicable candidate_payload states and 512-character union reasons; T-PRODUCT-UNION and corruption vectors cover all branches."]
+  },
+  {
+    "id": "T081-V4-S3A-MA-007",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every validator-2-valid pointer-derived semantic key fits the physical representation losslessly.",
+    "summary": "The matrix specified node_key varchar(255), but valid recursive expression pointers can exceed 255 characters.",
+    "evidence": ["Holistic closure-1 review at packet bda863e69f285d670a7e3c4df69cda06ea6b045e84273f6980ef674775e317f9."],
+    "impact": "A schema-valid nested expression could pass ingestion and fail materialization solely due to a narrower relational width.",
+    "requiredClosure": "Use unbounded text or prove one shared validator bound, freeze resource limits, and add a >255-character pointer parity vector.",
+    "closureEvidence": ["The semantic node domain now uses unbounded text for node_key, the DSL freezes all four validator resource limits, and T-EXPR-LONG-POINTER requires Python/PostgreSQL/read parity above 255 characters."]
+  },
+  {
+    "id": "T081-V4-S3A-F1-IA-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every graph-changing INSERT, UPDATE, or DELETE automatically dirties and deferred-validates every affected projection, independently of immutability.",
+    "summary": "Family-1 dirty-generation and completeness triggers covered INSERT only.",
+    "evidence": ["Initial Family-1 review at packet b68844073dfdc0b229c65c35353761025595fdc4e2caec460fb3cb858e2af489."],
+    "impact": "With immutability disabled, UPDATE or DELETE could commit an invalid graph without automatic deferred validation.",
+    "requiredClosure": "Cover INSERT, UPDATE, and DELETE, including OLD and NEW projections, and prove automatic rejection after disabling only immutability.",
+    "closureEvidence": [
+      "Dirty and deferred completeness triggers now cover INSERT, UPDATE, and DELETE and resolve both OLD and NEW affected projections.",
+      "A transaction-local generation table coalesces repeated row events while forcing revalidation after any later mutation.",
+      "PostgreSQL test_18 disables only immutability and proves automatic SET CONSTRAINTS rejection for valid-shape UPDATE and DELETE corruption.",
+      "Independent reviewer /root/v4_s3a_impl_adversary closed the finding at packet a613ca3b54ad2181a47adcc896f93c86ab0c975913b55d6318927bb38c2de46f; see adversarial-implementation-family1-closure.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-F1-IA-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The Family-1 direct-SQL and read corruption matrix demonstrates every normative missing, extra, cross-reference, union, provenance, hash, ordering, cardinality, and transaction-generation failure class.",
+    "summary": "The initial Family-1 packet had a broad positive fixture but only six selected SQL corruptions and seven read mutations.",
+    "evidence": ["Initial Family-1 review at packet b68844073dfdc0b229c65c35353761025595fdc4e2caec460fb3cb858e2af489."],
+    "impact": "The required direct-SQL and validation-generation threat model was asserted more broadly than demonstrated.",
+    "requiredClosure": "Add table-driven SQL and endpoint matrices for all named X-* classes, including SET CONSTRAINTS followed by a later Family-1 write.",
+    "closureEvidence": [
+      "PostgreSQL test_18 now covers valid alternate unions and optional presence, missing and extra owners/mappings/evidence, wrong semantic type, member ordinal gaps, cross-projection parents, distinct source/context evidence swaps, mapping provenance/hash/cross-reference drift, and semantic hash drift.",
+      "The same test first establishes an immediate constraint boundary and then proves a later wrong-type Family-1 INSERT is revalidated and rejected.",
+      "The reconstruction endpoint vector now adds alternate-union and mapping-provenance corruption plus missing and extra typed-owner cases.",
+      "Freshly migrated disposable PostgreSQL suite passed 19/19 and focused host applicability/calibration passed 22/22.",
+      "Independent reviewer /root/v4_s3a_impl_adversary closed the finding at packet a613ca3b54ad2181a47adcc896f93c86ab0c975913b55d6318927bb38c2de46f; see adversarial-implementation-family1-closure.md."
+    ]
+  }
+]

@@ -32,6 +32,8 @@ from app.models.core import (
     ADMatchResult,
     ADTargetApplicability,
     ADV4CandidateProposal,
+    ADV4CandidateAppMaterializationRequest,
+    ADV4CandidateAppProjection,
     ADV4CandidateSubmission,
     AircraftADDueState,
     AirworthinessDirective,
@@ -49,6 +51,9 @@ from app.schemas.ads import (
     ADEvidenceFragmentResponse,
     ADV4CandidateListResponse,
     ADV4CandidateResponse,
+    ADV4ApplicabilityProjectionListResponse,
+    ADV4ApplicabilityProjectionResponse,
+    ADV4ApplicabilityReconstructionResponse,
     ADV4SubmissionAuditResponse,
     ADV4SubmissionRelationshipAuditResponse,
     ADProposalProvenanceResponse,
@@ -112,6 +117,14 @@ from app.services.ad_v4_candidates import (
     store_v4_candidate,
     verified_candidate,
     verified_submission,
+)
+from app.services.ad_v4_applicability import (
+    POLICY_VERSION as APP_PROJECTION_POLICY_VERSION,
+    authorize_projection_audit,
+    materialize_applicability,
+    projection_state,
+    reconstruct_applicability,
+    verified_app_projection,
 )
 from app.services.ad_recurrence import due_state_payload
 from app.services.installed_components import component_display_name
@@ -405,6 +418,151 @@ def get_v4_candidate_proposal(
         raise v4_http_error(exc) from exc
 
 
+def serialize_v4_app_projection(
+    db: Session,
+    projection: ADV4CandidateAppProjection,
+    *,
+    acting_membership_id: str,
+    request_row: ADV4CandidateAppMaterializationRequest | None = None,
+    created: bool = False,
+    idempotent_retry: bool = False,
+) -> ADV4ApplicabilityProjectionResponse:
+    # Every audit representation is verified against the complete typed graph;
+    # list responses must not be a weaker integrity path than detail/readback.
+    reconstruct_applicability(db, projection)
+    state_value, reasons = projection_state(db, projection)
+    return ADV4ApplicabilityProjectionResponse(
+        projectionId=projection.id,
+        proposalId=projection.proposal_id,
+        directiveId=projection.directive_id,
+        validatorVersion=projection.validator_version,
+        canonicalizationVersion=projection.canonicalization_version,
+        materializerVersion=projection.materializer_version,
+        proposalCanonicalHash=projection.proposal_canonical_hash,
+        evidenceBindingHash=projection.evidence_binding_hash,
+        applicabilitySubtreeHash=projection.applicability_subtree_hash,
+        projectionHash=projection.projection_hash,
+        gate=projection.gate,
+        projectionState=state_value,
+        stateReasons=reasons,
+        semanticNodeCount=projection.semantic_node_count,
+        datumCount=projection.datum_count,
+        evidenceLinkCount=projection.evidence_link_count,
+        identityMappingCount=projection.identity_mapping_count,
+        requestId=request_row.id if request_row else None,
+        created=created,
+        idempotentRetry=idempotent_retry,
+        actingMembershipId=acting_membership_id,
+        authPolicyVersion=APP_PROJECTION_POLICY_VERSION,
+        createdAt=projection.created_at,
+    )
+
+
+@router.post(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/applicability-projection",
+    response_model=ADV4ApplicabilityProjectionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_v4_applicability_projection(
+    directive_id: str,
+    proposal_id: str,
+    response: Response,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=255),
+    acting_membership_id: str = Header(alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ApplicabilityProjectionResponse:
+    try:
+        result = materialize_applicability(
+            db, directive_id=directive_id, proposal_id=proposal_id,
+            actor=current_user, membership_id=acting_membership_id,
+            idempotency_key=idempotency_key,
+        )
+        db.commit()
+        db.refresh(result.projection)
+        db.refresh(result.request)
+        if not result.created:
+            response.status_code = status.HTTP_200_OK
+        return serialize_v4_app_projection(
+            db, result.projection, acting_membership_id=acting_membership_id,
+            request_row=result.request, created=result.created,
+            idempotent_retry=result.idempotent_retry,
+        )
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+
+
+@router.get(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/applicability-projection",
+    response_model=ADV4ApplicabilityProjectionResponse,
+)
+def get_v4_applicability_projection(
+    directive_id: str,
+    proposal_id: str,
+    acting_membership_id: str = Header(alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ApplicabilityProjectionResponse:
+    try:
+        authorize_projection_audit(db, current_user, acting_membership_id)
+        projection = verified_app_projection(db, directive_id=directive_id, proposal_id=proposal_id)
+        return serialize_v4_app_projection(db, projection, acting_membership_id=acting_membership_id)
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+
+
+@router.get(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/applicability-projection/reconstruction",
+    response_model=ADV4ApplicabilityReconstructionResponse,
+)
+def get_v4_applicability_reconstruction(
+    directive_id: str,
+    proposal_id: str,
+    acting_membership_id: str = Header(alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ApplicabilityReconstructionResponse:
+    try:
+        authorize_projection_audit(db, current_user, acting_membership_id)
+        projection = verified_app_projection(db, directive_id=directive_id, proposal_id=proposal_id)
+        subtree = reconstruct_applicability(db, projection)
+        return ADV4ApplicabilityReconstructionResponse(
+            projectionId=projection.id, proposalId=projection.proposal_id,
+            directiveId=projection.directive_id, gate=projection.gate,
+            applicabilitySubtreeHash=projection.applicability_subtree_hash,
+            projectionHash=projection.projection_hash,
+            canonicalApplicability=subtree,
+            actingMembershipId=acting_membership_id,
+            authPolicyVersion=APP_PROJECTION_POLICY_VERSION,
+        )
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+
+
+@router.get(
+    "/directives/{directive_id}/v4/applicability-projections",
+    response_model=ADV4ApplicabilityProjectionListResponse,
+)
+def list_v4_applicability_projections(
+    directive_id: str,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    acting_membership_id: str = Header(alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ApplicabilityProjectionListResponse:
+    try:
+        authorize_projection_audit(db, current_user, acting_membership_id)
+        total = db.scalar(select(func.count()).select_from(ADV4CandidateAppProjection).where(ADV4CandidateAppProjection.directive_id == directive_id)) or 0
+        rows = db.scalars(select(ADV4CandidateAppProjection).where(ADV4CandidateAppProjection.directive_id == directive_id).order_by(ADV4CandidateAppProjection.created_at.desc(), ADV4CandidateAppProjection.id.desc()).offset(offset).limit(limit)).all()
+        responses = [serialize_v4_app_projection(db, row, acting_membership_id=acting_membership_id) for row in rows]
+        return ADV4ApplicabilityProjectionListResponse(projections=responses, count=len(responses), total=total, limit=limit, offset=offset)
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
 @router.get(
     "/source-documents/{source_document_id}/pages/{page_number}",
     response_model=ADSourcePageEvidenceResponse,

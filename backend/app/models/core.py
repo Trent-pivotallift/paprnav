@@ -3,7 +3,7 @@ from datetime import date as PythonDate
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, ForeignKeyConstraint, Index, Integer, JSON, LargeBinary, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, ForeignKeyConstraint, Index, Integer, JSON, LargeBinary, Numeric, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -819,6 +819,8 @@ class ADV4CandidateEvidenceBinding(Base):
     fragment_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     admitted_event_id: Mapped[str] = mapped_column(ForeignKey("ad_evidence_fragment_lifecycle_events.id"), nullable=False)
     admitted_event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    validator_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-validator-1")
+    canonicalization_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-c14n-1")
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -851,6 +853,8 @@ class ADV4CandidateSubmission(Base):
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     request_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     raw_transport_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    validator_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-validator-1")
+    canonicalization_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-c14n-1")
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -873,6 +877,8 @@ class ADV4CandidateSubmissionRelationship(Base):
     evidence_keys: Mapped[list] = mapped_column(JSON, nullable=False)
     canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     relationship_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    validator_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-validator-1")
+    canonicalization_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-c14n-1")
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
@@ -895,6 +901,708 @@ class ADV4CandidateProposalEvent(Base):
     predecessor_event_hash: Mapped[str] = mapped_column(String(64), nullable=True)
     canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     event_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    validator_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-validator-1")
+    canonicalization_version: Mapped[str] = mapped_column(String(64), nullable=False, default="paprnav-ad-v4-c14n-1")
+    occurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4FeatureGate(Base):
+    __tablename__ = "ad_v4_feature_gates"
+
+    gate_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    changed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    changed_by: Mapped[str] = mapped_column(String(128), nullable=False, default="migration")
+
+
+class ADV4CandidateAppProjection(Base):
+    __tablename__ = "ad_v4_candidate_app_projections"
+    __table_args__ = (
+        CheckConstraint("gate = 'candidate_only'", name="ck_ad_v4_app_projection_gate"),
+        UniqueConstraint("proposal_id", "materializer_version", name="uq_ad_v4_app_projection_parent"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_app_projection_identity"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False, index=True)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    validator_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonicalization_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_binding_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    materializer_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    applicability_subtree_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    applicability_subtree_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    projection_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    projection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    gate: Mapped[str] = mapped_column(String(32), nullable=False, default="candidate_only")
+    semantic_node_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    datum_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    evidence_link_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    identity_mapping_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateAppMaterializationRequest(Base):
+    __tablename__ = "ad_v4_candidate_app_materialization_requests"
+    __table_args__ = (
+        CheckConstraint("actor_role = 'platform_admin'", name="ck_ad_v4_app_request_role"),
+        CheckConstraint("actor_status = 'active'", name="ck_ad_v4_app_request_status"),
+        UniqueConstraint(
+            "actor_user_id", "authorizing_membership_id", "endpoint_action",
+            "auth_policy_version", "idempotency_key", name="uq_ad_v4_app_request_idempotency",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False)
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    authorizing_membership_id: Mapped[str] = mapped_column(ForeignKey("organization_memberships.id"), nullable=False)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    auth_policy_name: Mapped[str] = mapped_column(String(96), nullable=False)
+    auth_policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    auth_claims_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    endpoint_action: Mapped[str] = mapped_column(String(96), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateAppSemanticNode(Base):
+    __tablename__ = "ad_v4_candidate_app_semantic_nodes"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal >= 0", name="ck_ad_v4_app_node_ordinal"),
+        CheckConstraint("node_type IN ('product_scope','designation_scope','value_assertion','identity_mapping','designation_value','designation_range','designation_group','designation_group_member','condition','expression','applicability_rule','search_hint','search_hint_group','search_hint_model','change_dependency')", name="ck_ad_v4_app_node_type"),
+        UniqueConstraint("projection_id", "node_type", "node_key", name="uq_ad_v4_app_node_key"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_app_node_identity"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    parent_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    node_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    node_key: Mapped[str] = mapped_column(Text, nullable=False)
+    source_pointer: Mapped[str] = mapped_column(Text, nullable=False)
+    canonical_node_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateAppDatum(Base):
+    """Closed scalar/container projection used for byte-exact subtree reconstruction."""
+
+    __tablename__ = "ad_v4_candidate_app_data"
+    __table_args__ = (
+        CheckConstraint("value_kind IN ('object','array','string','boolean')", name="ck_ad_v4_app_datum_kind"),
+        UniqueConstraint("projection_id", "json_pointer", name="uq_ad_v4_app_datum_pointer"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    semantic_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    json_pointer: Mapped[str] = mapped_column(Text, nullable=False)
+    parent_pointer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    property_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    array_ordinal: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    value_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    string_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    boolean_value: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    value_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ADV4CandidateAppEvidenceLink(Base):
+    __tablename__ = "ad_v4_candidate_app_evidence_links"
+    __table_args__ = (
+        UniqueConstraint("semantic_node_id", "purpose", "evidence_key", name="uq_ad_v4_app_evidence_link"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    candidate_binding_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_evidence_bindings.id"), nullable=False)
+    evidence_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    link_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ADV4CandidateAppIdentityMapping(Base):
+    __tablename__ = "ad_v4_candidate_app_identity_mappings"
+    __table_args__ = (
+        CheckConstraint("identity_kind IN ('manufacturer','model','series','model_or_series')", name="ck_ad_v4_app_identity_kind"),
+        CheckConstraint("normalization_origin IN ('candidate_payload','source_only','no_normalized_identity')", name="ck_ad_v4_app_identity_origin"),
+        CheckConstraint("normalized_state IN ('known','unknown','not_applicable')", name="ck_ad_v4_app_identity_state"),
+        CheckConstraint(
+            "(normalization_origin='candidate_payload' AND ((normalized_state='known' AND normalized_value IS NOT NULL AND reason IS NULL AND temporal_scope IS NULL AND normalization_namespace IS NOT NULL AND normalization_version IS NOT NULL) OR (normalized_state='unknown' AND normalized_value IS NULL AND reason IN ('not_observed','unavailable','not_obtained','not_extracted','not_yet_reviewed','not_yet_verified','conflicting_evidence','source_ambiguous','unsupported_expression') AND temporal_scope IS NOT NULL AND normalization_namespace IS NULL AND normalization_version IS NULL) OR (normalized_state='not_applicable' AND normalized_value IS NULL AND reason IS NOT NULL AND length(reason) BETWEEN 1 AND 512 AND temporal_scope IS NOT NULL AND normalization_namespace IS NULL AND normalization_version IS NULL))) OR "
+            "(normalization_origin IN ('source_only','no_normalized_identity') AND normalized_state='unknown' AND normalized_value IS NULL AND reason IN ('not_extracted','not_yet_reviewed') AND temporal_scope IN ('source_observation','directive_version') AND normalization_namespace IS NULL AND normalization_version IS NULL)",
+            name="ck_ad_v4_app_identity_union",
+        ),
+        CheckConstraint("review_state = 'unreviewed_candidate'", name="ck_ad_v4_app_identity_review"),
+        UniqueConstraint("projection_id", "identity_kind", "source_occurrence_node_id", name="uq_ad_v4_app_identity_occurrence"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False, unique=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    source_occurrence_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    evidence_parent_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    identity_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_value: Mapped[str] = mapped_column(Text, nullable=False)
+    normalization_origin: Mapped[str] = mapped_column(String(64), nullable=False)
+    normalized_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    normalized_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    normalization_namespace: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    normalization_version: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    review_state: Mapped[str] = mapped_column(String(32), nullable=False, default="unreviewed_candidate")
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+
+
+class ADV4CandidateAppValueAssertion(Base):
+    __tablename__ = "ad_v4_candidate_app_value_assertions"
+    __table_args__ = (
+        CheckConstraint("state IN ('known','unknown','not_applicable')", name="ck_ad_v4_app_value_state"),
+        CheckConstraint("value_type='text'", name="ck_ad_v4_app_value_type"),
+        CheckConstraint("field_code IN ('manufacturer','model_or_series','part_number','serial_number','stc_number','attribute_value','source_display_text')", name="ck_ad_v4_app_value_field"),
+        CheckConstraint(
+            "(state='known' AND text_value IS NOT NULL AND length(text_value) BETWEEN 1 AND 512 AND reason IS NULL AND temporal_scope IS NULL) OR "
+            "(state='unknown' AND text_value IS NULL AND reason IN ('not_observed','unavailable','not_obtained','not_extracted','not_yet_reviewed','not_yet_verified','conflicting_evidence','source_ambiguous','unsupported_expression') AND temporal_scope IS NOT NULL) OR "
+            "(state='not_applicable' AND text_value IS NULL AND reason IS NOT NULL AND length(reason) BETWEEN 1 AND 512 AND temporal_scope IS NOT NULL)",
+            name="ck_ad_v4_app_value_union",
+        ),
+        CheckConstraint("temporal_scope IS NULL OR temporal_scope IN ('directive_version','publication_version','at_applicability_evaluation','at_compliance_evaluation','source_observation')", name="ck_ad_v4_app_value_temporal"),
+        UniqueConstraint("parent_semantic_node_id", "field_code", name="uq_ad_v4_app_value_parent_field"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    parent_semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    field_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    value_type: Mapped[str] = mapped_column(String(16), nullable=False, default="text")
+    text_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+
+class ADV4CandidateAppProductScope(Base):
+    __tablename__ = "ad_v4_candidate_app_product_scopes"
+    __table_args__ = (
+        CheckConstraint("product_role IN ('airframe','engine','propeller','appliance','installed_part','modification')", name="ck_ad_v4_app_product_role"),
+        CheckConstraint("manufacturer_presence IN ('property_absent','present')", name="ck_ad_v4_app_product_manufacturer_presence"),
+        CheckConstraint(
+            "(manufacturer_presence='present' AND manufacturer_source_value IS NOT NULL AND manufacturer_identity_mapping_node_id IS NOT NULL) OR "
+            "(manufacturer_presence='property_absent' AND manufacturer_source_value IS NULL AND manufacturer_identity_mapping_node_id IS NULL)",
+            name="ck_ad_v4_app_product_manufacturer_union",
+        ),
+        CheckConstraint("model_presence IN ('property_absent','present') AND serial_presence IN ('property_absent','present') AND part_number_presence IN ('property_absent','present')", name="ck_ad_v4_app_product_designation_presence"),
+        UniqueConstraint("projection_id", "scope_key", name="uq_ad_v4_app_product_scope_key"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    scope_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    product_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    manufacturer_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    manufacturer_source_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_identity_mapping_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    model_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    serial_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    part_number_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+class ADV4CandidateAppDesignationScope(Base):
+    __tablename__ = "ad_v4_candidate_app_designation_scopes"
+    __table_args__ = (
+        CheckConstraint("field_kind IN ('model','serial','part_number')", name="ck_ad_v4_app_designation_field"),
+        CheckConstraint("scope_kind IN ('all','listed','series_expression','ranges','unknown','not_applicable')", name="ck_ad_v4_app_designation_kind"),
+        CheckConstraint(
+            "(scope_kind='series_expression' AND series_expression IS NOT NULL AND reason IS NULL AND temporal_scope IS NULL AND evaluation_state='unknown' AND evaluator_contract='unsupported_expression') OR "
+            "(scope_kind IN ('unknown','not_applicable') AND series_expression IS NULL AND reason IS NOT NULL AND temporal_scope IS NOT NULL AND evaluation_state='unevaluated' AND evaluator_contract='none') OR "
+            "(scope_kind IN ('all','listed','ranges') AND series_expression IS NULL AND reason IS NULL AND temporal_scope IS NULL AND evaluation_state='unevaluated' AND evaluator_contract='none')",
+            name="ck_ad_v4_app_designation_union",
+        ),
+        UniqueConstraint("product_scope_node_id", "field_kind", name="uq_ad_v4_app_designation_scope_field"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    product_scope_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    field_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    scope_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    series_expression: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    evaluation_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    evaluator_contract: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ADV4CandidateAppDesignationValue(Base):
+    __tablename__ = "ad_v4_candidate_app_designation_values"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal>=0", name="ck_ad_v4_app_designation_value_ordinal"),
+        UniqueConstraint("designation_scope_id", "source_value", name="uq_ad_v4_app_designation_value_source"),
+        UniqueConstraint("designation_scope_id", "canonical_ordinal", name="uq_ad_v4_app_designation_value_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    designation_scope_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    source_value: Mapped[str] = mapped_column(Text, nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    identity_mapping_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+
+
+class ADV4CandidateAppDesignationRange(Base):
+    __tablename__ = "ad_v4_candidate_app_designation_ranges"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal>=0", name="ck_ad_v4_app_designation_range_ordinal"),
+        CheckConstraint("polarity IN ('included','excluded')", name="ck_ad_v4_app_designation_range_polarity"),
+        CheckConstraint("comparator_version='lexical_source_only_v1'", name="ck_ad_v4_app_designation_range_comparator"),
+        UniqueConstraint("designation_scope_id", "lower_value", "upper_value", "lower_inclusive", "upper_inclusive", "polarity", name="uq_ad_v4_app_designation_range_identity"),
+        UniqueConstraint("designation_scope_id", "canonical_ordinal", name="uq_ad_v4_app_designation_range_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    designation_scope_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    lower_value: Mapped[str] = mapped_column(Text, nullable=False)
+    upper_value: Mapped[str] = mapped_column(Text, nullable=False)
+    lower_inclusive: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    upper_inclusive: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    polarity: Mapped[str] = mapped_column(String(16), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    comparator_version: Mapped[str] = mapped_column(String(64), nullable=False, default="lexical_source_only_v1")
+
+
+class ADV4CandidateAppCondition(Base):
+    __tablename__ = "ad_v4_candidate_app_conditions"
+    __table_args__ = (
+        CheckConstraint("condition_type IN ('identity','identifier_range','installed_equipment','modification_or_stc','configuration_attribute','temporal_overlap','source_inclusion','source_exclusion','reviewed_manual_predicate')", name="ck_ad_v4_app_condition_type"),
+        CheckConstraint("operator IN ('identity_equals','identity_in','identifier_in_range','is_installed','is_not_installed','equals','overlaps','includes','excludes','requires_review')", name="ck_ad_v4_app_condition_operator"),
+        CheckConstraint("comparator_presence IN ('property_absent','present') AND subject_product_role_presence IN ('property_absent','present') AND subject_attribute_key_presence IN ('property_absent','present') AND designation_group_presence IN ('property_absent','present')", name="ck_ad_v4_app_condition_presence"),
+        CheckConstraint("(comparator_presence='present')=(comparator_version IS NOT NULL)", name="ck_ad_v4_app_condition_comparator"),
+        CheckConstraint("(subject_product_role_presence='present')=(subject_product_role IS NOT NULL)", name="ck_ad_v4_app_condition_role_presence"),
+        CheckConstraint("subject_product_role IS NULL OR subject_product_role IN ('airframe','engine','propeller','appliance','installed_part','modification')", name="ck_ad_v4_app_condition_role"),
+        CheckConstraint("(subject_attribute_key_presence='present')=(subject_attribute_key IS NOT NULL)", name="ck_ad_v4_app_condition_attribute"),
+        CheckConstraint("(designation_group_presence='present')=(designation_group_node_id IS NOT NULL)", name="ck_ad_v4_app_condition_group"),
+        CheckConstraint("evaluation_state='unevaluated' AND evaluator_contract='none'", name="ck_ad_v4_app_condition_evaluation"),
+        UniqueConstraint("projection_id", "condition_key", name="uq_ad_v4_app_condition_key"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    condition_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    condition_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    operator: Mapped[str] = mapped_column(String(64), nullable=False)
+    temporal_basis: Mapped[str] = mapped_column(String(64), nullable=False)
+    comparator_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    comparator_version: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    subject_product_role_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject_product_role: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    subject_attribute_key_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject_attribute_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    designation_group_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    designation_group_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    evaluation_state: Mapped[str] = mapped_column(String(32), nullable=False, default="unevaluated")
+    evaluator_contract: Mapped[str] = mapped_column(String(64), nullable=False, default="none")
+
+
+class ADV4CandidateAppDesignationGroup(Base):
+    __tablename__ = "ad_v4_candidate_app_designation_groups"
+    __table_args__ = (
+        CheckConstraint("association IN ('all_members','any_member','source_group','unknown')", name="ck_ad_v4_app_group_association"),
+        CheckConstraint("(association='unknown' AND reason IN ('not_observed','unavailable','not_obtained','not_extracted','not_yet_reviewed','not_yet_verified','conflicting_evidence','source_ambiguous','unsupported_expression') AND temporal_scope IS NOT NULL) OR (association<>'unknown' AND reason IS NULL AND temporal_scope IS NULL)", name="ck_ad_v4_app_group_unknown"),
+        CheckConstraint("canonical_ordinal>=0", name="ck_ad_v4_app_group_ordinal"),
+        UniqueConstraint("condition_node_id", "group_key", name="uq_ad_v4_app_group_key"),
+        UniqueConstraint("condition_node_id", "canonical_ordinal", name="uq_ad_v4_app_group_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    condition_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    group_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    association: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_display_assertion_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class ADV4CandidateAppDesignationGroupMember(Base):
+    __tablename__ = "ad_v4_candidate_app_designation_group_members"
+    __table_args__ = (
+        CheckConstraint("designation_kind IN ('model','series_expression')", name="ck_ad_v4_app_group_member_kind"),
+        CheckConstraint("(designation_kind='model' AND source_designation IS NOT NULL AND expression_text IS NULL AND evaluation_state IS NULL AND evaluation_reason IS NULL) OR (designation_kind='series_expression' AND source_designation IS NULL AND expression_text IS NOT NULL AND evaluation_state='unevaluated' AND evaluation_reason='unsupported_expression')", name="ck_ad_v4_app_group_member_union"),
+        CheckConstraint("manufacturer_state IN ('known','unknown','not_applicable')", name="ck_ad_v4_app_group_member_manufacturer_state"),
+        CheckConstraint("(manufacturer_state='known' AND manufacturer_value IS NOT NULL AND manufacturer_reason IS NULL AND manufacturer_temporal_scope IS NULL) OR (manufacturer_state='unknown' AND manufacturer_value IS NULL AND manufacturer_reason IN ('not_observed','unavailable','not_obtained','not_extracted','not_yet_reviewed','not_yet_verified','conflicting_evidence','source_ambiguous','unsupported_expression') AND manufacturer_temporal_scope IS NOT NULL) OR (manufacturer_state='not_applicable' AND manufacturer_value IS NULL AND manufacturer_reason IS NOT NULL AND length(manufacturer_reason) BETWEEN 1 AND 512 AND manufacturer_temporal_scope IS NOT NULL)", name="ck_ad_v4_app_group_member_manufacturer_union"),
+        CheckConstraint("canonical_ordinal>=0", name="ck_ad_v4_app_group_member_ordinal"),
+        UniqueConstraint("group_node_id", "member_key", name="uq_ad_v4_app_group_member_key"),
+        UniqueConstraint("group_node_id", "canonical_ordinal", name="uq_ad_v4_app_group_member_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    group_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    member_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    designation_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_designation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    expression_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_assertion_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    manufacturer_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    manufacturer_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    evaluation_state: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    evaluation_reason: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    designation_identity_mapping_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+
+
+class ADV4CandidateAppRule(Base):
+    __tablename__ = "ad_v4_candidate_app_rules"
+    __table_args__ = (
+        CheckConstraint("condition_presence IN ('property_absent','present')", name="ck_ad_v4_app_rule_condition_presence"),
+        CheckConstraint("(condition_presence='present')=(condition_expression_node_id IS NOT NULL)", name="ck_ad_v4_app_rule_condition_union"),
+        CheckConstraint("evaluator_contract='none'", name="ck_ad_v4_app_rule_evaluator"),
+        UniqueConstraint("projection_id", "rule_key", name="uq_ad_v4_app_rule_key"),
+        ForeignKeyConstraint(["semantic_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["scope_expression_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["condition_expression_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    rule_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    scope_expression_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    condition_presence: Mapped[str] = mapped_column(String(32), nullable=False)
+    condition_expression_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    evaluator_contract: Mapped[str] = mapped_column(String(64), nullable=False, default="none")
+
+
+class ADV4CandidateAppExpression(Base):
+    __tablename__ = "ad_v4_candidate_app_expressions"
+    __table_args__ = (
+        CheckConstraint("expression_context IN ('scope','condition')", name="ck_ad_v4_app_expression_context"),
+        CheckConstraint("expression_node_type IN ('scope_ref','predicate_ref','rule_ref','not','all','any')", name="ck_ad_v4_app_expression_type"),
+        CheckConstraint("result_domain='true_false_unknown' AND evaluator_contract='none'", name="ck_ad_v4_app_expression_evaluator"),
+        CheckConstraint(
+            "(expression_node_type='scope_ref' AND scope_node_id IS NOT NULL AND condition_node_id IS NULL AND referenced_rule_node_id IS NULL) OR "
+            "(expression_node_type='predicate_ref' AND scope_node_id IS NULL AND condition_node_id IS NOT NULL AND referenced_rule_node_id IS NULL) OR "
+            "(expression_node_type='rule_ref' AND scope_node_id IS NULL AND condition_node_id IS NULL AND referenced_rule_node_id IS NOT NULL) OR "
+            "(expression_node_type IN ('not','all','any') AND scope_node_id IS NULL AND condition_node_id IS NULL AND referenced_rule_node_id IS NULL)",
+            name="ck_ad_v4_app_expression_reference_union",
+        ),
+        UniqueConstraint("owning_rule_node_id", "expression_context", "expression_path", name="uq_ad_v4_app_expression_path"),
+        ForeignKeyConstraint(["semantic_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["owning_rule_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["scope_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["condition_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["referenced_rule_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    owning_rule_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    expression_context: Mapped[str] = mapped_column(String(16), nullable=False)
+    expression_path: Mapped[str] = mapped_column(Text, nullable=False)
+    expression_node_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    result_domain: Mapped[str] = mapped_column(String(32), nullable=False, default="true_false_unknown")
+    evaluator_contract: Mapped[str] = mapped_column(String(64), nullable=False, default="none")
+    scope_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    condition_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    referenced_rule_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+
+
+class ADV4CandidateAppExpressionEdge(Base):
+    __tablename__ = "ad_v4_candidate_app_expression_edges"
+    __table_args__ = (
+        CheckConstraint("expression_context IN ('scope','condition')", name="ck_ad_v4_app_expression_edge_context"),
+        CheckConstraint("sequence>=0", name="ck_ad_v4_app_expression_edge_sequence"),
+        UniqueConstraint("parent_expression_id", "child_expression_id", name="uq_ad_v4_app_expression_edge_pair"),
+        UniqueConstraint("child_expression_id", name="uq_ad_v4_app_expression_child"),
+        ForeignKeyConstraint(["projection_id", "proposal_id"], ["ad_v4_candidate_app_projections.id", "ad_v4_candidate_app_projections.proposal_id"]),
+        ForeignKeyConstraint(["owning_rule_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["parent_expression_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["child_expression_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+    )
+
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    owning_rule_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    expression_context: Mapped[str] = mapped_column(String(16), nullable=False)
+    parent_expression_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    child_expression_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+class ADV4CandidateAppRuleExclusion(Base):
+    __tablename__ = "ad_v4_candidate_app_rule_exclusions"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal>=0", name="ck_ad_v4_app_rule_exclusion_ordinal"),
+        UniqueConstraint("rule_node_id", "excluded_rule_node_id", name="uq_ad_v4_app_rule_exclusion_pair"),
+        ForeignKeyConstraint(["projection_id", "proposal_id"], ["ad_v4_candidate_app_projections.id", "ad_v4_candidate_app_projections.proposal_id"]),
+        ForeignKeyConstraint(["rule_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["excluded_rule_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+    )
+
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    rule_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    excluded_rule_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+class ADV4CandidateAppSearchHint(Base):
+    __tablename__ = "ad_v4_candidate_app_search_hints"
+    __table_args__ = (
+        CheckConstraint("product_role IN ('airframe','engine','propeller','appliance','installed_part','modification')", name="ck_ad_v4_app_search_hint_role"),
+        CheckConstraint("controlling=false AND exhaustive=false", name="ck_ad_v4_app_search_hint_noncontrolling"),
+        UniqueConstraint("projection_id", "hint_key", name="uq_ad_v4_app_search_hint_key"),
+        ForeignKeyConstraint(["semantic_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["source_display_assertion_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    hint_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    product_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_display_assertion_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    controlling: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    exhaustive: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class ADV4CandidateAppSearchHintGroup(Base):
+    __tablename__ = "ad_v4_candidate_app_search_hint_groups"
+    __table_args__ = (
+        CheckConstraint("association IN ('paired','source_group','unknown')", name="ck_ad_v4_app_search_hint_group_association"),
+        CheckConstraint("(association='unknown' AND reason IN ('not_observed','unavailable','not_obtained','not_extracted','not_yet_reviewed','not_yet_verified','conflicting_evidence','source_ambiguous','unsupported_expression') AND temporal_scope IS NOT NULL) OR (association<>'unknown' AND reason IS NULL AND temporal_scope IS NULL)", name="ck_ad_v4_app_search_hint_group_unknown"),
+        CheckConstraint("temporal_scope IS NULL OR temporal_scope IN ('directive_version','publication_version','at_applicability_evaluation','at_compliance_evaluation','source_observation')", name="ck_ad_v4_app_search_hint_group_temporal"),
+        CheckConstraint("manufacturer_state IN ('known','unknown','not_applicable')", name="ck_ad_v4_app_search_hint_group_manufacturer_state"),
+        CheckConstraint("(manufacturer_state='known' AND manufacturer_value IS NOT NULL AND manufacturer_reason IS NULL AND manufacturer_temporal_scope IS NULL) OR (manufacturer_state='unknown' AND manufacturer_value IS NULL AND manufacturer_reason IN ('not_observed','unavailable','not_obtained','not_extracted','not_yet_reviewed','not_yet_verified','conflicting_evidence','source_ambiguous','unsupported_expression') AND manufacturer_temporal_scope IS NOT NULL) OR (manufacturer_state='not_applicable' AND manufacturer_value IS NULL AND manufacturer_reason IS NOT NULL AND length(manufacturer_reason) BETWEEN 1 AND 512 AND manufacturer_temporal_scope IS NOT NULL)", name="ck_ad_v4_app_search_hint_group_manufacturer_union"),
+        CheckConstraint("manufacturer_temporal_scope IS NULL OR manufacturer_temporal_scope IN ('directive_version','publication_version','at_applicability_evaluation','at_compliance_evaluation','source_observation')", name="ck_ad_v4_app_search_hint_group_manufacturer_temporal"),
+        CheckConstraint("canonical_ordinal>=0", name="ck_ad_v4_app_search_hint_group_ordinal"),
+        UniqueConstraint("hint_node_id", "group_key", name="uq_ad_v4_app_search_hint_group_key"),
+        UniqueConstraint("hint_node_id", "canonical_ordinal", name="uq_ad_v4_app_search_hint_group_ordinal"),
+        ForeignKeyConstraint(["semantic_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["hint_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["manufacturer_assertion_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    hint_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    group_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    manufacturer_assertion_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    manufacturer_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    manufacturer_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    association: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateAppSearchHintMember(Base):
+    __tablename__ = "ad_v4_candidate_app_search_hint_members"
+    __table_args__ = (
+        CheckConstraint("designation_kind IN ('model','series_expression')", name="ck_ad_v4_app_search_hint_member_kind"),
+        CheckConstraint("(designation_kind='model' AND source_designation IS NOT NULL AND expression_text IS NULL AND evaluation_state IS NULL AND evaluation_reason IS NULL) OR (designation_kind='series_expression' AND source_designation IS NULL AND expression_text IS NOT NULL AND evaluation_state='unevaluated' AND evaluation_reason='unsupported_expression')", name="ck_ad_v4_app_search_hint_member_union"),
+        CheckConstraint("(source_designation IS NULL OR length(source_designation) BETWEEN 1 AND 512) AND (expression_text IS NULL OR length(expression_text) BETWEEN 1 AND 512)", name="ck_ad_v4_app_search_hint_member_text_length"),
+        CheckConstraint("manufacturer_state IN ('known','unknown','not_applicable')", name="ck_ad_v4_app_search_hint_member_manufacturer_state"),
+        CheckConstraint("(manufacturer_state='known' AND manufacturer_value IS NOT NULL AND manufacturer_reason IS NULL AND manufacturer_temporal_scope IS NULL) OR (manufacturer_state='unknown' AND manufacturer_value IS NULL AND manufacturer_reason IN ('not_observed','unavailable','not_obtained','not_extracted','not_yet_reviewed','not_yet_verified','conflicting_evidence','source_ambiguous','unsupported_expression') AND manufacturer_temporal_scope IS NOT NULL) OR (manufacturer_state='not_applicable' AND manufacturer_value IS NULL AND manufacturer_reason IS NOT NULL AND length(manufacturer_reason) BETWEEN 1 AND 512 AND manufacturer_temporal_scope IS NOT NULL)", name="ck_ad_v4_app_search_hint_member_manufacturer_union"),
+        CheckConstraint("manufacturer_temporal_scope IS NULL OR manufacturer_temporal_scope IN ('directive_version','publication_version','at_applicability_evaluation','at_compliance_evaluation','source_observation')", name="ck_ad_v4_app_search_hint_member_manufacturer_temporal"),
+        CheckConstraint("canonical_ordinal>=0", name="ck_ad_v4_app_search_hint_member_ordinal"),
+        UniqueConstraint("group_node_id", "member_key", name="uq_ad_v4_app_search_hint_member_key"),
+        UniqueConstraint("group_node_id", "canonical_ordinal", name="uq_ad_v4_app_search_hint_member_ordinal"),
+        ForeignKeyConstraint(["semantic_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["group_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["manufacturer_assertion_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+        ForeignKeyConstraint(["designation_identity_mapping_node_id", "projection_id", "proposal_id"], ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"]),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    group_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    member_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    designation_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_designation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    expression_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_assertion_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    manufacturer_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    manufacturer_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    manufacturer_temporal_scope: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    evaluation_state: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    evaluation_reason: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    designation_identity_mapping_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+
+
+class ADV4CandidateCorrection(Base):
+    __tablename__ = "ad_v4_candidate_corrections"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal >= 0", name="ck_ad_v4_correction_ordinal_nonnegative"),
+        UniqueConstraint("proposal_id", "correction_key", name="uq_ad_v4_correction_key"),
+        UniqueConstraint("proposal_id", "canonical_ordinal", name="uq_ad_v4_correction_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False, index=True)
+    correction_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    correction_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    original_document_ref_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    correcting_document_ref_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    original_document_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    correcting_document_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    foundation_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    expected_ref_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    expected_evidence_count: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateCorrectionRef(Base):
+    __tablename__ = "ad_v4_candidate_correction_refs"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal >= 0", name="ck_ad_v4_correction_ref_ordinal_nonnegative"),
+        UniqueConstraint("correction_id", "namespace", "semantic_key", name="uq_ad_v4_correction_ref_key"),
+        UniqueConstraint("correction_id", "canonical_ordinal", name="uq_ad_v4_correction_ref_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    correction_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_corrections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    namespace: Mapped[str] = mapped_column(String(64), nullable=False)
+    semantic_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    owner_slice: Mapped[str] = mapped_column(String(32), nullable=False)
+    reference_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ADV4CandidateCorrectionSemanticBinding(Base):
+    __tablename__ = "ad_v4_candidate_correction_semantic_bindings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    correction_ref_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_correction_refs.id"), nullable=False, unique=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False)
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    binding_slice: Mapped[str] = mapped_column(String(32), nullable=False)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    binding_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+
+
+class ADV4CandidateCorrectionEvidenceLink(Base):
+    __tablename__ = "ad_v4_candidate_correction_evidence_links"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal >= 0", name="ck_ad_v4_correction_evidence_ordinal_nonnegative"),
+        UniqueConstraint("correction_id", "evidence_key", name="uq_ad_v4_correction_evidence"),
+        UniqueConstraint("correction_id", "canonical_ordinal", name="uq_ad_v4_correction_evidence_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    correction_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_corrections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    candidate_binding_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_evidence_bindings.id"), nullable=False)
+    evidence_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    link_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ADV4CandidateAppChangeDependency(Base):
+    __tablename__ = "ad_v4_candidate_app_change_dependencies"
+    __table_args__ = (
+        CheckConstraint(
+            "dependency_kind IN ('outgoing_supersedes','outgoing_partially_supersedes','incoming_supersession_signal')",
+            name="ck_ad_v4_app_dependency_kind",
+        ),
+        UniqueConstraint("id", "projection_id", name="uq_ad_v4_app_dependency_parent_identity"),
+        UniqueConstraint("projection_id", "dependency_key", name="uq_ad_v4_app_dependency"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    dependency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    dependency_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    predecessor_ad_number: Mapped[str] = mapped_column(String(64), nullable=False)
+    successor_ad_number: Mapped[str] = mapped_column(String(64), nullable=False)
+    resolution_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    unresolved_reason: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    target_projection_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=True)
+    source_dependency_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_change_dependencies.id"), nullable=True)
+    dependency_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+
+
+class ADV4CandidateAppProjectionEvent(Base):
+    __tablename__ = "ad_v4_candidate_app_projection_events"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["causing_dependency_id", "projection_id"],
+            ["ad_v4_candidate_app_change_dependencies.id", "ad_v4_candidate_app_change_dependencies.projection_id"],
+            name="fk_ad_v4_app_event_same_projection_dependency",
+        ),
+        UniqueConstraint("projection_id", "sequence_number", name="uq_ad_v4_app_event_sequence"),
+        UniqueConstraint("projection_id", "event_hash", name="uq_ad_v4_app_event_hash"),
+        Index(
+            "uq_ad_v4_app_event_dependency_cause", "projection_id", "event_type", "causing_dependency_id",
+            unique=True, postgresql_where=text("causing_dependency_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_ad_v4_app_event_relationship_cause", "projection_id", "event_type", "causing_relationship_id",
+            unique=True, postgresql_where=text("causing_relationship_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_ad_v4_app_event_lifecycle_cause", "projection_id", "event_type", "causing_lifecycle_event_id",
+            unique=True, postgresql_where=text("causing_lifecycle_event_id IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    reason_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    causing_request_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_materialization_requests.id"), nullable=True)
+    causing_relationship_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_submission_relationships.id"), nullable=True)
+    causing_lifecycle_event_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_evidence_fragment_lifecycle_events.id"), nullable=True)
+    causing_dependency_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_change_dependencies.id"), nullable=True)
+    predecessor_event_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     occurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 

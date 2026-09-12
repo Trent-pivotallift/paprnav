@@ -1,0 +1,56 @@
+[
+  {
+    "id": "T081-V4-S3A-EQ-DA-001",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "blocker",
+    "status": "rejected_finding",
+    "invariant": "Every canonical owner occurrence has exactly one total, unique, non-null typed relation under every schema-valid union branch.",
+    "summary": "The proposed typed views do not normatively specify or database-enforce totality, uniqueness, nullability, cardinality, or failed-join behavior.",
+    "evidence": [
+      "The decision lists view columns but not exact paths, occurrence IDs, joins, cardinalities, nullability, or failure behavior.",
+      "The deferred validator proves the generic graph but does not validate the derived views, so an incomplete join can silently omit an owner occurrence."
+    ],
+    "impact": "The amendment does not prove guarantees equivalent to exactly-one physical typed ownership.",
+    "requiredClosure": "Specify and database-enforce every typed-view mapping or retain the approved physical typed-owner tables.",
+    "closureEvidence": [
+      "The coordinator rejected the equivalence amendment and returned IA-001 to the approved physical typed-owner implementation; no typed views will be implemented."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-EQ-DA-002",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "blocker",
+    "status": "rejected_finding",
+    "invariant": "Direct SQL cannot forge validator conformance and commit a state the approved physical typed schema would reject.",
+    "summary": "The equivalence proof assumes validator-2 conformance that the database proposal boundary does not establish.",
+    "evidence": [
+      "The proposal trigger verifies envelope identity and hashes but does not execute JSON Schema, semantic-reference, or cycle validation.",
+      "A direct SQL writer can stamp validator-2 on invalid canonical content and faithfully project it into the generic graph."
+    ],
+    "impact": "The generic-plus-view legal state set is broader than the approved physical typed-table state set under the direct-SQL threat model.",
+    "requiredClosure": "Add a non-forgeable database validation boundary, narrow the threat model with evidence, or retain physical typed tables.",
+    "closureEvidence": [
+      "The coordinator rejected the equivalence amendment and retained physical typed tables, which preserve database-level defense in depth without changing the direct-SQL threat model."
+    ]
+  },
+  {
+    "id": "T081-V4-S3A-EQ-DA-003",
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "severity": "high",
+    "status": "rejected_finding",
+    "invariant": "The typed research surface is read-only and the generic datum table is not a query escape hatch for runtime or research roles.",
+    "summary": "The view amendment omits an explicit grants, revocations, security behavior, and actual-role test contract.",
+    "evidence": [
+      "Catalog non-updatability alone does not prevent base-table SELECT or mutation privileges.",
+      "The decision does not name migration-owner, application-role, or research-role grants and revocations."
+    ],
+    "impact": "A permitted role could bypass the claimed typed-only query surface.",
+    "requiredClosure": "Define and test explicit role privileges and view security behavior if the view amendment is pursued.",
+    "closureEvidence": [
+      "The coordinator rejected the view amendment; no new view/query privilege surface will be introduced by IA-001 closure."
+    ]
+  }
+]

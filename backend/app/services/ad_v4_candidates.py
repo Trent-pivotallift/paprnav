@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import unicodedata
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -20,17 +21,25 @@ from app.models.core import (
     ADV4CandidateProposalEvent,
     ADV4CandidateSubmission,
     ADV4CandidateSubmissionRelationship,
+    ADV4FeatureGate,
     AirworthinessDirective,
     OrganizationMembership,
     User,
     new_id,
 )
+from app.core.config import get_settings
 from app.services.ad_evidence import _hash_parts
 
 
 SCHEMA_VERSION = "ad_extraction_v4"
 CANONICALIZATION_VERSION = "paprnav-ad-v4-c14n-1"
 VALIDATOR_VERSION = "paprnav-ad-v4-validator-1"
+CANONICALIZATION_VERSION_V2 = "paprnav-ad-v4-c14n-2"
+VALIDATOR_VERSION_V2 = "paprnav-ad-v4-validator-2"
+SUPPORTED_V4_VALIDATOR_PAIRS = frozenset({
+    (VALIDATOR_VERSION, CANONICALIZATION_VERSION),
+    (VALIDATOR_VERSION_V2, CANONICALIZATION_VERSION_V2),
+})
 POLICY_NAME = "paprnav-platform-admin-candidate-write"
 POLICY_VERSION = "1"
 ENDPOINT_ACTION = "create_ad_v4_candidate"
@@ -52,6 +61,28 @@ DOMAINS = {
     "submission": b"paprnav:ad_extraction_v4:submission:1\x00",
     "relationship": b"paprnav:ad_extraction_v4:submission-relationship:1\x00",
 }
+DOMAINS_V2 = {
+    "proposal": b"paprnav:ad_extraction_v4:proposal:paprnav-ad-v4-c14n-2\x00",
+    "bindings": b"paprnav:ad_extraction_v4:evidence-bindings:2\x00",
+    "event": b"paprnav:ad_extraction_v4:candidate-event:2\x00",
+    "submission": b"paprnav:ad_extraction_v4:submission:2\x00",
+    "relationship": b"paprnav:ad_extraction_v4:submission-relationship:2\x00",
+}
+
+PROFILE_ENVELOPES = {
+    VALIDATOR_VERSION: {
+        "binding": "ad-v4-evidence-bindings-v1",
+        "event": "ad-v4-candidate-created-v1",
+        "submission": "ad-v4-submission-v1",
+        "relationship": "ad-v4-submission-relationship-v1",
+    },
+    VALIDATOR_VERSION_V2: {
+        "binding": "ad-v4-evidence-bindings-v2",
+        "event": "ad-v4-candidate-created-v2",
+        "submission": "ad-v4-submission-v2",
+        "relationship": "ad-v4-submission-relationship-v2",
+    },
+}
 
 ROOT_FIELDS = {
     "schemaVersion", "decisionKey", "directiveIdentity", "officialDocuments",
@@ -72,6 +103,9 @@ UNKNOWN_REASONS = {
 }
 INTERNAL_ARRAY_POLICIES: dict[str, tuple[str, str | tuple[str, ...] | None]] = {
     "bindings": ("set", "evidenceKey"),
+    "semanticNodeHashes": ("set", None),
+    "evidenceLinkHashes": ("set", None),
+    "reasons": ("set", None),
 }
 
 
@@ -189,9 +223,11 @@ def _resolved_schema(schema: dict[str, Any], root: dict[str, Any]) -> dict[str, 
     return schema
 
 
-@lru_cache(maxsize=1)
-def _array_policies() -> dict[str, tuple[str, str | tuple[str, ...] | None]]:
-    root = _v4_schema()
+@lru_cache(maxsize=2)
+def _array_policies(canonicalization_version: str = CANONICALIZATION_VERSION) -> dict[str, tuple[str, str | tuple[str, ...] | None]]:
+    root = _v4_schema(
+        VALIDATOR_VERSION_V2 if canonicalization_version == CANONICALIZATION_VERSION_V2 else VALIDATOR_VERSION
+    )
     policies: dict[str, tuple[str, str | tuple[str, ...] | None]] = {}
 
     def walk(node: Any, property_name: str | None = None, seen: frozenset[str] = frozenset()) -> None:
@@ -225,57 +261,60 @@ def _array_policies() -> dict[str, tuple[str, str | tuple[str, ...] | None]]:
     return policies
 
 
-def _set_sort_key(item: Any, sort_key: str | tuple[str, ...] | None) -> bytes:
+def _set_sort_key(item: Any, sort_key: str | tuple[str, ...] | None, canonicalization_version: str) -> bytes:
     if sort_key is None:
-        return canonical_bytes(item)
+        return canonical_bytes(item, canonicalization_version)
     if not isinstance(item, dict):
         raise ADV4Error("invalid_set_item", "", "Keyed set item must be an object")
     fields = (sort_key,) if isinstance(sort_key, str) else sort_key
     try:
-        return b"\x00".join(canonical_bytes(item[field]) for field in fields)
+        return b"\x00".join(canonical_bytes(item[field], canonicalization_version) for field in fields)
     except KeyError as exc:
         raise ADV4Error("missing_stable_key", "", f"Set item lacks {exc.args[0]}") from exc
 
 
-def _normalize(value: Any, parent_key: str | None = None) -> Any:
+def _normalize(value: Any, parent_key: str | None = None, canonicalization_version: str = CANONICALIZATION_VERSION) -> Any:
     if value is None or (isinstance(value, (int, float)) and not isinstance(value, bool)):
         raise ADV4Error("forbidden_json_value", "", "JSON null and numbers are forbidden")
     if isinstance(value, dict):
-        return {key: _normalize(value[key], key) for key in sorted(value, key=_utf16_sort_key)}
+        return {key: _normalize(value[key], key, canonicalization_version) for key in sorted(value, key=_utf16_sort_key)}
     if isinstance(value, list):
-        items = [_normalize(item) for item in value]
-        policy = INTERNAL_ARRAY_POLICIES.get(parent_key or "") or _array_policies().get(parent_key or "")
+        items = [_normalize(item, None, canonicalization_version) for item in value]
+        policy = INTERNAL_ARRAY_POLICIES.get(parent_key or "") or _array_policies(canonicalization_version).get(parent_key or "")
         if parent_key is None:
             policy = ("sequence", None)
         if policy is None:
             raise ADV4Error("unregistered_array", "", f"Array {parent_key!r} has no schema canonicalization policy")
         kind, sort_key = policy
         if kind == "set":
-            encoded = [canonical_bytes(item) for item in items]
+            encoded = [canonical_bytes(item, canonicalization_version) for item in items]
             if len(encoded) != len(set(encoded)):
                 raise ADV4Error("duplicate_set_item", "", f"Set array {parent_key} contains duplicates")
-            identities = [_set_sort_key(item, sort_key) for item in items]
+            identities = [_set_sort_key(item, sort_key, canonicalization_version) for item in items]
             if sort_key is not None and len(identities) != len(set(identities)):
                 raise ADV4Error(
                     "duplicate_stable_key", "",
                     f"Set array {parent_key} contains duplicate composite identity",
                 )
-            items.sort(key=lambda item: _set_sort_key(item, sort_key))
+            items.sort(key=lambda item: _set_sort_key(item, sort_key, canonicalization_version))
         elif kind != "sequence":
             raise RuntimeError(f"Invalid V4 array kind for {parent_key}: {kind}")
         return items
     return value
 
 
-def canonical_bytes(value: Any) -> bytes:
-    normalized = _normalize(value)
+def canonical_bytes(value: Any, canonicalization_version: str = CANONICALIZATION_VERSION) -> bytes:
+    if canonicalization_version not in {CANONICALIZATION_VERSION, CANONICALIZATION_VERSION_V2}:
+        raise ADV4Error("unsupported_canonicalization", "", "Unsupported V4 canonicalization version")
+    normalized = _normalize(value, canonicalization_version=canonicalization_version)
     return json.dumps(
         normalized, ensure_ascii=False, allow_nan=False, separators=(",", ":"),
     ).encode("utf-8")
 
 
-def _domain_hash(domain: str, value: Any) -> str:
-    return hashlib.sha256(DOMAINS[domain] + canonical_bytes(value)).hexdigest()
+def _domain_hash(domain: str, value: Any, canonicalization_version: str = CANONICALIZATION_VERSION) -> str:
+    domains = DOMAINS_V2 if canonicalization_version == CANONICALIZATION_VERSION_V2 else DOMAINS
+    return hashlib.sha256(domains[domain] + canonical_bytes(value, canonicalization_version)).hexdigest()
 
 
 def _require_object(value: Any, pointer: str) -> dict[str, Any]:
@@ -290,10 +329,81 @@ def _require_key(value: Any, pointer: str) -> str:
     return value
 
 
-@lru_cache(maxsize=1)
-def _v4_schema() -> dict[str, Any]:
+@lru_cache(maxsize=2)
+def _v4_schema(validator_version: str = VALIDATOR_VERSION) -> dict[str, Any]:
     path = Path(__file__).resolve().parents[1] / "schemas" / "ad_extraction_v4.schema.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    if validator_version == VALIDATOR_VERSION:
+        return schema
+    if validator_version != VALIDATOR_VERSION_V2:
+        raise ADV4Error("unsupported_validator", "", "Unsupported V4 validator version")
+    schema = deepcopy(schema)
+    defs = schema["$defs"]
+    member_base = {
+        "type": "object", "additionalProperties": False,
+        "required": ["memberKey", "designationKind", "manufacturer", "evidenceKeys"],
+        "properties": {
+            "memberKey": {"$ref": "#/$defs/stableKey"},
+            "designationKind": {},
+            "manufacturer": {"$ref": "#/$defs/knownString"},
+            "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"},
+        },
+    }
+    model_member = deepcopy(member_base)
+    model_member["required"].append("sourceDesignation")
+    model_member["properties"].update({
+        "designationKind": {"const": "model"},
+        "sourceDesignation": {"$ref": "#/$defs/identifier"},
+    })
+    series_member = deepcopy(member_base)
+    series_member["required"].extend(["expressionText", "evaluationState", "reason"])
+    series_member["properties"].update({
+        "designationKind": {"const": "series_expression"},
+        "expressionText": {"$ref": "#/$defs/identifier"},
+        "evaluationState": {"const": "unknown"},
+        "reason": {"const": "unsupported_expression"},
+    })
+    defs["designationMemberV2"] = {"oneOf": [model_member, series_member]}
+    defs["designationGroupV2"] = {
+        "type": "object", "additionalProperties": False,
+        "required": ["groupKey", "sourceDisplayText", "association", "members", "evidenceKeys"],
+        "properties": {
+            "groupKey": {"$ref": "#/$defs/stableKey"},
+            "sourceDisplayText": {"$ref": "#/$defs/knownString"},
+            "association": {"enum": ["all_members", "any_member", "source_group", "unknown"]},
+            "members": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/designationMemberV2"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "memberKey"},
+            "reason": {"enum": sorted(UNKNOWN_REASONS)},
+            "temporalScope": {"$ref": "#/$defs/temporalScope"},
+            "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"},
+        },
+    }
+    defs["conditionSubject"]["properties"]["designationGroup"] = {"$ref": "#/$defs/designationGroupV2"}
+    defs["manufacturerModelGroupV2"] = {
+        "type": "object", "additionalProperties": False,
+        "required": ["groupKey", "manufacturer", "association", "members", "evidenceKeys"],
+        "properties": {
+            "groupKey": {"$ref": "#/$defs/stableKey"},
+            "manufacturer": {"$ref": "#/$defs/knownString"},
+            "association": {"enum": ["paired", "source_group", "unknown"]},
+            "members": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/designationMemberV2"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "memberKey"},
+            "reason": {"enum": sorted(UNKNOWN_REASONS)},
+            "temporalScope": {"$ref": "#/$defs/temporalScope"},
+            "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"},
+        },
+    }
+    defs["searchHint"] = {
+        "type": "object", "additionalProperties": False,
+        "required": ["hintKey", "productRole", "sourceDisplayText", "manufacturerModelGroups", "controlling", "exhaustive", "evidenceKeys"],
+        "properties": {
+            "hintKey": {"$ref": "#/$defs/stableKey"},
+            "productRole": {"enum": ["airframe", "engine", "propeller", "appliance", "installed_part", "modification"]},
+            "sourceDisplayText": {"$ref": "#/$defs/knownString"},
+            "manufacturerModelGroups": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/manufacturerModelGroupV2"}, "x-paprnav-array-kind": "set", "x-paprnav-sort-key": "groupKey"},
+            "controlling": {"const": False}, "exhaustive": {"const": False},
+            "evidenceKeys": {"$ref": "#/$defs/evidenceKeys"},
+        },
+    }
+    return schema
 
 
 def _schema_pointer(pointer: str, key: str | int) -> str:
@@ -393,9 +503,9 @@ def _validate_schema_node(value: Any, schema: dict[str, Any], root: dict[str, An
         raise _schema_error(pointer, "Expected boolean")
 
 
-def validate_v4_schema(value: dict[str, Any]) -> None:
+def validate_v4_schema(value: dict[str, Any], validator_version: str = VALIDATOR_VERSION) -> None:
     """Validate the checked-in closed schema before semantic/reference checks."""
-    schema = _v4_schema()
+    schema = _v4_schema(validator_version)
     _validate_schema_node(value, schema, schema, "")
 
 
@@ -658,9 +768,36 @@ def _collect_and_validate(value: Any, evidence: set[str], used: set[str], pointe
             _collect_and_validate(child, evidence, used, f"{pointer}/{index}")
 
 
-def validate_v4_envelope(parsed: ParsedV4Request, directive_id: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def _validate_v2_semantics(proposal: dict[str, Any]) -> None:
+    for condition_index, condition in enumerate(proposal["conditionDefinitions"]):
+        subject = condition["subject"]
+        attribute = subject.get("attributeValue")
+        if isinstance(attribute, dict) and attribute.get("state") == "known" and attribute.get("value") == "unknown_requires_compliance":
+            raise ADV4Error(
+                "semantic_unknown_sentinel",
+                f"/proposal/conditionDefinitions/{condition_index}/subject/attributeValue/value",
+                "Unknown applicability must use the explicit unknown union",
+            )
+        group = subject.get("designationGroup")
+        if group is not None:
+            unknown = group["association"] == "unknown"
+            if unknown != ("reason" in group and "temporalScope" in group):
+                raise ADV4Error("schema_validation", f"/proposal/conditionDefinitions/{condition_index}/subject/designationGroup", "Unknown group association requires reason and temporalScope only")
+    for hint_index, hint in enumerate(proposal["applicabilitySearchHints"]):
+        for group_index, group in enumerate(hint["manufacturerModelGroups"]):
+            unknown = group["association"] == "unknown"
+            if unknown != ("reason" in group and "temporalScope" in group):
+                raise ADV4Error("schema_validation", f"/proposal/applicabilitySearchHints/{hint_index}/manufacturerModelGroups/{group_index}", "Unknown group association requires reason and temporalScope only")
+
+
+def validate_v4_envelope(
+    parsed: ParsedV4Request,
+    directive_id: str,
+    *,
+    validator_version: str = VALIDATOR_VERSION,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     envelope = parsed.value
-    validate_v4_schema(envelope)
+    validate_v4_schema(envelope, validator_version)
     if set(envelope) != {"proposal", "submissionContext"}:
         raise ADV4Error("closed_envelope", "", "Envelope properties must be proposal and submissionContext")
     proposal = _require_object(envelope["proposal"], "/proposal")
@@ -701,6 +838,8 @@ def validate_v4_envelope(parsed: ParsedV4Request, directive_id: str) -> tuple[di
     if used != set(bindings):
         raise ADV4Error("unused_evidence", "/proposal/evidenceBindings", f"Unused bindings: {sorted(set(bindings) - used)}")
     _validate_semantic_graph(proposal)
+    if validator_version == VALIDATOR_VERSION_V2:
+        _validate_v2_semantics(proposal)
     context = _require_object(envelope["submissionContext"], "/submissionContext")
     if set(context) != {"relationships"} or not isinstance(context["relationships"], list):
         raise ADV4Error("closed_submission_context", "/submissionContext", "Only relationships array is permitted")
@@ -738,6 +877,19 @@ def _authorization(db: Session, actor: User, membership_id: str) -> Organization
     if membership.user_id != actor.id or membership.status != "active" or membership.role != "platform_admin":
         raise ADV4Error("forbidden", "", "Active platform administrator membership required", http_status=403)
     return membership
+
+
+def require_v4_database_gate(db: Session, gate_key: str, *, lock: bool = False) -> None:
+    query = select(ADV4FeatureGate).where(ADV4FeatureGate.gate_key == gate_key)
+    if lock:
+        query = query.with_for_update(read=True)
+    try:
+        gate = db.scalar(query)
+    except Exception as exc:
+        raise ADV4Error("schema_capability_mismatch", "", "V4 database capability is unavailable", http_status=409) from exc
+    if gate is None or not gate.enabled:
+        code = "validator2_write_gate_disabled" if gate_key == "validator2_write_enabled" else "materializer3a_gate_disabled"
+        raise ADV4Error(code, "", f"V4 database gate {gate_key} is disabled", http_status=409)
 
 
 def _binding_snapshot(db: Session, directive_id: str, proposal: dict[str, Any]) -> list[dict[str, Any]]:
@@ -846,20 +998,49 @@ def _validate_candidate_relationship_graph(
 def store_v4_candidate(
     db: Session, *, directive_id: str, parsed: ParsedV4Request, actor: User,
     membership_id: str, idempotency_key: str,
+    validator_version: str | None = None,
 ) -> StoredV4Candidate:
-    proposal_value, relationships = validate_v4_envelope(parsed, directive_id)
+    if validator_version is None:
+        validator_version = (
+            VALIDATOR_VERSION_V2
+            if get_settings().ad_v4_validator2_writes_enabled
+            else VALIDATOR_VERSION
+        )
+    if validator_version not in {VALIDATOR_VERSION, VALIDATOR_VERSION_V2}:
+        raise ADV4Error("unsupported_validator", "", "Unsupported V4 validator version")
+    canonicalization_version = (
+        CANONICALIZATION_VERSION_V2
+        if validator_version == VALIDATOR_VERSION_V2
+        else CANONICALIZATION_VERSION
+    )
+    if validator_version == VALIDATOR_VERSION_V2:
+        if not get_settings().ad_v4_validator2_writes_enabled:
+            raise ADV4Error("capability_disabled", "", "Validator-2 application capability is disabled", http_status=409)
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            db.execute(text("LOCK TABLE ad_v4_candidate_proposals IN ROW EXCLUSIVE MODE"))
+        require_v4_database_gate(db, "validator2_write_enabled", lock=True)
+    proposal_value, relationships = validate_v4_envelope(
+        parsed, directive_id, validator_version=validator_version,
+    )
     if db.get(AirworthinessDirective, directive_id) is None:
         raise ADV4Error("not_found", "", "Directive not found", http_status=404)
     membership = _authorization(db, actor, membership_id)
     scope = f"{actor.id}:{membership.id}:{ENDPOINT_ACTION}:{POLICY_VERSION}:{idempotency_key}"
     _advisory_lock(db, f"idem:{scope}")
-    proposal_payload = canonical_bytes(proposal_value)
-    proposal_hash = hashlib.sha256(DOMAINS["proposal"] + proposal_payload).hexdigest()
+    proposal_payload = canonical_bytes(proposal_value, canonicalization_version)
+    domains = DOMAINS_V2 if validator_version == VALIDATOR_VERSION_V2 else DOMAINS
+    envelopes = PROFILE_ENVELOPES[validator_version]
+    proposal_hash = hashlib.sha256(domains["proposal"] + proposal_payload).hexdigest()
     request_envelope = {
-        "version": "ad-v4-submission-v1", "directiveId": directive_id,
+        "version": envelopes["submission"], "directiveId": directive_id,
         "proposalCanonicalHash": proposal_hash, "relationships": relationships,
     }
-    request_hash = _domain_hash("submission", request_envelope)
+    if validator_version == VALIDATOR_VERSION_V2:
+        request_envelope.update({
+            "validatorVersion": validator_version,
+            "canonicalizationVersion": canonicalization_version,
+        })
+    request_hash = _domain_hash("submission", request_envelope, canonicalization_version)
     prior = db.scalar(select(ADV4CandidateSubmission).where(
         ADV4CandidateSubmission.actor_user_id == actor.id,
         ADV4CandidateSubmission.authorizing_membership_id == membership.id,
@@ -872,22 +1053,25 @@ def store_v4_candidate(
             raise ADV4Error("idempotency_conflict", "", "Idempotency key was used for different canonical content", http_status=409)
         return StoredV4Candidate(db.get(ADV4CandidateProposal, prior.proposal_id), prior, True, True)  # type: ignore[arg-type]
     snapshots = _binding_snapshot(db, directive_id, proposal_value)
-    binding_envelope = {"version": "ad-v4-evidence-bindings-v1", "bindings": snapshots}
-    binding_hash = _domain_hash("bindings", binding_envelope)
-    _advisory_lock(db, f"content:{directive_id}:{CANONICALIZATION_VERSION}:{proposal_hash}")
+    binding_envelope = {"version": envelopes["binding"], "bindings": snapshots}
+    if validator_version == VALIDATOR_VERSION_V2:
+        binding_envelope.update({"validatorVersion": validator_version, "canonicalizationVersion": canonicalization_version})
+    binding_hash = _domain_hash("bindings", binding_envelope, canonicalization_version)
+    _advisory_lock(db, f"content:{directive_id}:{validator_version}:{canonicalization_version}:{proposal_hash}")
     candidate = db.scalar(select(ADV4CandidateProposal).where(
         ADV4CandidateProposal.directive_id == directive_id,
-        ADV4CandidateProposal.canonicalization_version == CANONICALIZATION_VERSION,
+        ADV4CandidateProposal.validator_version == validator_version,
+        ADV4CandidateProposal.canonicalization_version == canonicalization_version,
         ADV4CandidateProposal.canonical_hash == proposal_hash,
     ))
     reused = candidate is not None
     if candidate is None:
         candidate = ADV4CandidateProposal(
             id=new_id("avp"), directive_id=directive_id, schema_version=SCHEMA_VERSION,
-            canonicalization_version=CANONICALIZATION_VERSION,
-            validator_version=VALIDATOR_VERSION, canonical_bytes=proposal_payload,
+            canonicalization_version=canonicalization_version,
+            validator_version=validator_version, canonical_bytes=proposal_payload,
             parsed_json=proposal_value, canonical_hash=proposal_hash,
-            evidence_binding_bytes=canonical_bytes(binding_envelope),
+            evidence_binding_bytes=canonical_bytes(binding_envelope, canonicalization_version),
             evidence_binding_hash=binding_hash, binding_count=len(snapshots), gate="candidate_only",
         )
         db.add(candidate)
@@ -903,6 +1087,8 @@ def store_v4_candidate(
                 evidence_key=item["evidenceKey"], fragment_id=item["fragmentId"],
                 fragment_hash=item["fragmentHash"], admitted_event_id=item["admittedEventId"],
                 admitted_event_hash=item["admittedEventHash"],
+                validator_version=validator_version,
+                canonicalization_version=canonicalization_version,
             )
             db.add(binding)
             binding_rows.append(binding)
@@ -926,10 +1112,12 @@ def store_v4_candidate(
         authorizing_membership_id=membership.id, organization_id=membership.organization_id,
         actor_role=membership.role, actor_status=membership.status,
         auth_policy_name=POLICY_NAME, auth_policy_version=POLICY_VERSION,
-        auth_claims_hash=hashlib.sha256(canonical_bytes(claims)).hexdigest(),
+        auth_claims_hash=hashlib.sha256(canonical_bytes(claims, canonicalization_version)).hexdigest(),
         endpoint_action=ENDPOINT_ACTION, idempotency_key=idempotency_key,
-        request_hash=request_hash, request_canonical_bytes=canonical_bytes(request_envelope),
+        request_hash=request_hash, request_canonical_bytes=canonical_bytes(request_envelope, canonicalization_version),
         raw_transport_hash=parsed.raw_hash,
+        validator_version=validator_version,
+        canonicalization_version=canonicalization_version,
     )
     db.add(submission)
     # Relationship and candidate-created event triggers both resolve their
@@ -939,33 +1127,41 @@ def store_v4_candidate(
     for relation in relationships:
         predecessor = predecessors[relation["predecessorProposalId"]]
         relation_envelope = {
-            "version": "ad-v4-submission-relationship-v1",
+            "version": envelopes["relationship"],
             "submissionId": submission.id,
             **relation,
         }
-        relation_bytes = canonical_bytes(relation_envelope)
+        if validator_version == VALIDATOR_VERSION_V2:
+            relation_envelope.update({"validatorVersion": validator_version, "canonicalizationVersion": canonicalization_version})
+        relation_bytes = canonical_bytes(relation_envelope, canonicalization_version)
         db.add(ADV4CandidateSubmissionRelationship(
             submission_id=submission.id, relationship_key=relation["relationshipKey"],
             relation_type=relation["relationType"], predecessor_proposal_id=predecessor.id,
             reason=relation["reason"], evidence_keys=relation["evidenceKeys"],
             canonical_bytes=relation_bytes,
-            relationship_hash=_domain_hash("relationship", relation_envelope),
+            relationship_hash=_domain_hash("relationship", relation_envelope, canonicalization_version),
+            validator_version=validator_version,
+            canonicalization_version=canonicalization_version,
         ))
     if not reused:
         event_envelope = {
-            "version": "ad-v4-candidate-created-v1", "eventType": "candidate_created",
+            "version": envelopes["event"], "eventType": "candidate_created",
             "proposalId": candidate.id, "directiveId": directive_id,
             "proposalCanonicalHash": proposal_hash, "evidenceBindingHash": binding_hash,
             "createdBySubmissionId": submission.id,
         }
-        event_bytes = canonical_bytes(event_envelope)
+        if validator_version == VALIDATOR_VERSION_V2:
+            event_envelope.update({"validatorVersion": validator_version, "canonicalizationVersion": canonicalization_version})
+        event_bytes = canonical_bytes(event_envelope, canonicalization_version)
         db.add(ADV4CandidateProposalEvent(
             proposal_id=candidate.id, directive_id=directive_id,
             created_by_submission_id=submission.id, event_type="candidate_created",
             sequence_number=0, proposal_canonical_hash=proposal_hash,
             evidence_binding_hash=binding_hash, predecessor_event_hash=None,
             canonical_bytes=event_bytes,
-            event_hash=_domain_hash("event", event_envelope),
+            event_hash=_domain_hash("event", event_envelope, canonicalization_version),
+            validator_version=validator_version,
+            canonicalization_version=canonicalization_version,
         ))
     db.flush()
     return StoredV4Candidate(candidate, submission, reused, False)
@@ -975,15 +1171,27 @@ def verified_candidate(db: Session, proposal_id: str) -> ADV4CandidateProposal:
     candidate = db.get(ADV4CandidateProposal, proposal_id)
     if candidate is None:
         raise ADV4Error("not_found", "", "Candidate not found", http_status=404)
-    if canonical_bytes(candidate.parsed_json) != candidate.canonical_bytes:
+    pair = (candidate.validator_version, candidate.canonicalization_version)
+    if pair not in SUPPORTED_V4_VALIDATOR_PAIRS:
+        raise ADV4Error("candidate_integrity", "", "Stored validator/canonicalization pair is unsupported", http_status=409)
+    if canonical_bytes(candidate.parsed_json, candidate.canonicalization_version) != candidate.canonical_bytes:
         raise ADV4Error("candidate_integrity", "", "Stored canonical bytes and JSON differ", http_status=409)
-    if hashlib.sha256(DOMAINS["proposal"] + candidate.canonical_bytes).hexdigest() != candidate.canonical_hash:
+    domains = DOMAINS_V2 if candidate.validator_version == VALIDATOR_VERSION_V2 else DOMAINS
+    if hashlib.sha256(domains["proposal"] + candidate.canonical_bytes).hexdigest() != candidate.canonical_hash:
         raise ADV4Error("candidate_integrity", "", "Stored canonical hash differs", http_status=409)
+    validate_v4_schema({"proposal": candidate.parsed_json, "submissionContext": {"relationships": []}}, candidate.validator_version)
     return candidate
 
 
 def verified_submission(db: Session, submission: ADV4CandidateSubmission) -> list[ADV4CandidateSubmissionRelationship]:
     candidate = verified_candidate(db, submission.proposal_id)
+    if (
+        submission.validator_version != candidate.validator_version
+        or submission.canonicalization_version != candidate.canonicalization_version
+    ):
+        raise ADV4Error("candidate_integrity", "", "Submission version pair differs from proposal", http_status=409)
+    canonicalization_version = candidate.canonicalization_version
+    envelopes = PROFILE_ENVELOPES[candidate.validator_version]
     if (
         submission.actor_kind != "platform_admin"
         or submission.actor_role != "platform_admin"
@@ -998,12 +1206,17 @@ def verified_submission(db: Session, submission: ADV4CandidateSubmission) -> lis
         request_value = json.loads(submission.request_canonical_bytes.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ADV4Error("candidate_integrity", "", "Submission canonical bytes are invalid", http_status=409) from exc
-    if canonical_bytes(request_value) != submission.request_canonical_bytes:
+    if canonical_bytes(request_value, canonicalization_version) != submission.request_canonical_bytes:
         raise ADV4Error("candidate_integrity", "", "Submission bytes are not canonical", http_status=409)
-    if _domain_hash("submission", request_value) != submission.request_hash:
+    if _domain_hash("submission", request_value, canonicalization_version) != submission.request_hash:
         raise ADV4Error("candidate_integrity", "", "Submission hash differs", http_status=409)
-    if request_value.get("version") != "ad-v4-submission-v1" or request_value.get("directiveId") != submission.directive_id or request_value.get("proposalCanonicalHash") != candidate.canonical_hash:
+    if request_value.get("version") != envelopes["submission"] or request_value.get("directiveId") != submission.directive_id or request_value.get("proposalCanonicalHash") != candidate.canonical_hash:
         raise ADV4Error("candidate_integrity", "", "Submission envelope differs from relational identity", http_status=409)
+    if candidate.validator_version == VALIDATOR_VERSION_V2 and (
+        request_value.get("validatorVersion") != candidate.validator_version
+        or request_value.get("canonicalizationVersion") != canonicalization_version
+    ):
+        raise ADV4Error("candidate_integrity", "", "Submission envelope version differs", http_status=409)
     claims = {
         "userId": submission.actor_user_id,
         "membershipId": submission.authorizing_membership_id,
@@ -1013,7 +1226,7 @@ def verified_submission(db: Session, submission: ADV4CandidateSubmission) -> lis
         "policy": submission.auth_policy_name,
         "version": submission.auth_policy_version,
     }
-    if hashlib.sha256(canonical_bytes(claims)).hexdigest() != submission.auth_claims_hash:
+    if hashlib.sha256(canonical_bytes(claims, canonicalization_version)).hexdigest() != submission.auth_claims_hash:
         raise ADV4Error("candidate_integrity", "", "Authorization snapshot hash differs", http_status=409)
     relationships = db.scalars(
         select(ADV4CandidateSubmissionRelationship)
@@ -1024,7 +1237,7 @@ def verified_submission(db: Session, submission: ADV4CandidateSubmission) -> lis
     candidate_evidence_keys = set(candidate.parsed_json.get("evidenceBindings", {}))
     for relationship in relationships:
         envelope = {
-            "version": "ad-v4-submission-relationship-v1",
+            "version": envelopes["relationship"],
             "submissionId": submission.id,
             "relationshipKey": relationship.relationship_key,
             "relationType": relationship.relation_type,
@@ -1032,11 +1245,15 @@ def verified_submission(db: Session, submission: ADV4CandidateSubmission) -> lis
             "reason": relationship.reason,
             "evidenceKeys": relationship.evidence_keys,
         }
-        expected_bytes = canonical_bytes(envelope)
+        if candidate.validator_version == VALIDATOR_VERSION_V2:
+            envelope.update({"validatorVersion": candidate.validator_version, "canonicalizationVersion": canonicalization_version})
+        expected_bytes = canonical_bytes(envelope, canonicalization_version)
         predecessor = db.get(ADV4CandidateProposal, relationship.predecessor_proposal_id)
         if (
             relationship.canonical_bytes != expected_bytes
-            or relationship.relationship_hash != _domain_hash("relationship", envelope)
+            or relationship.relationship_hash != _domain_hash("relationship", envelope, canonicalization_version)
+            or relationship.validator_version != candidate.validator_version
+            or relationship.canonicalization_version != canonicalization_version
             or predecessor is None
             or predecessor.directive_id != candidate.directive_id
             or predecessor.id == candidate.id

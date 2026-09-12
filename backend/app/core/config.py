@@ -82,6 +82,14 @@ class Settings:
     govinfo_api_key: Optional[str]
     govinfo_base_url: str
     drs_max_snapshot_age_days: int = 7
+    ad_v4_validator2_writes_enabled: bool = False
+    ad_v4_slice3a_routes_enabled: bool = False
+
+
+def parse_bool(value: Optional[str], default: bool = False) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 @lru_cache
@@ -169,5 +177,11 @@ def get_settings() -> Settings:
         govinfo_base_url=os.getenv("PAPRNAV_GOVINFO_BASE_URL", "https://api.govinfo.gov").rstrip("/"),
         drs_max_snapshot_age_days=int(
             os.getenv("PAPRNAV_DRS_MAX_SNAPSHOT_AGE_DAYS", "7")
+        ),
+        ad_v4_validator2_writes_enabled=parse_bool(
+            os.getenv("PAPRNAV_AD_V4_VALIDATOR2_WRITES_ENABLED")
+        ),
+        ad_v4_slice3a_routes_enabled=parse_bool(
+            os.getenv("PAPRNAV_AD_V4_SLICE3A_ROUTES_ENABLED")
         ),
     )

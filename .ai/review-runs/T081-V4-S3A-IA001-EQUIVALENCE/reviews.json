@@ -1,0 +1,14 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/v4_s3a_impl_adversary",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-10T02:09:09+00:00",
+    "baseRef": "28f6be0",
+    "head": "28f6be0eab225abc4b68830345e04d6fb6df454f",
+    "scopeFingerprint": "eb6f3fd11dbfc40571ec6931601c2682810c3a251a0473e4e30496b300e7caf4",
+    "artifact": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/adversarial-design-initial.md",
+    "artifactSha256": "41bde8728f6ff6a90f58ac2d95a8c3f40b45cb01749b3eb85aaaac420547365e"
+  }
+]

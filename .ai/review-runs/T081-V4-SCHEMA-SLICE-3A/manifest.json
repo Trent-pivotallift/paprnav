@@ -1,0 +1,162 @@
+{
+  "taskId": "T081-V4-SCHEMA-SLICE-3A",
+  "stage": "closure",
+  "generatedAt": "2026-09-11T04:10:13+00:00",
+  "baseRef": "28f6be0",
+  "head": "28f6be0eab225abc4b68830345e04d6fb6df454f",
+  "scopePaths": [],
+  "scopeFingerprint": "3b054974a71525475f34d7b4319dfca91ac3389d42ec2592b31871712f7ca1fd",
+  "files": [
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/adversarial-design-initial.md",
+      "status": "A ",
+      "size": 2263,
+      "sha256": "41bde8728f6ff6a90f58ac2d95a8c3f40b45cb01749b3eb85aaaac420547365e",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/closure.md",
+      "status": "A ",
+      "size": 223,
+      "sha256": "549dfb23777cbcf83601676c0aae52e55f757ddce8d0f23f5bd33f3c151cf4bb",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/decision.md",
+      "status": "A ",
+      "size": 9830,
+      "sha256": "08bf9a8ec53274dbdbbc1218a24e68d139b3e222af951e9ea5a5026baac554f5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/findings.json",
+      "status": "A ",
+      "size": 3547,
+      "sha256": "e3cdaddb3fa9e5a23dbf589cc6b3a9e1d4ca1e260e5e0a80037818e106a0e8fc",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/manifest.json",
+      "status": "A ",
+      "size": 8535,
+      "sha256": "cd8fcccf03418bc21e7a556567c6901a1caed74a1cf4d2fc94afee45328e321e",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/review-packet.md",
+      "status": "A ",
+      "size": 814697,
+      "sha256": "80be157ce7a44c6cae0caa6b7c5a5664ac28b1d0195273900bc2b076c971d4d8",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/reviews.json",
+      "status": "A ",
+      "size": 534,
+      "sha256": "96b0d2241f12efa1cc5b58413108c84f4fa8540b0321d5b130afaf30c23a0dc9",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/state.json",
+      "status": "A ",
+      "size": 54,
+      "sha256": "5971ba54519335b62014364ff59dd7c3bde56fea735b1fe8fc2441c665864126",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": "M ",
+      "size": 71044,
+      "sha256": "4ea834be2727ab66ec036ebbd6ec4d588e69ce2d6d375d27baa50b6e776d8f92",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "status": "M ",
+      "size": 7979,
+      "sha256": "d285cc55e960d5f740278b9a5ef5f87e47ba8c80eaa3e453474fc9119bc635e7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260907_0027_add_ad_v4_applicability.py",
+      "status": "A ",
+      "size": 226236,
+      "sha256": "6338c193516ebdf016fe5e80c6af1d443de1cc40bd911c8012bff41f3f107405",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": "M ",
+      "size": 154855,
+      "sha256": "93a48012b45599cbbee6c4d795a4847d809683daa049bf1567d0f552cd6924ad",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": "M ",
+      "size": 10462,
+      "sha256": "7f19a3219e4bd483df7249a444ad485c38c6d72fb80451876ee1d2018bf1b4fa",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_applicability.py",
+      "status": "A ",
+      "size": 175443,
+      "sha256": "4a0e49aa6b925c5ec5bafd8ed6197437bf1d34054ad770195894ae7bf51cefbc",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_candidates.py",
+      "status": "M ",
+      "size": 69544,
+      "sha256": "0f888f836a0e9782264e3791d7409ba68f3f5b58679662eeed07744ca093ee55",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_applicability.py",
+      "status": "A ",
+      "size": 37182,
+      "sha256": "d8a60b81fdc1fc752de27ed8d53d4d1e7b83f02bb74574a3833a1efa6e481868",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_applicability_calibration.py",
+      "status": "A ",
+      "size": 15924,
+      "sha256": "c6c19a0792833feeebd8e6c57ea8a9868d1aa206afb725306b7ca829aae0f817",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_applicability_postgres.py",
+      "status": "A ",
+      "size": 94083,
+      "sha256": "6703cc90f01c07bce0bacf7e13b5d2335457bfc8a581505744b94d75e7588393",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_postgres.py",
+      "status": "M ",
+      "size": 43379,
+      "sha256": "40ea05bea77b712cd0e4f6bd47d9e4773e4565f19d9d0109c64d566fa638f9ff",
+      "readStatus": "readable"
+    }
+  ],
+  "reviewInputs": [
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md",
+      "status": "review_input",
+      "size": 93133,
+      "sha256": "79377f1f3ba13d5cdba8e8f1667026b1155c8a0d81f870605861414e94a704a9",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/findings.json",
+      "status": "review_input",
+      "size": 67320,
+      "sha256": "6302fea466ff59dd9be3cb48e6c53aef095c5012443da4aeaad1591bf1c67ffe",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [],
+  "outOfScopeReason": null
+}

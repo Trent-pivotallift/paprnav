@@ -42,13 +42,13 @@ POSTGRES_URL = os.getenv("PAPRNAV_TEST_POSTGRES_URL")
 pytestmark = pytest.mark.skipif(not POSTGRES_URL, reason="PAPRNAV_TEST_POSTGRES_URL required")
 
 
-def _seed(db: Session):
+def _seed(db: Session, *, ad_number: str = "2024-14-03"):
     token = uuid.uuid4().hex
     user = User(email=f"v4-{token}@example.test", name="V4 Admin", password_hash="x", status="active")
     organization = Organization(name=f"Paprnav {token}", type="platform")
     db.add_all([user, organization]); db.flush()
     membership = OrganizationMembership(organization_id=organization.id, user_id=user.id, role="platform_admin", status="active")
-    directive = AirworthinessDirective(ad_number="2024-14-03", title="V4 fixture", source_content_hash="1" * 64, status="candidate", extraction_status="not_started", review_status="not_started")
+    directive = AirworthinessDirective(ad_number=ad_number, title="V4 fixture", source_content_hash="1" * 64, status="candidate", extraction_status="not_started", review_status="not_started")
     document = ADSourceDocument(source_system="federal_register", source_type="document_pdf", source_identifier=token, storage_backend="local", storage_key=f"fixture/{token}.pdf", media_type="application/pdf", content_hash=hashlib.sha256(token.encode()).hexdigest(), storage_bytes=1, captured_at=datetime.now(timezone.utc), status="retained")
     db.add_all([membership, directive, document]); db.flush()
     db.add(ADPublication(directive_id=directive.id, source_document_id=document.id, source_system="federal_register", source_type="document_pdf", source_identifier=token, content_hash=document.content_hash)); db.flush()
@@ -77,6 +77,11 @@ def _request(
     relationships=None,
     extra_binding=None,
     reverse_bindings=False,
+    listed_designation=False,
+    typed_scope_shapes=False,
+    listed_non_model=False,
+    ad_number="2024-14-03",
+    supersession_relations=None,
 ):
     ev = "ev-official"
     bindings = [(ev, {"fragmentId": fragment_id, "fragmentHash": fragment_hash})]
@@ -90,14 +95,50 @@ def _request(
         bindings.reverse()
     proposal = {
         "schemaVersion": "ad_extraction_v4", "decisionKey": decision_key,
-        "directiveIdentity": {"directiveId": directive_id, "adNumber": {"state": "known", "value": "2024-14-03", "evidenceKeys": [ev]}},
+        "directiveIdentity": {"directiveId": directive_id, "adNumber": {"state": "known", "value": ad_number, "evidenceKeys": [ev]}},
         "officialDocuments": [{"officialDocumentKey": "official-rule", "documentRole": "ad_rule", "sourceDocumentId": document_id, "sourceContentHash": source_hash, "publicationDocumentNumber": "2024-15529", "evidenceKeys": document_evidence}],
         "evidenceBindings": dict(bindings),
         "incorporatedDocuments": [], "productScopes": [{"scopeKey": "scope-main", "productRole": "airframe", "evidenceKeys": [ev]}],
         "conditionDefinitions": [], "applicabilityRules": [{"ruleKey": "rule-main", "scopeExpression": {"nodeType": "scope_ref", "scopeKey": "scope-main"}, "exclusionRuleKeys": [], "evidenceKeys": [ev]}],
         "requirements": [{"requirementKey": "requirement-main", "sequence": "1", "activationExpression": {"nodeType": "rule_ref", "ruleKey": "rule-main"}, "requirementType": "corrective_action", "action": {"actionType": "other_reviewed", "approvedDataDocumentRefKeys": [], "evidenceKeys": [ev]}, "prerequisiteRequirementKeys": [], "branch": {"kind": "required", "evidenceKeys": [ev]}, "initialTiming": {"state": "unknown", "reason": "not_yet_reviewed", "temporalScope": {"kind": "directive_version"}, "evidenceKeys": [ev]}, "recurrence": {"kind": "none", "evidenceKeys": [ev]}, "terminatingEffect": {"kind": "none", "evidenceKeys": [ev]}, "evidenceKeys": [ev]}],
-        "recurrenceGroups": [], "applicabilitySearchHints": [], "amocAuthorityProvisions": [], "supersessionRelations": [], "authoritativeCorrections": [],
+        "recurrenceGroups": [], "applicabilitySearchHints": [], "amocAuthorityProvisions": [], "supersessionRelations": supersession_relations or [], "authoritativeCorrections": [],
     }
+    if listed_designation:
+        proposal["productScopes"][0]["modelScope"] = {
+            "kind": "listed",
+            "sourceDesignations": ["Model 100", "Model 200"],
+            "evidenceKeys": [ev],
+        }
+    if typed_scope_shapes:
+        product = proposal["productScopes"][0]
+        product["manufacturer"] = {
+            "sourceValue": "Example Aircraft",
+            "normalizedIdentity": {
+                "state": "known", "value": "Example Aircraft", "evidenceKeys": [ev],
+            },
+        }
+        product["serialScope"] = {
+            "kind": "ranges",
+            "ranges": [{
+                "lower": "100", "upper": "200", "lowerInclusive": True,
+                "upperInclusive": False, "polarity": "included",
+            }],
+            "evidenceKeys": [ev],
+        }
+        product["partNumberScope"] = {
+            "kind": "series_expression", "expression": "PN-10 through PN-19",
+            "evidenceKeys": [ev],
+        }
+    if listed_non_model:
+        product = proposal["productScopes"][0]
+        product["serialScope"] = {
+            "kind": "listed", "sourceDesignations": ["SN-100", "SN-200"],
+            "evidenceKeys": [ev],
+        }
+        product["partNumberScope"] = {
+            "kind": "listed", "sourceDesignations": ["PN-10", "PN-20"],
+            "evidenceKeys": [ev],
+        }
     return parse_v4_request_bytes(json.dumps({
         "proposal": proposal,
         "submissionContext": {"relationships": relationships or []},

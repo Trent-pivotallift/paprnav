@@ -1,0 +1,246 @@
+{
+  "taskId": "T081-V4-S3A-IA001-EQUIVALENCE",
+  "stage": "design",
+  "generatedAt": "2026-09-10T02:04:22+00:00",
+  "baseRef": "28f6be0",
+  "head": "28f6be0eab225abc4b68830345e04d6fb6df454f",
+  "scopePaths": [],
+  "scopeFingerprint": "eb6f3fd11dbfc40571ec6931601c2682810c3a251a0473e4e30496b300e7caf4",
+  "files": [
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/CURRENT_CHECKPOINT.md",
+      "status": "??",
+      "size": 9035,
+      "sha256": "ce5cd27e815b55317f01708f9e70f8c2c3b99e6b2f7bda76a233a44f0ce13ac0",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-design-closure-1.md",
+      "status": "??",
+      "size": 3714,
+      "sha256": "4dc29c60271e0909275f816d3252f2691b1549e96abdcdb34d73c327580f4f45",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-design-closure-2.md",
+      "status": "??",
+      "size": 4222,
+      "sha256": "b9524760acfb8632c681b05c0dd32e393d0c7ba89a4a751b93542115f9a2788f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-design-initial.md",
+      "status": "??",
+      "size": 4487,
+      "sha256": "b617aa132d2825d9140540f7d0d41f6d489bf67ec007c1997a5f3dd47a6c328d",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-external-critic-closure-1.md",
+      "status": "??",
+      "size": 4727,
+      "sha256": "95d1931fa67301070cad10c7353a29843178d38bed669b44a6659043c111c054",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-implementation-ia002-ia005-closure.md",
+      "status": "??",
+      "size": 1402,
+      "sha256": "12df90292e9c0c53764ca44289ae852ba0426440c54bc0344d3f572a0f35360c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-implementation-ia003-closure.md",
+      "status": "??",
+      "size": 1916,
+      "sha256": "8bc033f2545f85ec8dbb453b8599310e1897201d99466a5844df185fbd8c7b1e",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-implementation-ia004-closure.md",
+      "status": "??",
+      "size": 1005,
+      "sha256": "8d985334209fe3eca35fbd228d7783aeff03e028fc041385e91f73a6d54b363f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/adversarial-implementation-initial.md",
+      "status": "??",
+      "size": 5127,
+      "sha256": "6125935f42332e4bd4add0f15c09cf30fb62773ac8c0cfac1645adb8bd36fc76",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/claude-external-critic-20260906T235706Z.findings.json",
+      "status": "??",
+      "size": 7255,
+      "sha256": "077940e41ca6e0678f39e5e10a634d2ba25d63e354126eca4078250172c263dc",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/claude-external-critic-20260906T235706Z.md",
+      "status": "??",
+      "size": 14994,
+      "sha256": "0bee68926fcc21fa7dafb1a3cf06c239e3d91821710df8c19f54e4721d2289aa",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/closure.md",
+      "status": "??",
+      "size": 217,
+      "sha256": "a082505d61b0ad9d35647c1072f4f0d077223bf705d766bf60827bef6163361f",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/decision.md",
+      "status": "??",
+      "size": 91684,
+      "sha256": "50effad6a01fdb75a1d4594b170bed35f3c977464f4f83a81919793d553df466",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/findings.json",
+      "status": "??",
+      "size": 51518,
+      "sha256": "72d2441a64ca83bcad32e2358300ced5a4ba184bcd072ffb7518067fb83164d9",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/implementation-slice-3a.md",
+      "status": "??",
+      "size": 5336,
+      "sha256": "8b0e9c5f64ea267383c888046965fc6ea4240a5d4bb4d97ee28c516f30d83208",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/latest",
+      "status": "??",
+      "size": 100452,
+      "sha256": "5421f3b3dc6f6e061d55cc27d040d1b1090a1c21cd5edd50dfcb5bfb1a5b2d96",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/manifest.json",
+      "status": "??",
+      "size": 3430,
+      "sha256": "c0f543a203d6aae4fcc89c314c60c48bb96a3acb646c8020b7c19f0db9abd914",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/review-packet.md",
+      "status": "??",
+      "size": 557352,
+      "sha256": "a3084bacf0b883bbe3d1da74553671ab69635560de9a82ed9e3c1b64064e47cf",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/reviews.json",
+      "status": "??",
+      "size": 2162,
+      "sha256": "fed1d13b11caac1d5d5378a4f106265f64fe9cafb30313473d3313f85f373a31",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3A/state.json",
+      "status": "??",
+      "size": 62,
+      "sha256": "857a5e9aa8f0011d71f451bfa2c8160002ffa4ca02d2ebffe4a6ccabe9a589b3",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": " M",
+      "size": 70840,
+      "sha256": "c19bbf01d2ce4a479a162922702f2626668ada382c440d5d9cbd4f4f38cd2385",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "status": " M",
+      "size": 7979,
+      "sha256": "d285cc55e960d5f740278b9a5ef5f87e47ba8c80eaa3e453474fc9119bc635e7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260907_0027_add_ad_v4_applicability.py",
+      "status": "??",
+      "size": 82407,
+      "sha256": "26968c0697bf5021de5e8c11888c254f07934815184407d0a56a87deec95f660",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": " M",
+      "size": 113180,
+      "sha256": "bfecfab846338278709c36ea429a92dfd0147c8cdf28ad3e0bb5a7dfa34c6f02",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": " M",
+      "size": 10462,
+      "sha256": "7f19a3219e4bd483df7249a444ad485c38c6d72fb80451876ee1d2018bf1b4fa",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_applicability.py",
+      "status": "??",
+      "size": 58050,
+      "sha256": "7b31dca53a704446c92f193ec5c8537fd7d442f7bef89b916257e4769257c0d3",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_candidates.py",
+      "status": " M",
+      "size": 69544,
+      "sha256": "0f888f836a0e9782264e3791d7409ba68f3f5b58679662eeed07744ca093ee55",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_applicability.py",
+      "status": "??",
+      "size": 13437,
+      "sha256": "31ee8d71b596673408b1be13e8488d128093843bf5e6db9dfe54be98c2b118b9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_applicability_calibration.py",
+      "status": "??",
+      "size": 13708,
+      "sha256": "74bd5aacc1164e9c5c928645e30c965d56267e50c6ff5306748f9410ba2affa9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_applicability_postgres.py",
+      "status": "??",
+      "size": 27935,
+      "sha256": "3e300ebeb4c192c1a3ee4f1fb79314321acda34bf5f42bb2f87a41887d8ccbe0",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_postgres.py",
+      "status": " M",
+      "size": 42190,
+      "sha256": "d78c799679e2c007a8be07c05437f8c18865149edb6c3dbbad59bb03c82ff892",
+      "readStatus": "readable"
+    }
+  ],
+  "reviewInputs": [
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/decision.md",
+      "status": "review_input",
+      "size": 9830,
+      "sha256": "08bf9a8ec53274dbdbbc1218a24e68d139b3e222af951e9ea5a5026baac554f5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-S3A-IA001-EQUIVALENCE/findings.json",
+      "status": "review_input",
+      "size": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [],
+  "outOfScopeReason": null
+}

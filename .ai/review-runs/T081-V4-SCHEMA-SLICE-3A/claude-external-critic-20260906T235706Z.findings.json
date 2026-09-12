@@ -1,0 +1,41 @@
+[
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3A-CC-001",
+    "severity": "medium",
+    "invariant": "Every other safety/correctness invariant in this design is enforced by the database or application transaction rather than by operator discipline (e.g., invariant 2's 'creation-time validity is not trusted'); the staged validator-2/3A rollout should meet the same bar.",
+    "summary": "The mandatory deployment order (apply 0027 -> dual-reader app -> enable v2 writer -> enable 3A routes) has no concrete code-level gate. The codebase has no existing feature-flag mechanism, so nothing prevents a rolling deploy from serving v2 writes or 3A routes from an instance before all instances are dual-readers.",
+    "evidence": [
+      "review-packet.md:1262-1269 'Deployment order is mandatory: 1. apply 0027 ... 2. deploy the compatibility application ... 3. enable the v2 writer after all serving instances are dual readers; and 4. enable the 3A materializer/routes only after v2 writes are proven.'",
+      "grep for feature_flag/FEATURE_FLAG/ENABLE_*/settings.FEATURE across backend/app returned zero matches, confirming there is no existing toggle mechanism this design could rely on.",
+      "Every other invariant in the same document (e.g., invariant 2, invariant 24) is phrased as a transaction-enforced or trigger-enforced guarantee, not a manual rollout instruction."
+    ],
+    "impact": "A rolling/blue-green deploy that briefly runs mixed old/new application instances (a routine production pattern) could serve v2 candidate writes or 3A materialization from a not-yet-fully-rolled-out fleet, or could enable 3A routes before the v2 writer has been proven safe in production, silently violating the design's own stated sequencing without any error, log, or DB rejection.",
+    "requiredClosure": "Define a concrete, code-level gate (e.g., an environment/config flag read at router-registration or write-path time) that makes 'v2 writer enabled' and '3A routes enabled' explicit, independently togglable states rather than an implicit consequence of which code version is deployed. Add a test or startup check proving the 3A routes/v2 writer cannot activate merely because migration 0027 has run."
+  },
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3A-CC-002",
+    "severity": "medium",
+    "invariant": "The design's stated in-scope/out-of-scope boundary (Objective section) and its 'Expected file scope' section should name every namespace and table Slice 3A is authorized to touch, so an implementer or later reviewer can verify boundary compliance without re-deriving it from a 1,500-line design body.",
+    "summary": "Section 2.1.1 requires Slice 3A to create a shared, proposal-scoped correction foundation that stores canonical `authoritativeCorrections` content and verified `officialDocuments` identity hashes -- two top-level V4 namespaces distinct from the four-field applicability subtree {productScopes, conditionDefinitions, applicabilityRules, applicabilitySearchHints}. Neither namespace is mentioned in the Objective's in/out-of-scope bullet list, nor explicitly named in the 'Expected file scope' section, even though the mandatory 2008-26-10 calibration assertion depends on it.",
+    "evidence": [
+      "review-packet.md:28-63 (Objective) lists what's out of scope for 3A/deferred to 3B but never mentions `authoritativeCorrections` or `officialDocuments`.",
+      "review-packet.md:581-655 (section 2.1.1) defines `ad_v4_candidate_corrections`, `_correction_refs`, `_correction_semantic_bindings`, `_correction_evidence_links` storing `officialDocuments reference keys`, their `verified document-identity hashes`, and namespace refs spanning `requirements|recurrenceGroups|amocAuthorityProvisions` (3B-owned) in addition to 3A-owned namespaces.",
+      "backend/app/schemas/ad_extraction_v4.schema.json $defs.proposal.properties includes `authoritativeCorrections` and `officialDocuments` as independent top-level arrays, confirming these are namespaces outside the four-field subtree definition in invariant 3.",
+      "review-packet.md:1458-1489 ('Expected file scope') mentions only 'the additive 3A tables' generically and never names the correction-foundation tables or namespaces, while the mandatory test for 2008-26-10 (review-packet.md:1369-1372) requires 'exact shared correction-2010 foundation with two ordered refs, two evidence links once, one 3A scope binding, and one explicit future-3B requirement ref'."
+    ],
+    "impact": "An implementer following the Objective/Expected-file-scope sections literally could reasonably treat the correction-foundation tables as unauthorized scope creep and omit them, causing the mandatory 2008-26-10 reconstruction test (and the whole DA-002 closure) to fail; conversely, a later reviewer auditing 'did 3A only touch what it said it would' has no single authoritative scope list to check against, since the two scope-defining sections disagree with the detailed design.",
+    "requiredClosure": "Update the Objective's out-of-scope list and the 'Expected file scope' section to explicitly name the correction-foundation tables and the `authoritativeCorrections`/`officialDocuments` namespaces they read/verify, so the document's own scope statement is internally consistent with section 2.1.1 and the mandatory calibration test."
+  },
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3A-CC-003",
+    "severity": "low",
+    "invariant": "'Write paths and administrative paths' asserts no new operational writer (job/CLI/seed/etc.) is added beyond the single platform-admin POST service.",
+    "summary": "The stale-fold section introduces 'a background repair function [that] may append missing deterministic events after a crash,' which reads as a new asynchronous/scheduled process, apparently in tension with the explicit claim elsewhere that no provider job, CLI, seed, or generic writer is added.",
+    "evidence": [
+      "review-packet.md:1081-1085 'A background repair function may append missing deterministic events after a crash; it uses the same locks and event identity and requires no human review.'",
+      "review-packet.md:1205-1213 ('Write paths and administrative paths') states 'No provider job, CLI, seed, V3 translator, calibration loader, frontend form, or generic ORM CRUD writer is added,' and that 'Its internal deterministic stale-event helper is part of the same service/repository boundary,' without clarifying whether the crash-repair helper is invoked synchronously (e.g., opportunistically on the next POST/GET) or via a new scheduled/background worker process."
+    ],
+    "impact": "If implementation interprets 'background repair function' as a new cron/worker process, that is new operational surface (deployment unit, scheduling, monitoring) not accounted for anywhere else in the design's operational sections, and could be missed by an implementation reviewer who only checks for 'no new job' against the explicit write-paths sentence.",
+    "requiredClosure": "Clarify in the design that the repair helper is invoked inline/opportunistically from existing request paths (not a new scheduled process), or, if a real background worker is intended, add it explicitly to the write-paths/operational sections and its own authorization/idempotency contract."
+  }
+]
