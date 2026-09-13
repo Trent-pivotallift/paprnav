@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from typing import Any, Iterable
 
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.core import (
+    ADEvidenceFragment,
     ADEvidenceFragmentLifecycleEvent,
     ADV4CandidateAppChangeDependency,
     ADV4CandidateAppCondition,
@@ -33,12 +35,14 @@ from app.models.core import (
     ADV4CandidateAppSearchHintMember,
     ADV4CandidateAppSemanticNode,
     ADV4CandidateAppValueAssertion,
+    ADV4CandidateObligationSemanticNode,
     ADV4CandidateCorrection,
     ADV4CandidateCorrectionEvidenceLink,
     ADV4CandidateCorrectionRef,
     ADV4CandidateCorrectionSemanticBinding,
     ADV4CandidateEvidenceBinding,
     ADV4CandidateProposal,
+    ADV4CandidateSubmission,
     ADV4CandidateSubmissionRelationship,
     OrganizationMembership,
     User,
@@ -52,7 +56,17 @@ from app.services.ad_v4_candidates import (
     canonical_bytes,
     require_v4_database_gate,
     verified_candidate,
+    verified_submission,
 )
+from app.services.ad_evidence import (
+    ADEvidenceError,
+    verified_evidence_lifecycle_events,
+)
+from app.services.ad_v4_obligation_mapping_v1 import (
+    CORRECTION_COMPATIBILITY,
+    DOMAINS as OBLIGATION_MAPPING_DOMAINS,
+)
+from app.services.ad_v4_obligations import _row_id as _obligation_row_id
 
 
 MATERIALIZER_VERSION = "paprnav-ad-v4-app-materializer-2"
@@ -63,10 +77,54 @@ SUBTREE_DOMAIN = b"paprnav:ad_extraction_v4:applicability-subtree:paprnav-ad-v4-
 PROJECTION_DOMAIN = b"paprnav:ad_extraction_v4:applicability-projection:2\x00"
 EVENT_DOMAIN = b"paprnav:ad_extraction_v4:applicability-projection-event:2\x00"
 ROW_DOMAIN = b"paprnav:ad_extraction_v4:applicability-row:2\x00"
+_CORRECTION_OWNER_BY_NAMESPACE = {
+    row["namespace"]: row["ownerSlice"]
+    for row in CORRECTION_COMPATIBILITY["namespaces"]
+}
+_CORRECTION_TARGET_TYPE_BY_NAMESPACE = {
+    row["namespace"]: row["targetNodeType"]
+    for row in CORRECTION_COMPATIBILITY["namespaces"]
+    if row["targetNodeType"] is not None
+}
+_CORRECTION_IDENTITY_DOMAIN_KEYS = CORRECTION_COMPATIBILITY[
+    "identityDomainKeys"
+]
 APP_FIELDS = (
     "productScopes", "conditionDefinitions", "applicabilityRules",
     "applicabilitySearchHints",
 )
+
+
+def _validate_correction_compatibility_contract() -> None:
+    domain_keys = dict(_CORRECTION_IDENTITY_DOMAIN_KEYS)
+    expected_owner_by_namespace = {
+        row["namespace"]: row["ownerSlice"]
+        for row in CORRECTION_COMPATIBILITY["namespaces"]
+    }
+    expected_target_type_by_namespace = {
+        row["namespace"]: row["targetNodeType"]
+        for row in CORRECTION_COMPATIBILITY["namespaces"]
+        if row["targetNodeType"] is not None
+    }
+    if (
+        _CORRECTION_OWNER_BY_NAMESPACE != expected_owner_by_namespace
+        or _CORRECTION_TARGET_TYPE_BY_NAMESPACE
+        != expected_target_type_by_namespace
+        or domain_keys != {
+            "correctionRoot": "legacyApplicabilityRow",
+            "correctionReference": "legacyApplicabilityRow",
+            "slice3aBinding": "legacyApplicabilityRow",
+            "slice3bBinding": "row",
+        }
+        or OBLIGATION_MAPPING_DOMAINS[domain_keys["correctionRoot"]] != ROW_DOMAIN
+        or OBLIGATION_MAPPING_DOMAINS[domain_keys["correctionReference"]] != ROW_DOMAIN
+        or OBLIGATION_MAPPING_DOMAINS[domain_keys["slice3aBinding"]] != ROW_DOMAIN
+        or OBLIGATION_MAPPING_DOMAINS[domain_keys["slice3bBinding"]] == ROW_DOMAIN
+    ):
+        raise ADV4Error(
+            "projection_integrity", "",
+            "Correction identity compatibility contract differs",
+        )
 
 
 @dataclass(frozen=True)
@@ -161,13 +219,20 @@ def authorize_projection_audit(db: Session, actor: User, membership_id: str) -> 
     return membership
 
 
-def _verify_live_evidence(db: Session, proposal: ADV4CandidateProposal) -> dict[str, ADV4CandidateEvidenceBinding]:
-    bindings = db.scalars(
+def _verify_live_evidence(
+    db: Session, proposal: ADV4CandidateProposal, *, lock: bool = True,
+) -> dict[str, ADV4CandidateEvidenceBinding]:
+    query = (
         select(ADV4CandidateEvidenceBinding)
         .where(ADV4CandidateEvidenceBinding.proposal_id == proposal.id)
-        .order_by(ADV4CandidateEvidenceBinding.fragment_id, ADV4CandidateEvidenceBinding.evidence_key)
-        .with_for_update()
-    ).all()
+        .order_by(
+            ADV4CandidateEvidenceBinding.fragment_id,
+            ADV4CandidateEvidenceBinding.evidence_key,
+        )
+    )
+    if lock:
+        query = query.with_for_update()
+    bindings = db.scalars(query).all()
     if len(bindings) != proposal.binding_count:
         raise ADV4Error("candidate_integrity", "", "Candidate evidence binding count differs", http_status=409)
     result: dict[str, ADV4CandidateEvidenceBinding] = {}
@@ -976,6 +1041,7 @@ def reconstruct_applicability(db: Session, projection: ADV4CandidateAppProjectio
     _verify_correction_foundation(db, projection, proposal)
     _verify_change_dependencies(db, projection, proposal)
     _verify_global_owner_graph(db, projection)
+    _verify_projection_event_chain(db, projection)
     typed = _typed_reconstruct_applicability(db, projection)
     typed_payload = canonical_bytes(typed, CANONICALIZATION_VERSION_V2)
     if (
@@ -991,6 +1057,188 @@ def reconstruct_applicability(db: Session, projection: ADV4CandidateAppProjectio
             http_status=409,
         )
     return typed
+
+
+def _verify_projection_event_chain(
+    db: Session,
+    projection: ADV4CandidateAppProjection,
+) -> None:
+    """Verify the complete applicability audit chain and each stale cause."""
+
+    events = db.scalars(
+        select(ADV4CandidateAppProjectionEvent)
+        .where(ADV4CandidateAppProjectionEvent.projection_id == projection.id)
+        .order_by(ADV4CandidateAppProjectionEvent.sequence_number)
+    ).all()
+    if not events or [event.sequence_number for event in events] != list(
+        range(len(events))
+    ):
+        raise ADV4Error(
+            "projection_integrity", "", "Projection event sequence differs",
+            http_status=409,
+        )
+    for index, event in enumerate(events):
+        predecessor = None if index == 0 else events[index - 1].event_hash
+        if (
+            event.proposal_id != projection.proposal_id
+            or event.predecessor_event_hash != predecessor
+            or event.event_hash
+            != hashlib.sha256(EVENT_DOMAIN + event.canonical_bytes).hexdigest()
+        ):
+            raise ADV4Error(
+                "projection_integrity", "", "Projection event chain differs",
+                http_status=409,
+            )
+        try:
+            payload = json.loads(event.canonical_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ADV4Error(
+                "projection_integrity", "", "Projection event bytes are invalid",
+                http_status=409,
+            ) from exc
+        if canonical_bytes(payload, CANONICALIZATION_VERSION_V2) != event.canonical_bytes:
+            raise ADV4Error(
+                "projection_integrity", "", "Projection event bytes are not canonical",
+                http_status=409,
+            )
+        if index == 0:
+            request = db.get(ADV4CandidateAppMaterializationRequest, event.causing_request_id)
+            expected_payload = {
+                "version": "ad-v4-applicability-event-v2",
+                "eventType": "materialized",
+                "projectionId": projection.id,
+                "proposalId": projection.proposal_id,
+                "sequence": "0",
+                "requestId": event.causing_request_id,
+                "predecessorEventHash": "none",
+            }
+            if (
+                event.event_type != "materialized"
+                or event.reason_code != "explicit_admin_materialization"
+                or event.actor_kind != "platform_admin"
+                or request is None
+                or request.projection_id != projection.id
+                or any((
+                    event.causing_relationship_id,
+                    event.causing_lifecycle_event_id,
+                    event.causing_dependency_id,
+                ))
+                or payload != expected_payload
+            ):
+                raise ADV4Error(
+                    "projection_integrity", "", "Projection root event differs",
+                    http_status=409,
+                )
+            continue
+
+        cause_ids = tuple(filter(None, (
+            event.causing_relationship_id,
+            event.causing_lifecycle_event_id,
+            event.causing_dependency_id,
+        )))
+        if (
+            event.event_type != "stale_marked"
+            or event.causing_request_id is not None
+            or event.actor_kind != "system_repair"
+            or len(cause_ids) != 1
+        ):
+            raise ADV4Error(
+                "projection_integrity", "", "Projection stale event differs",
+                http_status=409,
+            )
+        valid_cause = False
+        cause_kind: str
+        if event.causing_relationship_id is not None:
+            cause_kind = "candidate_relationship"
+            relationship = db.get(
+                ADV4CandidateSubmissionRelationship,
+                event.causing_relationship_id,
+            )
+            if relationship is not None:
+                submission = db.get(ADV4CandidateSubmission, relationship.submission_id)
+                if submission is not None:
+                    try:
+                        verified = verified_submission(db, submission)
+                    except ADV4Error:
+                        verified = []
+                    valid_cause = (
+                        relationship in verified
+                        and relationship.predecessor_proposal_id
+                        == projection.proposal_id
+                        and relationship.relation_type
+                        in {"corrects_candidate", "replaces_candidate"}
+                    )
+        elif event.causing_dependency_id is not None:
+            cause_kind = "supersession_dependency"
+            dependency = db.get(
+                ADV4CandidateAppChangeDependency,
+                event.causing_dependency_id,
+            )
+            valid_cause = (
+                dependency is not None
+                and dependency.projection_id == projection.id
+                and dependency.dependency_kind == "incoming_supersession_signal"
+                and dependency.resolution_state == "resolved_candidate"
+            )
+        else:
+            cause_kind = "evidence_lifecycle"
+            lifecycle = db.get(
+                ADEvidenceFragmentLifecycleEvent,
+                event.causing_lifecycle_event_id,
+            )
+            fragment = (
+                None if lifecycle is None
+                else db.get(ADEvidenceFragment, lifecycle.fragment_id)
+            )
+            binding = (
+                None if lifecycle is None
+                else db.scalar(select(ADV4CandidateEvidenceBinding).where(
+                    ADV4CandidateEvidenceBinding.proposal_id == projection.proposal_id,
+                    ADV4CandidateEvidenceBinding.fragment_id == lifecycle.fragment_id,
+                ))
+            )
+            try:
+                lifecycle_events = (
+                    [] if fragment is None
+                    else verified_evidence_lifecycle_events(db, fragment=fragment)
+                )
+            except ADEvidenceError:
+                lifecycle_events = []
+            valid_cause = (
+                lifecycle is not None
+                and lifecycle in lifecycle_events
+                and lifecycle.event_type in {"superseded", "quarantined"}
+                and binding is not None
+            )
+        reasons = payload.get("reasons")
+        expected_reason = (
+            reasons[0]
+            if isinstance(reasons, list) and len(reasons) == 1
+            else "multiple"
+        )
+        expected_payload = {
+            "version": "ad-v4-applicability-event-v2",
+            "eventType": "stale_marked",
+            "projectionId": projection.id,
+            "proposalId": projection.proposal_id,
+            "sequence": str(event.sequence_number),
+            "reasons": reasons,
+            "cause": {"kind": cause_kind, "id": cause_ids[0]},
+            "predecessorEventHash": predecessor,
+        }
+        if (
+            not valid_cause
+            or not isinstance(reasons, list)
+            or not reasons
+            or reasons != sorted(set(reasons))
+            or any(type(reason) is not str or not reason for reason in reasons)
+            or event.reason_code != expected_reason
+            or payload != expected_payload
+        ):
+            raise ADV4Error(
+                "projection_integrity", "", "Projection stale cause differs",
+                http_status=409,
+            )
 
 
 def _verify_global_owner_graph(
@@ -2686,22 +2934,63 @@ def _verify_correction_foundation(
                     "namespace": ref.namespace,
                     "key": ref.semantic_key,
                 })[1]
-                or len(bindings) != (1 if expected_owner == "slice_3a" else 0)
+                or (expected_owner == "slice_3a" and len(bindings) != 1)
+                or (expected_owner == "foundation" and len(bindings) != 0)
+                or (expected_owner == "slice_3b" and len(bindings) not in {0, 1})
             ):
                 raise ADV4Error("projection_integrity", "", "Correction reference is incomplete", http_status=409)
             if bindings:
                 binding = bindings[0]
-                node = db.get(ADV4CandidateAppSemanticNode, binding.semantic_node_id)
-                if (
-                    binding.proposal_id != candidate.id
-                    or binding.projection_id != projection.id
-                    or binding.binding_slice != "slice_3a"
-                    or binding.generation != 1
-                    or node is None
-                    or node.projection_id != projection.id
-                    or node.node_type != three_a_types[ref.namespace]
-                    or node.node_key != ref.semantic_key
-                ):
+                if expected_owner == "slice_3a":
+                    node = db.get(ADV4CandidateAppSemanticNode, binding.semantic_node_id)
+                    expected_id, expected_hash = _row_id(
+                        "avk", "correction-binding",
+                        {"refId": ref.id, "semanticId": binding.semantic_node_id},
+                    )
+                    differs = (
+                        binding.proposal_id != candidate.id
+                        or binding.projection_id != projection.id
+                        or binding.semantic_node_id is None
+                        or binding.obligation_projection_id is not None
+                        or binding.obligation_semantic_node_id is not None
+                        or binding.binding_slice != "slice_3a"
+                        or binding.generation != 1
+                        or node is None
+                        or node.projection_id != projection.id
+                        or node.node_type != three_a_types[ref.namespace]
+                        or node.node_key != ref.semantic_key
+                        or binding.id != expected_id
+                        or binding.binding_hash != expected_hash
+                    )
+                else:
+                    node = db.get(
+                        ADV4CandidateObligationSemanticNode,
+                        binding.obligation_semantic_node_id,
+                    )
+                    expected_id, expected_hash = _obligation_row_id(
+                        "avk", "correction-binding",
+                        {
+                            "refId": ref.id,
+                            "semanticId": binding.obligation_semantic_node_id,
+                        },
+                    )
+                    differs = (
+                        binding.proposal_id != candidate.id
+                        or binding.projection_id is not None
+                        or binding.semantic_node_id is not None
+                        or binding.obligation_projection_id is None
+                        or binding.obligation_semantic_node_id is None
+                        or binding.binding_slice != "slice_3b"
+                        or binding.generation != 1
+                        or node is None
+                        or node.projection_id != binding.obligation_projection_id
+                        or node.proposal_id != candidate.id
+                        or node.node_type != _CORRECTION_TARGET_TYPE_BY_NAMESPACE[ref.namespace]
+                        or node.node_key != ref.semantic_key
+                        or binding.id != expected_id
+                        or binding.binding_hash != expected_hash
+                    )
+                if differs:
                     raise ADV4Error("projection_integrity", "", "Correction semantic binding differs", http_status=409)
         for evidence_ordinal, link in enumerate(evidence):
             binding = db.get(ADV4CandidateEvidenceBinding, link.candidate_binding_id)
@@ -2945,15 +3234,9 @@ def _materialize_corrections(
     bindings: dict[str, ADV4CandidateEvidenceBinding],
     nodes: dict[str, ADV4CandidateAppSemanticNode],
 ) -> None:
+    _validate_correction_compatibility_contract()
     documents = {item["officialDocumentKey"]: item for item in candidate.parsed_json["officialDocuments"]}
     node_by_key = {(node.node_type, node.node_key): node for node in nodes.values()}
-    owner = {
-        "directiveIdentity": "foundation", "supersessionRelations": "foundation",
-        "productScopes": "slice_3a", "conditionDefinitions": "slice_3a",
-        "applicabilityRules": "slice_3a", "requirements": "slice_3b",
-        "recurrenceGroups": "slice_3b", "amocAuthorityProvisions": "slice_3b",
-    }
-    type_by_namespace = {"productScopes": "product_scope", "conditionDefinitions": "condition", "applicabilityRules": "applicability_rule"}
     for ordinal, value in enumerate(candidate.parsed_json["authoritativeCorrections"]):
         root_id, root_hash = _row_id("avc", "correction", {"proposalId": candidate.id, "correctionKey": value["correctionKey"]})
         original = documents[value["originalDocumentRefKey"]]
@@ -2963,11 +3246,11 @@ def _materialize_corrections(
         db.flush([root])
         for ref_ordinal, ref in enumerate(value["changedSemanticRefs"]):
             ref_id, ref_hash = _row_id("avf", "correction-ref", {"correctionId": root.id, "namespace": ref["namespace"], "key": ref["key"]})
-            ref_row = ADV4CandidateCorrectionRef(id=ref_id, correction_id=root.id, proposal_id=candidate.id, canonical_ordinal=ref_ordinal, namespace=ref["namespace"], semantic_key=ref["key"], owner_slice=owner[ref["namespace"]], reference_hash=ref_hash)
+            ref_row = ADV4CandidateCorrectionRef(id=ref_id, correction_id=root.id, proposal_id=candidate.id, canonical_ordinal=ref_ordinal, namespace=ref["namespace"], semantic_key=ref["key"], owner_slice=_CORRECTION_OWNER_BY_NAMESPACE[ref["namespace"]], reference_hash=ref_hash)
             db.add(ref_row)
             db.flush([ref_row])
-            if ref["namespace"] in type_by_namespace:
-                semantic = node_by_key.get((type_by_namespace[ref["namespace"]], ref["key"]))
+            if ref["namespace"] in _CORRECTION_TARGET_TYPE_BY_NAMESPACE and ref_row.owner_slice == "slice_3a":
+                semantic = node_by_key.get((_CORRECTION_TARGET_TYPE_BY_NAMESPACE[ref["namespace"]], ref["key"]))
                 if semantic is None:
                     raise ADV4Error("projection_integrity", "", "Correction 3A reference does not resolve")
                 binding_id, binding_hash = _row_id("avk", "correction-binding", {"refId": ref_id, "semanticId": semantic.id})
@@ -3116,7 +3399,7 @@ def _detect_projection_state(
     candidate = verified_candidate(db, projection.proposal_id)
     causing_lifecycle_event_id: str | None = None
     try:
-        _verify_live_evidence(db, candidate)
+        _verify_live_evidence(db, candidate, lock=False)
     except ADV4Error:
         reasons.append("evidence_invalidated")
         binding = db.scalar(select(ADV4CandidateEvidenceBinding).where(

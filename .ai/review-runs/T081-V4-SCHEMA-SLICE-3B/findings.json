@@ -1,0 +1,969 @@
+[
+  {
+    "id": "T081-V4-S3B-B-001",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Every physical row, projection envelope, request, and audit event has one exact cross-language identity, parentage, cardinality, and hash contract.",
+    "summary": "The normative matrix omits exact identity subobjects, expression-root ordinals, structural count inventory, and closed request/event payloads, and conflicts by freezing counts for append-only audit children.",
+    "evidence": [
+      "normative-mapping-matrix.md defines relationship rows as deterministic without enumerating their exact identity objects.",
+      "The E1-E7 rows do not distinguish exact parent and ordinal rules for activation, branch-condition, and recurrence-condition roots.",
+      "The P1-P4 rows omit closed envelopes, hash preimages, stale-cause unions, and immutable versus append-only count boundaries.",
+      "decision.md says root counts cover every child while also allowing later requests and stale events against an immutable projection."
+    ],
+    "impact": "Python, generated SQL, hand-written PostgreSQL, and read verification could disagree while claiming conformance; exact direct-SQL validation and immutable projection hashing are not implementable as written.",
+    "requiredClosure": "Define every row identity/domain, exact expression parent/ordinal rule, structural count column, projection/request/event envelope and hash preimage, stale cause union/cardinality/predecessor chain, and generation meaning; extend positive and corruption vectors accordingly.",
+    "closureEvidence": [
+      "normative-mapping-matrix.md sections 1.3-1.9 now freeze every row identity/domain, semantic parent/ordinal slot, the 22 structural counts, projection/request/auth/event payloads, hashes, cause unions, predecessor chain, and no-generation rule.",
+      "normative-mapping-matrix.md sections 9-10 now require exact preimage goldens, all cause branches, audit-child count exclusion, multi-request/event stability, and direct corruption vectors.",
+      "decision.md projection and event clauses now explicitly exclude append-only requests/events from immutable root counts.",
+      "normative-mapping-matrix.md section 1.9 now defines correctionBindingSetHash from an exact normalized 3B-binding record list, deterministic sort, [] empty value, domain-separated bytes/hash, and corruption goldens.",
+      "Independent design closure review 2 closed B-001 against packet 52bf5bda4f8abf4e2240227e4ea3f298c38e213750c8aa09be520f00611c85ec."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-H-001",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Slice 3B appends correction bindings without changing any committed Slice-3A identity or hash.",
+    "summary": "The proposed correction-binding hash preimage contradicts the committed Slice-3A two-field preimage and incorrectly places all hashes under the 3B row domain.",
+    "evidence": [
+      "decision.md claims the existing binding preimage includes slice, generation, projection, and semantic IDs.",
+      "backend/app/services/ad_v4_applicability.py and migration 0027 compute the committed binding identity from only refId and semanticId under the Slice-3A row domain.",
+      "normative-mapping-matrix.md globally assigns row hashes to the obligation row domain without carving out preserved 3A bindings."
+    ],
+    "impact": "Literal implementation could restamp immutable 3A rows, fail the amended validator, or create Python/PostgreSQL disagreement.",
+    "requiredClosure": "Freeze the exact existing Slice-3A domain and {refId,semanticId} preimage; separately define the 3B binding domain/preimage and prove byte identity of existing rows across upgrade, materialization, failed downgrade, and re-upgrade.",
+    "closureEvidence": [
+      "decision.md section 9 freezes the committed Slice-3A APP_ROW_DOMAIN, correction-binding label, and exact {refId,semanticId} preimage, and separately defines the obligation domain for new 3B bindings.",
+      "normative-mapping-matrix.md section 1.3 records the correction-binding domain exception and section 8 freezes slice_3b/generation-1 behavior.",
+      "The migration test plan requires byte-identical existing binding IDs/hashes across upgrade, materialization, failed downgrade, and re-upgrade.",
+      "The contract now uses the committed avk_ binding prefix rather than the avc_ correction-root prefix.",
+      "Independent design closure review 2 closed H-001 against packet 52bf5bda4f8abf4e2240227e4ea3f298c38e213750c8aa09be520f00611c85ec."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-H-002",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "All 3A/3B materializers, gate administration, and downgrade acquire shared locks in one complete deadlock-safe order and return no unhandled 500.",
+    "summary": "The declared lock order conflicts with committed Slice-3A ordering, omits locks, contradicts itself, and excludes the needed Slice-3A service amendment from scope.",
+    "evidence": [
+      "decision.md requires lexical gate locking while committed Slice 3A locks validator2 before materializer3a.",
+      "The expected implementation scope omits backend/app/services/ad_v4_applicability.py.",
+      "Invariant 32 says gates are rechecked while holding the app projection, while invariant 34 and the operation list put gates before it.",
+      "The order omits actor/membership and idempotency advisory locks used by Slice 3A."
+    ],
+    "impact": "Concurrent 3A/3B writes, gate changes, or downgrade can deadlock and surface PostgreSQL victims as 500 responses.",
+    "requiredClosure": "Define one complete compatible order, add the required Slice-3A service to scope or follow its established order, and add forced interleaving tests across 3A/3B, gate disable, and downgrade.",
+    "closureEvidence": [
+      "decision.md section 11 now enumerates actor, membership, idempotency, proposal, fixed gate prefix, evidence, 3A advisory/root, correction, 3B advisory/root, and child lock order.",
+      "The same section defines gate administration and a NOWAIT/bounded-timeout table-first DDL protocol with controlled rollback instead of waiting while holding inverted locks.",
+      "Expected scope now includes backend/app/services/ad_v4_applicability.py and concurrency tests require forced 3A/3B, gate, and downgrade interleavings with no 500.",
+      "Independent design closure review 1 explicitly closed H-002 against packet cd71d30c465dd0b8daef6d34470d25d9d98e51c7762790dde2d56fe6702358a6."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-H-003",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every timing interval is preserved exactly and any unsupported parent value fails before numeric conversion with a stable controlled error.",
+    "summary": "The decimal admissibility boundary and pre-cast failure behavior are unresolved for forged/direct-SQL parents and finite PostgreSQL numeric storage.",
+    "evidence": [
+      "The JSON Schema digit pattern is unbounded while normal raw API parsing separately limits strings to 16,384 characters.",
+      "verified_candidate re-runs schema validation but not the raw parser resource boundary.",
+      "PostgreSQL numeric is finite and the design specifies an exact cast without a pre-cast bound.",
+      "The decision leaves the behavior as an open question rather than a normative rule."
+    ],
+    "impact": "A forged parent can cause numeric overflow or an unhandled materialization/read failure rather than controlled fail-closed behavior.",
+    "requiredClosure": "Freeze a supported bound and stable pre-cast error in Python/PostgreSQL, or remove numeric projection/use a new validator version; test maximum, maximum+1, integer-heavy, fractional-heavy, and corrupted-parent values.",
+    "closureEvidence": [
+      "decision.md sections 7 and invariant 18 freeze MAX_TIMING_INTERVAL_CHARS=16,384, stable timing_interval_resource_limit failure before conversion, and PostgreSQL integer/scale fit reasoning.",
+      "normative-mapping-matrix.md physical domains make exact text authoritative and require the bound before unconstrained numeric cast.",
+      "Positive/direct-SQL tests require max, max+1, integer-heavy, fractional-heavy, and forged-parent vectors.",
+      "Independent design closure review 1 explicitly closed H-003 against packet cd71d30c465dd0b8daef6d34470d25d9d98e51c7762790dde2d56fe6702358a6."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-H-004",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Rolling deployment and rollback preserve available Slice-3A audit reads without misclassifying valid 3B bindings as corruption.",
+    "summary": "Committed Slice-3A readers require zero 3B-owned bindings, so the claimed rollback to the 9ad410b binary is incompatible after the first 3B binding.",
+    "evidence": [
+      "backend/app/services/ad_v4_applicability.py currently rejects any binding for owner_slice slice_3b.",
+      "Slice 3B must append exactly one such binding for each 3B correction ref.",
+      "decision.md claims unchanged 3A route compatibility and application rollback availability without defining an 0028-aware binary boundary."
+    ],
+    "impact": "Rolling deployment or binary rollback can turn otherwise valid 3A audit reads into integrity 409 failures.",
+    "requiredClosure": "Keep the 3B gate disabled until every replica is 0028-aware, test the old binary only against upgraded-empty state, prohibit rollback to 9ad410b after first binding, and define application rollback as route disablement on an 0028-aware binary unless a compatible legacy reader is implemented.",
+    "closureEvidence": [
+      "decision.md migration section defines expand-first deployment with the 3B DB gate disabled until every replica is 0028-aware.",
+      "It limits exact-9ad410b testing to upgraded-empty state, prohibits old-binary rollback after the first 3B binding, and defines rollback thereafter as gate disablement on an 0028-aware binary.",
+      "Expected scope includes the Slice-3A reader amendment and the test plan names both compatibility boundaries.",
+      "Independent design closure review 1 explicitly closed H-004 against packet cd71d30c465dd0b8daef6d34470d25d9d98e51c7762790dde2d56fe6702358a6."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-M-001",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Each verified GET observes candidate, live evidence, parent applicability, corrections, and typed obligations at one defined consistency point without mutation.",
+    "summary": "Verified reads use many queries but the design defines neither repeatable-read snapshot isolation nor a complete non-mutating lock protocol.",
+    "evidence": [
+      "The decision requires multi-table revalidation without specifying a consistency point.",
+      "Current live-evidence verification locks binding rows but reads lifecycle events separately while lifecycle insertion locks fragment rows.",
+      "The concurrency plan omits GET races with evidence lifecycle, candidate relationships, and parent-3A stale transitions."
+    ],
+    "impact": "One response may combine observations from different committed states or complete after evidence invalidation without defined semantics.",
+    "requiredClosure": "Use one repeatable-read snapshot or a compatible non-mutating lock protocol, and add forced interleaving tests for detail/list/reconstruction against lifecycle, relationship, and parent-3A stale changes.",
+    "closureEvidence": [
+      "decision.md section 10 defines each detail/list/reconstruction verification as one separate PostgreSQL REPEATABLE READ read-only transaction, with membership/gates and all evidence/relationship/3A/correction/3B/event reads in that snapshot.",
+      "The session always rolls back/closes and list verification captures the complete result set in one snapshot.",
+      "The concurrency plan now requires forced GET interleavings against evidence lifecycle, candidate relationship, and parent-3A stale commits.",
+      "Independent design closure review 1 explicitly closed M-001 against packet cd71d30c465dd0b8daef6d34470d25d9d98e51c7762790dde2d56fe6702358a6."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-B-002",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The exact design packet cryptographically binds every normative input relied on for implementation authorization.",
+    "summary": "The first closure packet omitted the Slice-3B normative mapping matrix from its manifest and packet hash.",
+    "evidence": [
+      "The cd71d30c packet manifest did not list normative-mapping-matrix.md.",
+      "B-001 closure depended primarily on matrix sections 1.3-1.9."
+    ],
+    "impact": "Unbound normative bytes could change after review without changing the reviewed packet digest.",
+    "requiredClosure": "Rebuild with the Slice-3B normative matrix as an explicit review input and obtain a new exact-packet review.",
+    "closureEvidence": [
+      "Packet 52bf5bda4f8abf4e2240227e4ea3f298c38e213750c8aa09be520f00611c85ec includes the Slice-3B normative matrix as an explicit review input with bound digest 7f3fb38f53cb640e53707c76c052822bfb49101e8dbc06d0f3ec0486b4a2a9b3.",
+      "Independent design closure review 2 verified the exact packet and closed B-002."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-M-002",
+    "stage": "design",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Requirement sequence text is validated without unsafe integer conversion and yields only controlled errors for normal or forged parents.",
+    "summary": "The prior design projected schema-unbounded sequence text to Python/PostgreSQL integers without a pre-conversion membership rule.",
+    "evidence": [
+      "Validator-2 sequence is a digit string and the raw parser permits up to 16,384 characters.",
+      "Python enforces an integer-string digit limit and PostgreSQL integer is bounded."
+    ],
+    "impact": "A long sequence could produce an unhandled conversion failure instead of controlled validation.",
+    "requiredClosure": "Compare exact sequence strings to the 1..N textual set before conversion, cap N at 2,000, and test normal and forged-parent boundaries.",
+    "closureEvidence": [
+      "decision.md invariant 10 and requirements section now require length/membership validation before conversion with stable resource/invalid codes and a maximum stored value of 2,000.",
+      "normative-mapping-matrix.md Q1 and the positive/corruption oracle cover the pre-conversion sequence boundary.",
+      "Expected scope now includes ad_v4_candidates.py and its tests so the existing normal create path is repaired rather than left with a conversion 500.",
+      "Independent design closure review 2 closed M-002 against packet 52bf5bda4f8abf4e2240227e4ea3f298c38e213750c8aa09be520f00611c85ec."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-IF-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The declarative mapping mechanically binds all selectors, typed columns, unions, references, identities, ordering, and cardinality used by Python and PostgreSQL.",
+    "summary": "The initial manifest and validator captured coarse owner/relationship labels but omitted executable typed-owner and union semantics and accepted material mutations.",
+    "evidence": [
+      "Removing D3 or changing D2's selector was accepted.",
+      "Changing Q4 identity properties/table or substituting the row domain was accepted.",
+      "Generated Python/SQL exposed constants rather than expected-relation logic."
+    ],
+    "impact": "Later Python, SQL, and read implementations could drift while the pinned digest and tests still pass.",
+    "requiredClosure": "Expand the closed DSL and exact validator, generate executable expectation helpers, and add systematic mutation tests for every bound field.",
+    "closureEvidence": [
+      "The schema and manifest now define 13 complete typed-owner contracts with physical columns/source rules/nullability, closed union branches, references, and child cardinalities in addition to all selectors and relationship identities.",
+      "The generator pins a normalized full-manifest shape digest, validates exact occurrence-to-owner cross-record consistency, and rejects any semantic mutation before output.",
+      "Generated Python now executes the selector DSL and generated PostgreSQL installs paprnav_v4_obligation_select_occurrences(proposal jsonb); a rolled-back local PostgreSQL execution passed 1/1.",
+      "Parameterized tests mutate omissions, selectors, domains, relationship tables/identities, algorithms, owner columns/nullability/unions/references/cardinality and require rejection.",
+      "The corrected manifest uses requirementState and changedSemanticRefs, derives known timing state, restricts D4 to unknown and R6 to known, maps each expression reference branch to its exact Slice-3A node type, and requires two_or_more G2 members.",
+      "Generated Python and a rolled-back PostgreSQL execution both verify the specialized union/reference rules; the corrected host gate passes 43/43.",
+      "Independent foundation closure review 2 closed IF-001 against packet b8f783d925d7c3c0f0397a290f139b4441269e9413070a0ef8a24cfe09af6279."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-IF-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Forged candidate requirement arrays above 2,000 fail before sequence-map allocation or conversion.",
+    "summary": "The helper accepted a forged contiguous 2,001-requirement list and allocated from its unbounded length.",
+    "evidence": [
+      "_validated_requirement_sequences constructed expected from len(requirements) without checking MAX_ARRAY_ITEMS.",
+      "verified_candidate relies on this helper for direct-forged parents."
+    ],
+    "impact": "Out-of-contract parent data can pass integrity verification and larger arrays can consume unbounded memory.",
+    "requiredClosure": "Reject above MAX_ARRAY_ITEMS before allocation with controlled read/create behavior and test the forged boundary.",
+    "closureEvidence": [
+      "_validated_requirement_sequences now rejects len(requirements)>MAX_ARRAY_ITEMS before constructing the textual expectation map, with 413 on create and 409 on integrity reads.",
+      "A direct-forged, correctly canonicalized and rehashed 2,001-requirement candidate test verifies controlled requirement_sequence_resource_limit/409 behavior.",
+      "Independent foundation closure review 1 explicitly closed IF-002 against packet 0cea161694cac0654edc03b20f6f70759bc13bd4e5fecadca3ca8caece338cb9."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-IF-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Runtime mapping structures are recursively immutable and cannot diverge from MAPPING_DIGEST.",
+    "summary": "MappingProxyType and tuples froze only top-level containers; nested selectors remained mutable.",
+    "evidence": [
+      "A nested selector mutation succeeded while the exported digest remained unchanged."
+    ],
+    "impact": "A consumer could accidentally create runtime Python/SQL mapping drift without a file or digest change.",
+    "requiredClosure": "Recursively freeze all generated containers and test nested mutation failure.",
+    "closureEvidence": [
+      "Generated _freeze recursively converts every mapping dictionary to MappingProxyType and every list to tuple before export.",
+      "Tests prove nested selector assignment raises TypeError and nested owner-column append raises AttributeError while digest parity remains exact.",
+      "Independent foundation closure review 1 explicitly closed IF-003 against packet 0cea161694cac0654edc03b20f6f70759bc13bd4e5fecadca3ca8caece338cb9."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-DOC-001",
+    "stage": "implementation",
+    "reviewer": "/root",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Every exact 3B row identity and closed projection/audit payload can be canonically serialized in byte-identical Python and PostgreSQL form.",
+    "summary": "The approved matrix required numeric JSON ordinals, counts, and event sequence numbers while also routing them through the number-free candidate c14n-2 canonicalizer.",
+    "evidence": [
+      "The evidence-link identity contains ordinal as a JSON integer.",
+      "The projection envelope contains 22 integer counts and event payloads contain integer sequenceNumber.",
+      "backend/app/services/ad_v4_candidates.py canonical_bytes rejects all JSON numbers and null before serialization.",
+      "The first D1-D4 construction test failed before row creation when ordinal 0 reached canonical_bytes."
+    ],
+    "impact": "No evidence link, relationship with an ordinal, projection envelope, or event could receive its normative deterministic ID/hash.",
+    "requiredClosure": "Define a closed internal-record c14n-2 profile that permits only the exact null/boolean/string/nonnegative-integer types used by normative internal records, keep candidate source canonicalization number-free, implement byte-identical Python/PostgreSQL behavior, and obtain independent amendment review.",
+    "closureEvidence": [
+      "decision.md and normative-mapping-matrix.md distinguish the number-free candidate-source profile from the closed internal-record profile.",
+      "backend/app/services/ad_v4_obligations.py implements the narrow Python serializer and host tests cover exact bytes plus rejection of negative and floating values.",
+      "Independent bounded amendment review passed packet 905dedbf17a8d6b3ff14f198d5fbdd74a1db15b33c008426346b337557b2f6c1 and authorized implementation continuation.",
+      "Finding intentionally remains open until dedicated PostgreSQL serialization and the complete cross-language golden matrix pass independent review.",
+      "Generated PostgreSQL functions implement explicit UTF-16 object-key ordering and the closed null/boolean/string/nonnegative-integer recursive serializer without relying on database collation.",
+      "Twelve fixed row/projection/request/auth/event/correction/Unicode goldens produce byte-identical Python/PostgreSQL output and identical native PostgreSQL/Python domain hashes; four invalid numeric vectors reject.",
+      "Builder PostgreSQL-16 run: 17 serializer tests passed; generated artifact check, 301 host candidate/obligation tests, Python compilation, and git diff hygiene passed.",
+      "The repaired internal domain excludes U+0000, non-built-in JSON values, cycles, excessive depth, and integers outside 0..2147483647 in both its normative contract and implementations.",
+      "Fifteen literal goldens plus hostile boundary vectors pass byte-for-byte and hash-for-hash in Python and PostgreSQL 16; the dedicated suite passes 31 tests and the host candidate/obligation suite passes 320 tests.",
+      "Independent bounded closure passed packet dea8a0057c13a0283d26b58bb6bacce9d26ab8d9c40384f5c44fc525ff423d9a and explicitly closed DOC-001 without extending the pass to migration or broader Slice-3B persistence.",
+      "Independent closure artifact: adversarial-implementation-internal-record-serializer-closure-1.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-D-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Verified reads reject a consistently substituted proposal or projection graph.",
+    "summary": "The D-family verifier self-anchors to untrusted family root identities.",
+    "evidence": ["verify_document_family rebuilds expected state from family.proposal_id and family.projection_id.", "A completely restamped foreign family passed verification."],
+    "impact": "A query scoping defect could return another internally consistent projection without detection.",
+    "requiredClosure": "Pass trusted proposal/projection identity explicitly and test complete consistent restamps.",
+    "closureEvidence": [
+      "verify_document_family requires trusted proposal_id and projection_id and rebuilds every expected row from them.",
+      "Tests reject both fully consistent foreign-proposal and foreign-projection restamps.",
+      "Independent closure review 1 closed D-IMPL-001 against packet 50cdede4d25a915c22f45304ba9a724101b1c40f3e40bc00883d0644209f121b."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-D-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "D1 and evidence set ordinals follow schema-aware canonical order.",
+    "summary": "The D builder enumerates submitted document and evidence order and its common-mode oracle accepts it.",
+    "evidence": ["Reversed document keys received root ordinals 0/1 in submitted order.", "Reversed evidence keys received evidence ordinals 0/1 in submitted order."],
+    "impact": "Typed pointers, IDs, ordinals, and hashes can disagree with authoritative canonical bytes.",
+    "requiredClosure": "Establish canonical set order independently and add reversed-order vectors.",
+    "closureEvidence": [
+      "Source containers are restricted to JSON list/dict types, closing the tuple canonical-order bypass.",
+      "Reversed document and multi-evidence JSON arrays reconstruct in exact schema-aware canonical order with matching ordinals.",
+      "Independent closure review 2 closed D-IMPL-002 against packet d5e1ef4995a7584400946cd0e113582aaafc9b6c651803ed5e988701fddd31c0."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-D-IMPL-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every D-family array and aggregate source graph is resource-bounded before allocation.",
+    "summary": "Nested evidence arrays and the aggregate D source graph are not resource checked.",
+    "evidence": ["A 2,001-item evidenceKeys array produced 2,004 links.", "Only the root document count checks maxArrayItems."],
+    "impact": "A forged parent can drive excessive construction/read allocation.",
+    "requiredClosure": "Apply manifest maxArrayItems and maxTotalNodes before row allocation and test boundaries.",
+    "closureEvidence": [
+      "The manifest maxArrayItems and maxTotalNodes values drive a pre-row iterative source graph check.",
+      "Nested evidence arrays accept 2,000 and reject 2,001 before row construction.",
+      "The durable aggregate vector accepts exactly 75,000 source nodes with 74,641 evidence links and rejects 75,001.",
+      "Independent closure review 1 closed D-IMPL-003 against packet 50cdede4d25a915c22f45304ba9a724101b1c40f3e40bc00883d0644209f121b."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-D-IMPL-004",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The generated mapping mechanically binds D-family construction metadata.",
+    "summary": "D1-D4 rules are handwritten while only DOMAINS is imported from the generated contract.",
+    "evidence": ["OCCURRENCES, OWNER_CONTRACTS, selectors, union helpers, parent/ordinal/evidence rules are unused by the builder."],
+    "impact": "Manifest, Python construction, and later PostgreSQL can silently drift.",
+    "requiredClosure": "Drive construction from generated descriptors or add an exhaustive independent parity oracle.",
+    "closureEvidence": [
+      "Generated selectors and descriptors drive D1-D4 occurrence, node, parent, ordinal, owner-kind, evidence, presence/table, and restricted-branch behavior.",
+      "Generated owner contracts drive assertion required/forbidden columns and document references/child cardinality/order.",
+      "Tests bind every dataclass field and nullable branch to the complete generated owner columns and unions.",
+      "Independent closure review 2 closed D-IMPL-004 against packet d5e1ef4995a7584400946cd0e113582aaafc9b6c651803ed5e988701fddd31c0."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-Q-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Each Q4 key resolves to the exact verified same-projection D1 node with that canonical key.",
+    "summary": "A corrupted D owner-key lookup can silently retarget Q4 references.",
+    "evidence": ["Swapping two ObligationDocumentOwner.document_ref_key values made doc-one resolve to the D1 node keyed doc-two.", "Materialization and the common-mode Q verifier both accepted the swapped dependency."],
+    "impact": "An approved-data reference can bind the wrong incorporated document.",
+    "requiredClosure": "Verify the complete supplied D family against trusted canonical source/evidence before Q lookup and test swapped/duplicate/mismatched/restamped dependencies.",
+    "closureEvidence": [
+      "Q construction verifies the complete D family against trusted canonical documents and evidence bindings before building its lookup.",
+      "Swapped/duplicate owner keys, owner-node mismatch, fully restamped D dependencies, and fully restamped Q graphs fail closed.",
+      "Independent closure review closed Q-IMPL-001 against packet cb9ce439bc6e9d765ea5af9458d7f6f130a8ee91e9cf2f277261af8d3bc3f812."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-Q-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The generated mapping binds every claimed Q1-Q5 construction rule.",
+    "summary": "Q descriptor, owner-contract, and Q4 relationship consumption/parity is incomplete.",
+    "evidence": ["Parents, owner value rules/references/children, presence/table rules, Q4 identity order/cardinality/ordering, and most owner semantics remain handwritten."],
+    "impact": "Python and later PostgreSQL construction can drift after a manifest revision.",
+    "requiredClosure": "Drive or exhaustively validate all Q descriptors, owner columns/source/nullability/references/children/unions/deferred slots, and Q4 relationship semantics.",
+    "closureEvidence": [
+      "Generated Q descriptors drive occurrence, type, key, parent, ordinal, evidence, presence, and owner-table behavior.",
+      "Runtime validation/tests bind complete owner columns/source/nullability/presence, references, children, branch unions, deferred slots, and the full Q4 relationship contract.",
+      "Independent closure review closed Q-IMPL-002 against packet cb9ce439bc6e9d765ea5af9458d7f6f130a8ee91e9cf2f277261af8d3bc3f812."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-E-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Expression-state, prerequisite, and termination references form one complete acyclic requirement graph.",
+    "summary": "The expression-family cycle oracle checks only requirement_state_ref edges and omits prerequisite and termination edges.",
+    "evidence": [
+      "Packet 517a173 accepted req-a expression -> req-b plus req-b prerequisite -> req-a.",
+      "The same omitted-edge bypass applies to req-b terminatingEffect -> req-a."
+    ],
+    "impact": "The pure construction/read oracle can attest a source graph that violates the approved combined regulatory dependency invariant.",
+    "requiredClosure": "Use a shared generated-contract-bound oracle over all three edge classes; reject unresolved, self, cyclic, and over-limit graphs; test prerequisite and termination mixed cycles, an acyclic mixed graph, and exact aggregate edge boundaries.",
+    "closureEvidence": [
+      "A generated-contract-bound `_verify_combined_requirement_graph` merges requirement_state_ref, prerequisite, and termination source occurrences before one cycle check.",
+      "Mixed prerequisite and termination cycles reject, an acyclic mixed graph accepts, and the raw 40,000/40,001 source-occurrence boundary does not collapse duplicate graph targets.",
+      "Independent closure review 3 closed E-IMPL-001 against packet 2773f8f5a961f8b89a846bc3cc7fadd0d9a63fef7884a4ef53c8d93bb10fe800."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-E-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every schema-valid, within-budget acyclic requirement graph is verified without dependence on Python call-stack depth.",
+    "summary": "The combined requirement graph uses recursive DFS and leaks RecursionError for a valid 1,100-hop chain.",
+    "evidence": [
+      "Packet fa449dd raised raw RecursionError for a schema-shaped, under-75,000-node 1,100-requirement acyclic chain.",
+      "The same recursion dependency existed in the direct shared graph helper.",
+      "After the E helper became iterative, packet bd0a93 still raised raw RecursionError in candidate `_assert_acyclic` for an actual 742,487-byte valid envelope with the same 1,100-hop chain."
+    ],
+    "impact": "A valid candidate near ordinary Python recursion depth cannot pass the trusted validation-to-materialization path, producing an uncontrolled availability failure and validator/materializer disagreement.",
+    "requiredClosure": "Use iterative color/explicit-stack graph walks in both candidate validation and obligation verification; test actual valid-envelope and materialization acyclic/cyclic chains beyond Python recursion depth at the source budget.",
+    "closureEvidence": [
+      "Candidate validation and obligation verification both call the shared iterative `ad_v4_graph.first_cycle_node` primitive.",
+      "Actual 742,487-byte validator-2 and public materializer 1,100-hop acyclic chains pass; cyclic forms fail with controlled domain errors.",
+      "The reviewer compared the shared primitive with an independent oracle over 4,800 randomized graphs without disagreement.",
+      "Independent closure review 3 closed E-IMPL-002 against packet 2773f8f5a961f8b89a846bc3cc7fadd0d9a63fef7884a4ef53c8d93bb10fe800."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-T-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Stored timing numeric values are exact finite nonnegative Decimal derivations of canonical interval text.",
+    "summary": "Dataclass equality accepts equal-valued int, float, bool, and scale-altered Decimal timing corruption.",
+    "evidence": ["Packet 4c1b accepted interval_numeric substitutions 10, 10.0, and representation-altered Decimal values for canonical text 10."],
+    "impact": "Verified read can attest a binary-float or wrongly represented numeric value despite the exact arbitrary-precision contract.",
+    "requiredClosure": "Explicitly require exact Decimal type, finite/nonnegative value, and exact representation derived from canonical text before family equality; add equal-value type/scale corruption tests.",
+    "closureEvidence": [
+      "Verified read requires exact finite nonnegative Decimal type and as-tuple representation derived from canonical interval text.",
+      "A shared supplied-family numeric schema requires exact nonnegative int (never bool/float) for every semantic/evidence/group/term ordinal and term_count.",
+      "All equal-valued int/float/bool/Decimal-scale and nonfinite substitutions reject while the untouched exact family passes.",
+      "Independent closure review 2 closed T-IMPL-001 against packet bef4c52d35de0ac16ece8d363f66df34a6cbe394c1dbe5d428c89f99bfc633e3."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-T-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Not-applicable timing reasons match the schema identifier domain exactly.",
+    "summary": "The pure T4 constructor accepts reasons longer than the 512-character schema maximum.",
+    "evidence": ["Packet 4c1b accepted 513-character and 16,384-character not-applicable reasons."],
+    "impact": "The standalone exact union constructor is broader than validator-2 and can create non-schema timing owners.",
+    "requiredClosure": "Enforce the 1..512 reason bound and add exact 512/513 tests.",
+    "closureEvidence": [
+      "The pure timing validator now enforces nonempty not-applicable reasons no longer than 512 characters.",
+      "Exact 512-character input materializes and 513-character input rejects.",
+      "Independent closure review 1 closed T-IMPL-002 against packet d33c2d8b1e18f6a025203b9ce1caa5002a2687e8ed299de446972a1bcc5a411e."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-T-PKT-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The implementation packet byte-binds the amended normative mapping matrix used for review.",
+    "summary": "The timing packet did not include normative-mapping-matrix.md as a review input.",
+    "evidence": ["The inspected matrix SHA was 1497e8b6cf1335eb430a029d7040e816a2eea602f41b70c1571a501e53c22778 but packet currentness did not bind it."],
+    "impact": "Packet verification cannot detect drift in the normative contract used to judge implementation.",
+    "requiredClosure": "Bind normative-mapping-matrix.md explicitly in the fresh closure packet and verify its byte hash.",
+    "closureEvidence": [
+      "Packet d33c2d8 explicitly included normative-mapping-matrix.md as a review input.",
+      "The reviewer verified the current matrix SHA-256 1497e8b6cf1335eb430a029d7040e816a2eea602f41b70c1571a501e53c22778 was byte-bound.",
+      "Independent closure review 1 closed T-PKT-001."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-Q-REL-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Malformed Q7/Q9/Q10 source objects and discriminators fail through controlled ObligationIntegrityError without leaking Python exceptions.",
+    "summary": "The relationship source guard accepts generic Mapping objects that the canonicalizer cannot serialize and performs membership with an unchecked, potentially unhashable Q7 kind.",
+    "evidence": [
+      "Packet fe8fa962c490ae14fcd49cdfad289ec5db8cb8cc38ed78520a6d1cee466b1cd6 leaks TypeError for terminatingEffect.kind=[] and MappingProxyType requirement/effect objects.",
+      "Independent initial report: adversarial-implementation-requirement-relationships-initial.md."
+    ],
+    "impact": "Forged or corrupt trusted-source data can escape the integrity boundary as an uncontrolled exception and cause an availability/error-contract failure.",
+    "requiredClosure": "Type-check kind before membership; require exact JSON-object-compatible dict inputs or safely normalize generic mappings; regress list/dict kind and MappingProxyType/UserDict at materialize and verified-read rebuild boundaries.",
+    "closureEvidence": [
+      "The relationship source guard now requires exact dict values for requirement and terminating-effect objects, matching the JSON canonicalizer's accepted object domain.",
+      "The Q7 kind discriminator is required to be a string before membership or branch lookup.",
+      "Materialization and verified-read rebuild tests reject list/dict discriminators and MappingProxyType/UserDict requirement/effect objects through ObligationIntegrityError.",
+      "Builder rerun: 34 focused relationship tests and 2 focused candidate graph tests passed; Python compilation passed.",
+      "Independent closure review passed against packet 0cee3d5849df4da66b0b99d3f58593f4065ce7e038920bfeb162590848b4bbee after 12 malformed-source probes across materialize and verified-read paths.",
+      "Independent closure artifact: adversarial-implementation-requirement-relationships-closure-1.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-A-CB-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Malformed or wrongly typed authority, correction-reference, and correction-binding reconstructed rows fail through ObligationIntegrityError.",
+    "summary": "Public authority and correction boundaries dereference supplied row collections and elements before validating their types, leaking raw TypeError or AttributeError.",
+    "evidence": [
+      "Packet b93a0bede8f1d53a5f05f37f26fe391bdc74c746d395b020b2ad9e52e90a3060 leaked uncontrolled exceptions for None, mapping containers, and dict/string/UserDict elements.",
+      "Independent initial report: adversarial-implementation-authority-corrections-initial.md."
+    ],
+    "impact": "Corrupt reconstructed rows or integration assembly defects bypass the controlled integrity-error contract and become availability/error-handling failures.",
+    "requiredClosure": "Validate collection and element types before every field access for foundation refs, CB bindings, and A-family rows; add hostile container/element tests at materialize and verified-read boundaries.",
+    "closureEvidence": [
+      "Authority verification now requires the exact family type and exact dataclass row types for every semantic-node, evidence-link, provision-owner, and assertion-owner tuple before ordinal access or equality.",
+      "Correction construction validates foundation reference containers/elements before field access; verified read validates the correction family and every binding row before generation access.",
+      "Null and mapping containers plus dict, string, and UserDict elements reject through ObligationIntegrityError at materialize and verified-read boundaries.",
+      "Builder rerun: 79 focused A/CB tests and 295 combined candidate/obligation tests passed.",
+      "Independent closure review 1 reproduced all original hostile family/container/row cases and found no uncontrolled exception against packet 6f66446b900233bce7eb896586768d77d7c17fb2d3c048911ca1ce6118b34efa."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-A-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every A1/A2 evidence link contains an exact string candidate-binding ID and later persistence verifies its same-proposal target.",
+    "summary": "The shared evidence-link constructor accepts arbitrary non-null mapping values as candidate_binding_id, and verification accepts the same impossible output.",
+    "evidence": [
+      "Packet b93a0bede8f1d53a5f05f37f26fe391bdc74c746d395b020b2ad9e52e90a3060 accepted list, dict, integer, and boolean evidence-binding targets.",
+      "Independent initial report: adversarial-implementation-authority-corrections-initial.md."
+    ],
+    "impact": "Pure materialization can construct and attest an evidence graph incompatible with the typed persistence contract.",
+    "requiredClosure": "Require exact string evidence-binding targets before link construction; test malformed A1 and A2 targets at materialize and verified-read boundaries; retain same-proposal existence as an explicit persistence dependency.",
+    "closureEvidence": [
+      "The shared evidence-link constructor now rejects non-mapping binding collections and requires exact string binding targets before row construction.",
+      "Both independent A1 provision evidence and A2 assertion evidence reject list, dict, integer, and boolean target values at materialize and verified-read rebuild boundaries.",
+      "The bounded scope explicitly identifies same-proposal target existence and lifecycle validity as mandatory persistence/read-verification checks.",
+      "Independent closure review 1 confirmed both A1 and A2 malformed targets and non-mapping collections reject cleanly at both boundaries against packet 6f66446b900233bce7eb896586768d77d7c17fb2d3c048911ca1ce6118b34efa."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-A-CB-IMPL-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The declarative mapping pins correction namespace ownership and legacy-versus-obligation row-domain compatibility facts.",
+    "summary": "Correction namespace classification and the legacy applicability row domain are handwritten outside the generated mapping contract.",
+    "evidence": [
+      "Packet b93a0bede8f1d53a5f05f37f26fe391bdc74c746d395b020b2ad9e52e90a3060 generated CB table/identity metadata but not the namespace ownership map or legacy domain selection rule.",
+      "Independent initial report: adversarial-implementation-authority-corrections-initial.md."
+    ],
+    "impact": "Python, Slice-3A, and future SQL compatibility rules can drift outside the generated parity check.",
+    "requiredClosure": "Move the closed namespace ownership map and legacy-domain rule into the declarative manifest or equivalent shared authority; parity-check both slices and test every namespace and both binding domains.",
+    "closureEvidence": [
+      "The declarative manifest and schema now pin all eight namespace owner slices, six bindable target types, and four identity-domain roles.",
+      "The generator emits immutable CORRECTION_COMPATIBILITY metadata and the legacy applicability row domain into Python and PostgreSQL expectations.",
+      "Both ad_v4_applicability and ad_v4_obligations consume the generated metadata and independently parity-check legacy Slice-3A versus obligation Slice-3B domain selection.",
+      "Nineteen compatibility tests cover the shared exact contract, mutation of every namespace classification, every bindable target type, and every identity-domain role in both consumers; the generated digest is 8ffe13312a10b91cecdeed54707ebfa30fe2863296273ed599363d37c0f4a4db.",
+      "All 15 existing Slice-3A applicability tests pass after replacing its handwritten correction maps.",
+      "Independent closure review 1 confirmed the generated artifacts and both domain-role consumers but found Slice-3A accepted all eight owner-map and all six target-type map mutations; finding remains open.",
+      "Slice-3A now recomputes both expected maps from immutable generated CORRECTION_COMPATIBILITY metadata on every runtime parity check and rejects any derived-consumer drift.",
+      "Builder rerun: Slice-3A rejects mutation of all eight owner classifications and all six target node types; 19 compatibility, 301 combined candidate/obligation, and 15 existing Slice-3A applicability tests pass.",
+      "Independent closure review 2 rejected all eight owner, all six target-type, and all four identity-domain mutations against packet 64014758cb745c2fbb4d8206ccfb5a600b19e6d420b6793e0fbe76037d4ebf70 and closed A-CB-IMPL-003."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-DOC-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Every admitted internal or candidate-source string is representable by the PostgreSQL JSONB boundary and receives the same canonical bytes in Python and PostgreSQL.",
+    "summary": "The internal profile and candidate parser admit U+0000, but PostgreSQL JSONB rejects it before the generated serializer can run.",
+    "evidence": [
+      "Python serialized {value: U+0000} while PostgreSQL 16 rejected the corresponding JSONB input with SQLSTATE 22P05.",
+      "The reviewed scope did not exclude NUL and its escape golden covered U+0001 but not U+0000.",
+      "Independent initial report: adversarial-implementation-internal-record-serializer-initial.md."
+    ],
+    "impact": "A contract-admitted source or internal string cannot be persisted, serialized, or domain-hashed in PostgreSQL, so the cross-language closure claim is false.",
+    "requiredClosure": "Exclude U+0000 from the common domain; reject it at the candidate boundary and internal Python serializer; add Python, PostgreSQL-input, candidate, and nested key/value vectors; obtain independent closure review.",
+    "closureEvidence": [
+      "The normative matrix and decision now exclude U+0000 from internal strings/keys and require rejection before candidate JSONB persistence.",
+      "Candidate parsing rejects top-level and nested NUL values/keys with unsupported_unicode_character; direct-forged incorporated-document source rejects through ObligationIntegrityError.",
+      "The Python serializer rejects NUL values/keys through ObligationIntegrityError and PostgreSQL-input tests pin JSONB SQLSTATE 22P05 behavior for the same four shapes.",
+      "Builder rerun: 320 candidate/obligation host tests, 15 Slice-3A applicability tests, and 31 PostgreSQL serializer tests passed.",
+      "Independent closure reproduced all four NUL boundary classes against packet dea8a0057c13a0283d26b58bb6bacce9d26ab8d9c40384f5c44fc525ff423d9a and closed DOC-IMPL-001.",
+      "Independent closure artifact: adversarial-implementation-internal-record-serializer-closure-1.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-DOC-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The Python internal-record serializer admits only the exact closed JSON type domain and converts cyclic or excessive nesting failures to ObligationIntegrityError.",
+    "summary": "Python accepts tuple, UserDict, and MappingProxyType containers and leaks RecursionError for a cyclic list.",
+    "evidence": [
+      "The reviewed serializer used Mapping and (list, tuple) acceptance branches.",
+      "Independent probes reproduced arbitrary mapping and tuple normalization plus an uncontrolled cyclic-list RecursionError.",
+      "Independent initial report: adversarial-implementation-internal-record-serializer-initial.md."
+    ],
+    "impact": "Producer defects can silently change authoritative hash preimages or bypass the controlled integrity error contract.",
+    "requiredClosure": "Admit only exact built-in dict/list/scalar types, detect cycles and excessive depth, add top-level and nested hostile-type and cyclic-container tests, and obtain independent closure review.",
+    "closureEvidence": [
+      "The Python serializer now admits only exact built-in dict/list/string/int/bool/None types and rejects arbitrary mappings, tuple, container subclasses, and scalar subclasses.",
+      "An active-container identity set rejects cyclic lists and dictionaries, while the generated maxDepth=64 rule produces controlled Python and PostgreSQL errors for excessive nesting.",
+      "Host tests cover top-level and nested tuple/arbitrary mapping cases, dict/list/string/int subclasses, both cyclic container types, exact depth acceptance, and depth-plus-one rejection.",
+      "Builder rerun: 320 candidate/obligation host tests and 31 PostgreSQL serializer tests passed.",
+      "Independent closure rejected every hostile type and cycle, accepted shared acyclic containers and depth 64, rejected depth 65 in both runtimes, and closed DOC-IMPL-002 against packet dea8a0057c13a0283d26b58bb6bacce9d26ab8d9c40384f5c44fc525ff423d9a.",
+      "Independent closure artifact: adversarial-implementation-internal-record-serializer-closure-1.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-DOC-PREFLIGHT-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Internal-record integer acceptance is explicit, storage-aligned, cross-language, and independent of interpreter conversion limits.",
+    "summary": "The contract's unbounded nonnegative integer domain lets a 4,501-digit integer leak Python ValueError while PostgreSQL serializes it.",
+    "evidence": [
+      "Astra builder preflight reproduced the Python integer-to-string limit and PostgreSQL acceptance.",
+      "Builder preflight artifact: builder-preflight-internal-record-serializer-initial.md."
+    ],
+    "impact": "Acceptance and controlled-error behavior differ by runtime for large integer hash preimages.",
+    "requiredClosure": "Freeze a storage-aligned maximum internal integer, enforce it before serialization in Python and PostgreSQL, and test the maximum and maximum-plus-one boundaries.",
+    "closureEvidence": [
+      "The generated manifest/schema now freeze maxInternalInteger=2147483647, aligned with the normative PostgreSQL integer storage domain.",
+      "Python checks the bound before integer-to-string conversion; generated PostgreSQL rejects larger canonical numerics with SQLSTATE 22023.",
+      "Cross-language tests accept and byte-compare the maximum, reject maximum-plus-one and a 4,501-digit integer, and pin integral JSONB exponent/negative-zero normalization.",
+      "Builder rerun: 31 PostgreSQL serializer tests passed.",
+      "Independent closure verified zero, maximum, maximum-plus-one, the 4,501-digit hostile value, and JSONB normalization against packet dea8a0057c13a0283d26b58bb6bacce9d26ab8d9c40384f5c44fc525ff423d9a and closed DOC-PREFLIGHT-001.",
+      "Independent closure artifact: adversarial-implementation-internal-record-serializer-closure-1.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-DOC-PREFLIGHT-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "low",
+    "status": "closed",
+    "invariant": "A generated-SQL installation failure cannot bypass explicit test transaction, connection, and engine cleanup.",
+    "summary": "The PostgreSQL fixture entered its cleanup guard only after SQL installation.",
+    "evidence": [
+      "Fixture acquisition and generated SQL execution preceded try/finally in the reviewed packet.",
+      "Builder preflight artifact: builder-preflight-internal-record-serializer-initial.md."
+    ],
+    "impact": "A setup failure can leave test resources open and make later results less isolated.",
+    "requiredClosure": "Put acquisition and installation under cleanup protection and add an injected setup-failure cleanup test.",
+    "closureEvidence": [
+      "The installation context now places connection acquisition, transaction creation, and generated SQL execution under one cleanup guard.",
+      "An injected installation failure test proves rollback, connection close, and engine disposal all occur.",
+      "The full PostgreSQL serializer suite still installs and rolls back the exact generated functions transactionally.",
+      "Independent closure verified injected-failure cleanup and zero remaining generated functions after rollback against packet dea8a0057c13a0283d26b58bb6bacce9d26ab8d9c40384f5c44fc525ff423d9a and closed DOC-PREFLIGHT-002.",
+      "Independent closure artifact: adversarial-implementation-internal-record-serializer-closure-1.md."
+    ]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Shared correction bindings revalidate every affected OLD and NEW Slice-3A and Slice-3B root for INSERT, UPDATE, and DELETE even if immutability is disabled.",
+    "summary": "Migration 0028 initially replaced the shared correction dirty/completeness triggers with INSERT-only Slice-3A triggers.",
+    "evidence": ["Astra runtime/catalog inspection recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "A direct SQL writer that disables the immutable trigger could mutate or delete a correction binding without commit-time revalidation.",
+    "requiredClosure": "Restore UPDATE/DELETE coverage, preserve OLD and NEW owners, add 3B dispatch, and obtain independent verification.",
+    "closureEvidence": ["Builder added Slice-3A INSERT/UPDATE/DELETE dirty and deferred-complete triggers; Slice-3B dispatch and independent verification remain pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "A valid generation-1 Slice-3B correction binding coexists with and remains verifiable by the immutable Slice-3A parent.",
+    "summary": "Existing Python and PostgreSQL Slice-3A completeness readers rejected every binding owned outside Slice 3A.",
+    "evidence": ["Astra source trace recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "Materializing a valid 3B correction binding would make the parent applicability projection fail verification.",
+    "requiredClosure": "Teach both readers the closed 3B pair, namespace/type/key/proposal/generation/hash contract without recursively invoking full 3B completeness.",
+    "closureEvidence": ["Builder amended Python _verify_correction_foundation and the replacement Slice-3A PostgreSQL validator for the exact Slice-3B root/proposal/node/namespace/type/key/generation/ID/hash contract; mixed-validator positive and restamped/misclassified corruption regressions pass locally. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every owner and relationship endpoint belongs to the stored projection and proposal, and ORM metadata agrees with migrated PostgreSQL.",
+    "summary": "The initial migration used independent root FKs and omitted relationship endpoint FKs.",
+    "evidence": ["Astra catalog inspection recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "Nonexistent or cross-projection endpoints could commit before the global validator existed.",
+    "requiredClosure": "Install composite root/node/app/evidence constraints in ORM and migration, compare catalog semantics, and run negative SQL tests.",
+    "closureEvidence": ["Builder added composite owner, relationship, generic datum/evidence, app-target, and all child/edge endpoint FKs to migration and ORM metadata; two fresh 0001→0028 PostgreSQL upgrades pass. Catalog parity and negative tests remain pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-004",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every closed union CHECK is two-valued and rejects SQL NULL substitutions.",
+    "summary": "The known timing branch allowed NULL logic because the CHECK evaluated NULL.",
+    "evidence": ["Astra PostgreSQL truth-value probe recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "A malformed timing owner could bypass the intended closed union.",
+    "requiredClosure": "Require non-null known logic in ORM and migration and add a direct-SQL regression.",
+    "closureEvidence": ["Builder added logic IS NOT NULL to both ORM and migration; independent runtime regression remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-005",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Downgrade uses bounded deterministic locking and refuses enabled or occupied Slice-3B state.",
+    "summary": "The initial downgrade used unbounded child-first locks and allowed downgrade while the 3B gate was enabled.",
+    "evidence": ["Astra runtime downgrade probe recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "Rollback could race active writers or silently remove an enabled capability.",
+    "requiredClosure": "Use bounded deterministic locking, refuse the enabled gate and occupied state, and test rollback interleavings.",
+    "closureEvidence": ["Initial builder response added a five-second timeout and enabled/occupied refusal, but independent review reproduced a 40P01 cycle caused by lexical child-before-parent ordering.", "Builder replaced lexical sorting with one explicit projection-root-first dependency order. The durable two-connection regression holds the root, starts exact downgrade, then proves the writer can acquire the correction child before downgrade proceeds; downgrade subsequently refuses the enabled gate, preserves revision 0028, and produces no deadlock victim.", "After closure review rejected the sleep-based synchronization, the regression now gives Alembic a unique application_name and uses a separate autocommit observer to confirm pg_stat_activity/pg_locks contains its ungranted AccessExclusiveLock on the projection root before probing the correction child. The exact current suite passes 37/37 on freshly migrated t081_s3b_persist_am.", "Independent whole-family implementation closure review 2 passed exact packet dab985ad87c8abbaed01cd4f2d3d31ebf16bcbeb4ab594f7ccf2bfda7638e740 and explicitly authorized closure of this finding; see adversarial-implementation-persistence-api-closure-2.md."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-006",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Caller-writable temporary state can never suppress authoritative deferred completeness validation.",
+    "summary": "The 0027 generation cache pattern is forgeable by direct SQL and must not be copied as a 3B integrity boundary.",
+    "evidence": ["Astra transactional reproduction recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "A writer could corrupt rows, forge the cache clean, and commit without exact validation.",
+    "requiredClosure": "Always validate each affected root from deferred events or protect any optimization outside caller control; add a cache-tampering regression.",
+    "closureEvidence": ["The Slice-3B deferred validator validates every OLD/NEW root directly and has no caller-writable validated-generation bypass. Direct-SQL corruption tests exercise the boundary; independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-007",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The supported feature-gate administrator and capabilities response expose the installed 3B gate consistently and downgrade restores 0027 behavior.",
+    "summary": "The installed administrator function rejected materializer3b_enabled and capabilities omitted it.",
+    "evidence": ["Astra PostgreSQL function probe recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "Operators could not enable the capability through the supported control surface.",
+    "requiredClosure": "Update both functions in 0028, restore 0027 definitions on downgrade, and test exact responses.",
+    "closureEvidence": ["Builder replaced both functions in upgrade and restores their 0027 definitions in downgrade; PostgreSQL accepted the 3B gate and returned revision 20260911_0028 in a disposable database."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-PREFLIGHT-008",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every schema-valid terminating-effect branch, including terminates with an empty requirement-key list, persists unchanged.",
+    "summary": "The initial ORM and migration CHECK required at least one termination edge for kind terminates.",
+    "evidence": ["Astra contract comparison recorded in builder-preflight-persistence-foundation-initial.md."],
+    "impact": "A valid candidate could not be materialized.",
+    "requiredClosure": "Allow edge_count zero for terminates in ORM and migration and add whole-graph/PostgreSQL regression coverage.",
+    "closureEvidence": ["Builder changed both CHECKs to edge_count>=0 and added whole-graph and migrated-PostgreSQL coverage for a valid empty terminates branch; independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Only a verified invalidating event bound to the exact evidence or parent applicability projection can make an obligation projection stale.",
+    "summary": "The root evidence admission event and root applicability materialization event could be cited as false stale causes.",
+    "evidence": ["Astra direct-SQL probes recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "An attacker could forge a structurally plausible stale chain without any actual upstream invalidation.",
+    "requiredClosure": "Verify dense upstream event chains, exact preimages/hashes/bindings, invalidating event types, and cause cardinality independently in Python and PostgreSQL.",
+    "closureEvidence": ["Builder added shared evidence lifecycle verification, applicability event verification, exact Python/SQL cause validation, and direct false-root-cause regressions. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every typed-owner forward child reference resolves to the one semantic node at its canonical source pointer, even when candidate values are equal.",
+    "summary": "Equal-valued action payloads could exchange Q1 action_node_id references without detection.",
+    "evidence": ["Astra equal-payload swap probe recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "A differently wired physical graph could commit while reconstructing equal JSON values.",
+    "requiredClosure": "Resolve every forward child slot to exact semantic identity/type/key/parent/pointer/ordinal and add equal-payload swap corruptions.",
+    "closureEvidence": ["Builder added exact SQL source-pointer checks for document, requirement, branch, recurrence, timing-group, and AMOC child references plus the equal-action swap regression. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-003",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every direct obligation request is admitted only by an active exact platform administrator while validator-2, Slice-3A, and Slice-3B gates are enabled.",
+    "summary": "Direct SQL accepted a request with validator-2 or Slice-3A disabled, or with an inactive actor.",
+    "evidence": ["Astra gate/actor direct-SQL probes recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "The audit envelope could claim authorization that did not exist at insertion time.",
+    "requiredClosure": "Enforce actor, exact active membership, and all three gates at the direct request boundary under the normative lock order.",
+    "closureEvidence": ["Builder added all-three-gate/current-active-actor checks to completeness and a BEFORE INSERT request guard; direct disabled-gate and inactive-actor regressions pass locally. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-004",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Commit-time combined-graph validation is bounded by vertices and source edges rather than the number of possible paths.",
+    "summary": "Recursive UNION ALL path enumeration grows exponentially for layered acyclic graphs.",
+    "evidence": ["Astra 52-node/100-edge timeout reproduction recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "A schema-valid bounded DAG could exhaust the statement timeout and make valid materialization unavailable.",
+    "requiredClosure": "Deduplicate reachability states, bound raw edge occurrences before traversal, and test adversarial layered DAGs.",
+    "closureEvidence": ["Builder replaced path enumeration with UNION-deduplicated (origin,current) reachability, added the raw 40,000-edge bound, and a layered-DAG performance/static regression. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-005",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "An authorized idempotent retry repairs parent staleness and appends each verified obligation stale cause exactly once; ordinary GET remains fail-closed.",
+    "summary": "Materialization rejected stale state before locating the existing projection, so P4 events were unreachable.",
+    "evidence": ["Astra stale-retry source trace and probe recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "The specified append-only stale audit chain could never be produced after genuine upstream invalidation.",
+    "requiredClosure": "Separate structural reconstruction from freshness, repair the parent on authorized POST, derive verified causes, and append deterministic causes once.",
+    "closureEvidence": ["Builder added structural/fresh reconstruction modes, parent repair, verified cause derivation, deterministic append-once events, and a quarantine retry regression producing materialized/parent_app_stale/evidence_invalidated exactly once. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-006",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Direct request insertion acquires the shared lock prefix before a root foreign-key lock and cannot invert the service proposal/root order.",
+    "summary": "Request insertion could acquire the root FK lock before the proposal while POST locked the proposal first.",
+    "evidence": ["Astra lock-order analysis recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "Concurrent direct SQL and supported POST could deadlock and surface a victim.",
+    "requiredClosure": "Acquire the normative actor/membership/idempotency/proposal/gate/evidence/3A/correction/3B prefix in a BEFORE INSERT guard and force the interleaving.",
+    "closureEvidence": ["Builder added the request guard and a two-connection regression proving the writer waits before the root/proposal cycle forms. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-007",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Expected PostgreSQL integrity and retryable transaction failures cross the HTTP boundary as stable controlled responses, while unknown database errors remain visible.",
+    "summary": "P0001, deadlock, serialization, and statement-timeout database failures could escape as HTTP 500.",
+    "evidence": ["Astra API error-boundary trace recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "Normal integrity or concurrency outcomes would become unhandled service failures.",
+    "requiredClosure": "Rollback and map only the known SQLSTATE classes to stable 409 responses; re-raise unknown failures.",
+    "closureEvidence": ["Initial builder response covered POST P0001/40P01, but independent review reproduced raw 57014 on all three GETs and found 55P03 omitted.", "One bounded mapper now covers P0001, every 23 class, 40P01, 40001, 57014, and 55P03. POST plus all three GET routes translate the declared classes to controlled 409 responses, and all four re-raise XX000. The focused route matrix passes 28/28; independent closure verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-008",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_q7_edges_preflight",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Slice-3A PostgreSQL verification accepts only the exact structurally valid Slice-3B correction binding counterpart.",
+    "summary": "The compatibility branch accepted Slice-3B classification without verifying its root/node/owner identity structure.",
+    "evidence": ["Astra mixed-validator analysis recorded in builder-preflight-persistence-api-astra.md."],
+    "impact": "A restamped or misclassified correction binding could satisfy one projection validator while disagreeing with the other.",
+    "requiredClosure": "Validate exact 3B root, proposal, semantic node, owner generation/type/key, binding ID, and hash from the Slice-3A boundary.",
+    "closureEvidence": ["Builder strengthened the replacement Slice-3A SQL validator and added positive agreement plus restamped/misclassified corruption regressions. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-CAL-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The JSON stored beside candidate canonical bytes is the exact decoded canonical value accepted by PostgreSQL and consumed by every downstream materializer.",
+    "summary": "c14n-2 normalized semantic-set arrays in canonical_bytes but store_v4_candidate retained transport array order in parsed_json, so valid calibration proposals failed PostgreSQL identity validation.",
+    "evidence": ["The five-packet PostgreSQL gate failed with V4 proposal envelope/relational identity mismatch on a valid semantically reordered packet."],
+    "impact": "Real valid candidates whose semantic-set order was noncanonical could pass Python validation but fail direct database admission.",
+    "requiredClosure": "Persist json.loads(proposal_payload), preserve ordered-array semantics through c14n-2, and rerun all candidate, calibration, applicability, and obligation gates.",
+    "closureEvidence": ["Builder now stores the decoded authoritative proposal payload and the host/fresh-PostgreSQL gate reruns are recorded in checkpoint.md. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-CAL-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root",
+    "severity": "high",
+    "status": "rejected_finding",
+    "invariant": "Slice-3B derives correction references in the immutable Slice-3A source ordinal order, regardless of c14n-2 semantic-set normalization.",
+    "summary": "The Slice-3B correction snapshot decoded canonical bytes and silently reordered changedSemanticRefs before comparing them with the committed Slice-3A foundation.",
+    "evidence": ["The 2008-26-10 five-packet gate failed correction reference foundation equality for its mixed productScopes/requirements references."],
+    "impact": "A real mixed 3A/3B correction could not materialize even though both individual target families were valid.",
+    "requiredClosure": "Determine whether the immutable Slice-3A ordinal is transport order or the authoritative canonical proposal order; preserve the approved canonical order if the symptom has a shared upstream cause.",
+    "closureEvidence": ["Rejected after root-cause isolation: CAL-IMPL-001 now persists the decoded c14n-2 proposal, so Slice 3A and Slice 3B both consume the same authoritative canonical changedSemanticRefs order. Restoring canonical snapshot normalization preserves the approved contract and existing mutation tests; the mixed 2008-26-10 packet remains in the final gates."],
+    "disposition": "Rejected as a duplicate symptom of CAL-IMPL-001; changing the correction snapshot would weaken the canonical-input boundary."
+  },
+  {
+    "id": "T081-V4-S3B-CAL-TEST-001",
+    "stage": "implementation",
+    "reviewer": "/root",
+    "severity": "low",
+    "status": "closed",
+    "invariant": "Each calibration packet begins with PostgreSQL constraints in their declared deferred mode.",
+    "summary": "Running all five packets in one transaction left constraints immediate after the first materialization, causing a later fragment row to validate before its admission event was inserted.",
+    "evidence": ["The PostgreSQL five-packet test failed at the third packet with AD evidence fragment lacks a valid admission root after prior SET CONSTRAINTS ALL IMMEDIATE."],
+    "impact": "The calibration harness produced a false failure unrelated to production request transaction boundaries.",
+    "requiredClosure": "Commit each independently authorized packet before admitting evidence for the next packet.",
+    "closureEvidence": ["The shared calibration runner commits each PostgreSQL packet after exact reconstruction; final fresh-database evidence is recorded in checkpoint.md. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-CAL-IMPL-003",
+    "stage": "implementation",
+    "reviewer": "/root",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every nested expression has the same canonical relative expression_path in Python materialization and PostgreSQL verification.",
+    "summary": "Python constructed root-child paths as //operand or //operands/{i}, while PostgreSQL correctly expected /operand or /operands/{i}.",
+    "evidence": ["The 2008-26-10 PostgreSQL calibration packet failed the expression ownership/arity boundary; its nested all/not expressions exposed the doubled root slash."],
+    "impact": "Any valid nested expression could pass Python and fail commit-time PostgreSQL validation despite identical semantic nodes and edges.",
+    "requiredClosure": "Normalize child paths from expression_path.rstrip('/') in both unary and n-ary branches and rerun nested-expression host plus real-packet PostgreSQL gates.",
+    "closureEvidence": ["Builder normalized both path constructors; focused expression/correction tests pass 51/51 and the final five-packet PostgreSQL result is recorded in checkpoint.md. Independent verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-009",
+    "stage": "implementation",
+    "reviewer": "/root",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Deferred commit-time validation remains fail-closed while performing one complete validation for an ordinary newly inserted graph rather than one global scan per row event.",
+    "summary": "Every deferred row-level constraint callback repeated the full global validator, making real calibration packets take minutes and preventing the five-packet gate from completing.",
+    "evidence": ["The first unoptimized PostgreSQL calibration run was interrupted after 8 minutes 10 seconds with only three packets committed."],
+    "impact": "Schema-valid production-sized obligation graphs could exhaust statement limits or make supported materialization operationally unavailable.",
+    "requiredClosure": "Coalesce only transaction-ordered initial INSERT callbacks into an unforgeable final materialized-event anchor, retain validation for the anchor and every later INSERT/UPDATE/DELETE, and test hostile same-transaction re-deferral after the anchor.",
+    "closureEvidence": ["Builder uses PostgreSQL-owned xmin/cmin ordering to coalesce only rows preceding the sequence-zero materialized event; a new regression proves SET IMMEDIATE, SET DEFERRED, then a later corrupt INSERT still fails closed. The expanded persistence suite passes 19/19 in 6.13 seconds and the five-packet fresh-PostgreSQL gate passes in 54.86 seconds.", "Independent whole-family review against packet 2a898fc45c640c2d38e18887163e4214ba16cedfeb0f34bc6481f1149cf843ad attacked missing, deleted, forged/restamped, post-anchor, and immediate-to-deferred writes and closed this finding as fail-closed."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-010",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Detail, reconstruction, and list GETs observe one repeatable-read, read-only snapshot across concurrent evidence, correction/replacement, and parent-app staleness transitions.",
+    "summary": "The session helper configures the intended isolation and read-only mode, but the required forced two-connection interleavings have no durable regression proof.",
+    "evidence": ["Independent review found no detail/list/reconstruction race tests against evidence lifecycle invalidation, correction/replacement relationships, or parent Slice-3A stale transitions."],
+    "impact": "A later change could silently regress the non-mixing read contract without any gate detecting it.",
+    "requiredClosure": "Add forced two-connection tests for each GET and transition family showing wholly-before or wholly-after results, plus a write rejection from the read-only session.",
+    "closureEvidence": ["A durable nine-case PostgreSQL matrix pauses each detail/list/reconstruction route after authorization establishes its repeatable-read snapshot, commits each evidence-lifecycle/candidate-relationship/parent-app-stale transition on a second connection, proves the in-flight route returns wholly-before, proves a new route call fails closed wholly-after, and proves the read-only session rejects UPDATE. The matrix passes 9/9; independent closure verification remains pending."]
+  },
+  {
+    "id": "T081-V4-S3B-PERSIST-IMPL-011",
+    "stage": "implementation",
+    "reviewer": "/root/v4_s3b_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The complete approved rollout and final regression matrix is durable rather than inferred from adjacent unit and calibration gates.",
+    "summary": "Several explicit final gates lack direct tests: old-reader/upgrade compatibility, full gate/authorization combinations, phase failure injection, the PostgreSQL decimal boundary, and released V3 state before/after calibration.",
+    "evidence": ["Independent whole-family review enumerated the missing matrix in adversarial-implementation-persistence-api-initial.md."],
+    "impact": "No concrete defect was reproduced, but rollout, atomicity, maximum-boundary, and non-regression claims exceed the durable evidence.",
+    "requiredClosure": "Add the missing old-reader/no-old-binary, gate/authorization, failure-phase, 16,384-character PostgreSQL, and released V3 before/after calibration proofs.",
+    "closureEvidence": ["Builder added: an exact 9ad410b reader subprocess proof against fresh upgraded-empty 0028 plus rejection after the first 3B binding and an operational rollout contract; all eight database-gate and four application-gate combinations with zero-row failures; six authority cases; exact PostgreSQL 16,384-character decimal persistence/reconstruction; and byte-exact snapshots of 19 V3/released/matching/coverage/recurrence/due-state tables before and after every one of the five real materializations.", "After closure review identified mislabeled flush boundaries, the failure matrix now covers before-root plus the actual root, semantic-node, remaining-child/correction, request, event, and forced-constraint boundaries. Each case inspects the same open transaction to prove the intended transient tables were reached, then proves every Slice-3B count returns exactly to its baseline after rollback. The exact current suite passes 37/37 on freshly migrated t081_s3b_persist_am.", "Independent whole-family implementation closure review 2 passed exact packet dab985ad87c8abbaed01cd4f2d3d31ebf16bcbeb4ab594f7ccf2bfda7638e740 and explicitly authorized closure of this finding; see adversarial-implementation-persistence-api-closure-2.md."]
+  },
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3B-CC-001",
+    "stage": "external_critic",
+    "reviewer": "claude-external-critic-20260913T171021Z",
+    "severity": "low",
+    "status": "rejected_finding",
+    "invariant": "GET performs no insert, update, delete, flush, commit, stale repair, or audit event; a response is wholly before or wholly after a concurrent commit, never a mixed observation.",
+    "summary": "The external critic reported duplicate verified reconstruction in the detail and reconstruction GET routes and claimed list amplified the same duplication.",
+    "evidence": ["ad_v4_obligation_persistence.verified_obligation_projection reconstructs and verifies one projection before returning it.", "The detail serializer reconstructs that returned projection again, and the reconstruction route calls reconstruct again to obtain its response subtree.", "The list route does not call verified_obligation_projection; it calls serialize_v4_obligation_projection exactly once per returned row, so the critic's list-duplication claim is false.", "Claude explicitly classified the item as low, stated there is no correctness or safety impact, and made its suggested hardening optional and not required to close the slice."],
+    "impact": "The two single-projection GET routes perform redundant idempotent verification within one repeatable-read snapshot. This is a possible performance cleanup, not a violation of the cited read-only or snapshot invariant; the list path performs the one required verification per row.",
+    "requiredClosure": "No Slice-3B closure change is required. A later performance slice may return a verified subtree alongside the projection if profiling justifies widening that internal contract.",
+    "closureEvidence": ["Coordinator traced every verified_obligation_projection caller and all three obligation GET routes. Detail and reconstruction each verify twice within one immutable snapshot; list verifies once per row and does not have the claimed duplicate call. The candidate is rejected as a closure finding because it identifies no correctness, safety, schema, migration, authorization, or public-contract defect and its own required closure says the optimization is optional."]
+  }
+]

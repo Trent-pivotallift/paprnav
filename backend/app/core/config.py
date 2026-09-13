@@ -84,6 +84,7 @@ class Settings:
     drs_max_snapshot_age_days: int = 7
     ad_v4_validator2_writes_enabled: bool = False
     ad_v4_slice3a_routes_enabled: bool = False
+    ad_v4_slice3b_routes_enabled: bool = False
 
 
 def parse_bool(value: Optional[str], default: bool = False) -> bool:
@@ -183,5 +184,8 @@ def get_settings() -> Settings:
         ),
         ad_v4_slice3a_routes_enabled=parse_bool(
             os.getenv("PAPRNAV_AD_V4_SLICE3A_ROUTES_ENABLED")
+        ),
+        ad_v4_slice3b_routes_enabled=parse_bool(
+            os.getenv("PAPRNAV_AD_V4_SLICE3B_ROUTES_ENABLED")
         ),
     )

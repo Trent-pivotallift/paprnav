@@ -188,7 +188,10 @@ def _alembic(revision: str) -> subprocess.CompletedProcess[str]:
 def test_00_empty_v4_migration_downgrade_upgrade_round_trip():
     downgrade = _alembic("downgrade 20260830_0025")
     assert downgrade.returncode == 0, downgrade.stdout + downgrade.stderr
-    upgrade = _alembic("upgrade 20260901_0026")
+    # Restore the current schema, not merely this suite's original 0026
+    # boundary. Later tests exercise current ORM mappings and must never run
+    # against an intentionally historical catalog after a new V4 slice lands.
+    upgrade = _alembic("upgrade head")
     assert upgrade.returncode == 0, upgrade.stdout + upgrade.stderr
 
 
@@ -814,7 +817,7 @@ def test_99_occupied_v4_downgrade_refuses_without_deleting_audit_rows():
     assert POSTGRES_URL
     engine = create_engine(POSTGRES_URL, pool_pre_ping=True)
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260901_0026"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260911_0028"
         assert connection.scalar(text("SELECT count(*) FROM ad_v4_candidate_proposals")) >= 2
     engine.dispose()
 

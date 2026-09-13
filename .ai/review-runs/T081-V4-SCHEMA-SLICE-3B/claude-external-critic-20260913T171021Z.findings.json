@@ -1,0 +1,16 @@
+[
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3B-CC-001",
+    "severity": "low",
+    "invariant": "GET performs no insert, update, delete, flush, commit, stale repair, or audit event; a response is wholly before or wholly after a concurrent commit, never a mixed observation (decision.md invariants 29-30).",
+    "summary": "The single-projection detail and reconstruction GET routes each run the full verified-read reconstruction twice inside the same repeatable-read transaction: once inside verified_obligation_projection() and once more explicitly in the route handler (serialize_v4_obligation_projection() / get_v4_obligation_reconstruction()). This does not violate correctness (same snapshot, so results are guaranteed identical), but it doubles the DB round trips and hashing work of the most expensive request path.",
+    "evidence": [
+      "backend/app/services/ad_v4_obligation_persistence.py:1259-1260 \u2014 verified_obligation_projection() already calls reconstruct_obligation_projection(db, projection).",
+      "backend/app/api/routes/ads.py: serialize_v4_obligation_projection() (around line 601) calls reconstruct_obligation_projection(db, projection, require_fresh=require_fresh) again for the same projection object returned by verified_obligation_projection().",
+      "backend/app/api/routes/ads.py: get_v4_obligation_reconstruction() calls verified_obligation_projection(...) and then calls reconstruct_obligation_projection(read_db, projection) a second time to obtain the subtree payload.",
+      "list_v4_obligation_projections() amplifies this per row (up to 100 rows/request), each going through serialize_v4_obligation_projection()'s internal duplicate reconstruction."
+    ],
+    "impact": "No correctness or safety impact under the current design (verification is idempotent within one REPEATABLE READ snapshot), but it roughly doubles CPU/DB cost per obligation GET/list call, which matters most for the list endpoint's O(rows) full graph reconstructions.",
+    "requiredClosure": "Optional hardening: have reconstruct_obligation_projection() return the already-computed subtree/typed graph so serialize_v4_obligation_projection() and the reconstruction route can reuse the single verified result instead of invoking the full verified read a second time. Not required to close this slice, since no invariant is violated."
+  }
+]

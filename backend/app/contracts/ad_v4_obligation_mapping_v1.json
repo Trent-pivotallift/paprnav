@@ -1,0 +1,705 @@
+{
+  "mappingVersion": "paprnav-ad-v4-obligation-mapping-1",
+  "generatorVersion": "paprnav-ad-v4-obligation-mapgen-1",
+  "generatorSourceSha256": "d3968bbf4a53c99cd7315441c06a671a94b436631238e0c442f420f488da4c9d",
+  "resourceLimits": {
+    "maxDepth": 64,
+    "maxTotalNodes": 75000,
+    "maxStringLength": 16384,
+    "maxArrayItems": 2000,
+    "maxAstNodes": 20000,
+    "maxGraphEdges": 40000,
+    "maxInternalInteger": 2147483647
+  },
+  "domains": {
+    "subtree": "paprnav:ad_extraction_v4:obligation-subtree:paprnav-ad-v4-c14n-2\\0",
+    "projection": "paprnav:ad_extraction_v4:obligation-projection:1\\0",
+    "row": "paprnav:ad_extraction_v4:obligation-row:1\\0",
+    "request": "paprnav:ad_extraction_v4:obligation-request:1\\0",
+    "authClaims": "paprnav:ad_extraction_v4:obligation-auth-claims:1\\0",
+    "event": "paprnav:ad_extraction_v4:obligation-projection-event:1\\0",
+    "correctionBindingSet": "paprnav:ad_extraction_v4:obligation-correction-binding-set:1\\0",
+    "legacyApplicabilityRow": "paprnav:ad_extraction_v4:applicability-row:2\\0"
+  },
+  "correctionCompatibility": {
+    "namespaces": [
+      {"namespace": "directiveIdentity", "ownerSlice": "foundation", "targetNodeType": null},
+      {"namespace": "supersessionRelations", "ownerSlice": "foundation", "targetNodeType": null},
+      {"namespace": "productScopes", "ownerSlice": "slice_3a", "targetNodeType": "product_scope"},
+      {"namespace": "conditionDefinitions", "ownerSlice": "slice_3a", "targetNodeType": "condition"},
+      {"namespace": "applicabilityRules", "ownerSlice": "slice_3a", "targetNodeType": "applicability_rule"},
+      {"namespace": "requirements", "ownerSlice": "slice_3b", "targetNodeType": "requirement"},
+      {"namespace": "recurrenceGroups", "ownerSlice": "slice_3b", "targetNodeType": "recurrence_group"},
+      {"namespace": "amocAuthorityProvisions", "ownerSlice": "slice_3b", "targetNodeType": "amoc_provision"}
+    ],
+    "identityDomainKeys": {
+      "correctionRoot": "legacyApplicabilityRow",
+      "correctionReference": "legacyApplicabilityRow",
+      "slice3aBinding": "legacyApplicabilityRow",
+      "slice3bBinding": "row"
+    }
+  },
+  "rootFields": [
+    "incorporatedDocuments",
+    "requirements",
+    "recurrenceGroups",
+    "amocAuthorityProvisions"
+  ],
+  "structuralCounts": [
+    "semanticNodeCount",
+    "datumCount",
+    "evidenceLinkCount",
+    "documentCount",
+    "valueAssertionCount",
+    "requirementCount",
+    "actionCount",
+    "actionStepCount",
+    "actionDocumentRefCount",
+    "branchCount",
+    "expressionCount",
+    "expressionEdgeCount",
+    "requirementDependencyCount",
+    "timingGroupCount",
+    "timingTermCount",
+    "recurrenceCount",
+    "terminatingEffectCount",
+    "terminationEdgeCount",
+    "recurrenceGroupCount",
+    "recurrenceGroupMemberCount",
+    "amocProvisionCount",
+    "correctionBindingCount"
+  ],
+  "occurrences": [
+    {
+      "id": "D1",
+      "selector": [{"op": "field", "name": "incorporatedDocuments"}, {"op": "each", "capture": "i"}],
+      "presence": "required",
+      "nodeType": "incorporated_document",
+      "key": {"op": "property", "name": "documentRefKey"},
+      "parent": {"op": "root"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_documents",
+      "evidence": {"source": "own", "purpose": "incorporated_document_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "D2",
+      "selector": [{"op": "field", "name": "incorporatedDocuments"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "documentNumber"}],
+      "presence": "required",
+      "nodeType": "value_assertion",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "D1"},
+      "ordinal": {"op": "constant", "value": 0},
+      "ownerTable": "ad_v4_candidate_obligation_value_assertions",
+      "ownerKind": "document_number",
+      "evidence": {"source": "own", "purpose": "document_identity", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "D3",
+      "selector": [{"op": "field", "name": "incorporatedDocuments"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "revision"}],
+      "presence": "required",
+      "nodeType": "value_assertion",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "D1"},
+      "ordinal": {"op": "constant", "value": 1},
+      "ownerTable": "ad_v4_candidate_obligation_value_assertions",
+      "ownerKind": "revision",
+      "evidence": {"source": "own", "purpose": "document_identity", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "D4",
+      "selector": [{"op": "field", "name": "incorporatedDocuments"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "retention"}],
+      "presence": "required",
+      "nodeType": "value_assertion",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "D1"},
+      "ordinal": {"op": "constant", "value": 2},
+      "ownerTable": "ad_v4_candidate_obligation_value_assertions",
+      "ownerKind": "retention",
+      "allowedUnionBranches": ["unknown"],
+      "evidence": {"source": "own", "purpose": "document_retention", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "Q1",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}],
+      "presence": "required",
+      "nodeType": "requirement",
+      "key": {"op": "property", "name": "requirementKey"},
+      "parent": {"op": "root"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_requirements",
+      "evidence": {"source": "own", "purpose": "requirement_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "Q2",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "action"}],
+      "presence": "required",
+      "nodeType": "action",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q1"},
+      "ordinal": {"op": "constant", "value": 0},
+      "ownerTable": "ad_v4_candidate_obligation_actions",
+      "evidence": {"source": "own", "purpose": "action_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "Q3",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "action"}, {"op": "field", "name": "orderedSteps"}, {"op": "each", "capture": "j"}],
+      "presence": "optional",
+      "nodeType": "action_step",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q2"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_action_steps",
+      "evidence": {"source": "none", "purpose": null, "cardinality": "zero", "inheritance": "none"}
+    },
+    {
+      "id": "Q5",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "branch"}],
+      "presence": "required",
+      "nodeType": "branch",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q1"},
+      "ordinal": {"op": "constant", "value": 2},
+      "ownerTable": "ad_v4_candidate_obligation_branches",
+      "evidence": {"source": "own", "purpose": "branch_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "Q7",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "terminatingEffect"}],
+      "presence": "required",
+      "nodeType": "terminating_effect",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q1"},
+      "ordinal": {"op": "constant", "value": 5},
+      "ownerTable": "ad_v4_candidate_obligation_terminating_effects",
+      "evidence": {"source": "own", "purpose": "termination_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "EACT",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "activationExpression"}],
+      "presence": "required",
+      "nodeType": "expression",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q1"},
+      "ordinal": {"op": "constant", "value": 1},
+      "ownerTable": "ad_v4_candidate_obligation_expressions",
+      "ownerKind": "recursive_tree",
+      "context": "activation",
+      "evidence": {"source": "none", "purpose": null, "cardinality": "zero", "inheritance": "none"}
+    },
+    {
+      "id": "EBR",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "branch"}, {"op": "field", "name": "conditionExpression"}],
+      "presence": "union",
+      "nodeType": "expression",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q5"},
+      "ordinal": {"op": "constant", "value": 0},
+      "ownerTable": "ad_v4_candidate_obligation_expressions",
+      "ownerKind": "recursive_tree",
+      "context": "branch_condition",
+      "evidence": {"source": "none", "purpose": null, "cardinality": "zero", "inheritance": "none"}
+    },
+    {
+      "id": "T1",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "initialTiming"}],
+      "presence": "required",
+      "nodeType": "timing_group",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q1"},
+      "ordinal": {"op": "constant", "value": 3},
+      "ownerTable": "ad_v4_candidate_obligation_timing_groups",
+      "ownerKind": "requirement_initial",
+      "evidence": {"source": "own", "purpose": "timing_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "T5I",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "initialTiming"}, {"op": "field", "name": "terms"}, {"op": "each", "capture": "j"}],
+      "presence": "union",
+      "nodeType": "timing_term",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "T1"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_timing_terms",
+      "ownerKind": "requirement_initial",
+      "evidence": {"source": "own", "purpose": "timing_term_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "R1",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "recurrence"}],
+      "presence": "required",
+      "nodeType": "recurrence",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "Q1"},
+      "ordinal": {"op": "constant", "value": 4},
+      "ownerTable": "ad_v4_candidate_obligation_recurrences",
+      "evidence": {"source": "own", "purpose": "recurrence_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "EREC",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "recurrence"}, {"op": "field", "name": "conditionExpression"}],
+      "presence": "union",
+      "nodeType": "expression",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "R1"},
+      "ordinal": {"op": "constant", "value": 0},
+      "ownerTable": "ad_v4_candidate_obligation_expressions",
+      "ownerKind": "recursive_tree",
+      "context": "recurrence_condition",
+      "evidence": {"source": "none", "purpose": null, "cardinality": "zero", "inheritance": "none"}
+    },
+    {
+      "id": "R6",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "recurrence"}, {"op": "field", "name": "timing"}],
+      "presence": "union",
+      "nodeType": "timing_group",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "R1"},
+      "ordinal": {"op": "constant", "value": 1},
+      "ownerTable": "ad_v4_candidate_obligation_timing_groups",
+      "ownerKind": "requirement_recurrence",
+      "allowedUnionBranches": ["known"],
+      "evidence": {"source": "own", "purpose": "timing_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "T5R",
+      "selector": [{"op": "field", "name": "requirements"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "recurrence"}, {"op": "field", "name": "timing"}, {"op": "field", "name": "terms"}, {"op": "each", "capture": "j"}],
+      "presence": "union",
+      "nodeType": "timing_term",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "R6"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_timing_terms",
+      "ownerKind": "requirement_recurrence",
+      "evidence": {"source": "own", "purpose": "timing_term_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "G1",
+      "selector": [{"op": "field", "name": "recurrenceGroups"}, {"op": "each", "capture": "i"}],
+      "presence": "required",
+      "nodeType": "recurrence_group",
+      "key": {"op": "property", "name": "recurrenceGroupKey"},
+      "parent": {"op": "root"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_recurrence_groups",
+      "evidence": {"source": "own", "purpose": "recurrence_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "G3",
+      "selector": [{"op": "field", "name": "recurrenceGroups"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "initialTiming"}],
+      "presence": "required",
+      "nodeType": "timing_group",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "G1"},
+      "ordinal": {"op": "constant", "value": 0},
+      "ownerTable": "ad_v4_candidate_obligation_timing_groups",
+      "ownerKind": "recurrence_group_initial",
+      "evidence": {"source": "own", "purpose": "timing_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "T5GI",
+      "selector": [{"op": "field", "name": "recurrenceGroups"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "initialTiming"}, {"op": "field", "name": "terms"}, {"op": "each", "capture": "j"}],
+      "presence": "union",
+      "nodeType": "timing_term",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "G3"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_timing_terms",
+      "ownerKind": "recurrence_group_initial",
+      "evidence": {"source": "own", "purpose": "timing_term_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "G4",
+      "selector": [{"op": "field", "name": "recurrenceGroups"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "recurringTiming"}],
+      "presence": "required",
+      "nodeType": "timing_group",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "G1"},
+      "ordinal": {"op": "constant", "value": 1},
+      "ownerTable": "ad_v4_candidate_obligation_timing_groups",
+      "ownerKind": "recurrence_group_recurring",
+      "evidence": {"source": "own", "purpose": "timing_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "T5GR",
+      "selector": [{"op": "field", "name": "recurrenceGroups"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "recurringTiming"}, {"op": "field", "name": "terms"}, {"op": "each", "capture": "j"}],
+      "presence": "union",
+      "nodeType": "timing_term",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "G4"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_timing_terms",
+      "ownerKind": "recurrence_group_recurring",
+      "evidence": {"source": "own", "purpose": "timing_term_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "A1",
+      "selector": [{"op": "field", "name": "amocAuthorityProvisions"}, {"op": "each", "capture": "i"}],
+      "presence": "required",
+      "nodeType": "amoc_provision",
+      "key": {"op": "property", "name": "provisionKey"},
+      "parent": {"op": "root"},
+      "ordinal": {"op": "array_ordinal"},
+      "ownerTable": "ad_v4_candidate_obligation_amoc_provisions",
+      "evidence": {"source": "own", "purpose": "amoc_authority_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    },
+    {
+      "id": "A2",
+      "selector": [{"op": "field", "name": "amocAuthorityProvisions"}, {"op": "each", "capture": "i"}, {"op": "field", "name": "approvingAuthority"}],
+      "presence": "required",
+      "nodeType": "value_assertion",
+      "key": {"op": "source_pointer"},
+      "parent": {"op": "ancestor", "name": "A1"},
+      "ordinal": {"op": "constant", "value": 0},
+      "ownerTable": "ad_v4_candidate_obligation_value_assertions",
+      "ownerKind": "approving_authority",
+      "evidence": {"source": "own", "purpose": "amoc_authority_clause", "cardinality": "one_or_more", "inheritance": "none"}
+    }
+  ],
+  "ownerContracts": [
+    {
+      "nodeType": "incorporated_document",
+      "table": "ad_v4_candidate_obligation_documents",
+      "occurrences": ["D1"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "document_ref_key", "source": "documentRefKey", "nullable": false, "presence": "always"},
+        {"name": "document_type", "source": "documentType", "nullable": false, "presence": "always"},
+        {"name": "canonical_ordinal", "source": "$node.ordinal", "nullable": false, "presence": "derived"},
+        {"name": "document_number_node_id", "source": "$child.D2.id", "nullable": false, "presence": "derived"},
+        {"name": "revision_node_id", "source": "$child.D3.id", "nullable": false, "presence": "derived"},
+        {"name": "retention_node_id", "source": "$child.D4.id", "nullable": false, "presence": "derived"}
+      ],
+      "union": null,
+      "references": [
+        {"column": "document_number_node_id", "target": "D2", "targetNodeType": "value_assertion", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "revision_node_id", "target": "D3", "targetNodeType": "value_assertion", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "retention_node_id", "target": "D4", "targetNodeType": "value_assertion", "scope": "same_projection", "cardinality": "required_one"}
+      ],
+      "children": [
+        {"target": "D2", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "D3", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "D4", "cardinality": "exactly_one", "ordering": "fixed_slot"}
+      ]
+    },
+    {
+      "nodeType": "value_assertion",
+      "table": "ad_v4_candidate_obligation_value_assertions",
+      "occurrences": ["D2", "D3", "D4", "A2"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "field_code", "source": "$occurrence.ownerKind", "nullable": false, "presence": "derived"},
+        {"name": "state", "source": "state", "nullable": false, "presence": "always"},
+        {"name": "value", "source": "value", "nullable": true, "presence": "branch"},
+        {"name": "reason", "source": "reason", "nullable": true, "presence": "branch"},
+        {"name": "temporal_kind", "source": "temporalScope.kind", "nullable": true, "presence": "branch"}
+      ],
+      "union": {"discriminator": "state", "branches": [
+        {"value": "known", "requiredColumns": ["value"], "forbiddenColumns": ["reason", "temporal_kind"], "requiredChildren": [], "forbiddenChildren": []},
+        {"value": "unknown", "requiredColumns": ["reason", "temporal_kind"], "forbiddenColumns": ["value"], "requiredChildren": [], "forbiddenChildren": []},
+        {"value": "not_applicable", "requiredColumns": ["reason", "temporal_kind"], "forbiddenColumns": ["value"], "requiredChildren": [], "forbiddenChildren": []}
+      ]},
+      "references": [],
+      "children": []
+    },
+    {
+      "nodeType": "requirement",
+      "table": "ad_v4_candidate_obligation_requirements",
+      "occurrences": ["Q1"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "requirement_key", "source": "requirementKey", "nullable": false, "presence": "always"},
+        {"name": "sequence_text", "source": "sequence", "nullable": false, "presence": "always"},
+        {"name": "sequence_value", "source": "$sequencePrecheck.value", "nullable": false, "presence": "derived"},
+        {"name": "requirement_type", "source": "requirementType", "nullable": false, "presence": "always"},
+        {"name": "canonical_ordinal", "source": "$node.ordinal", "nullable": false, "presence": "derived"},
+        {"name": "recurrence_group_present", "source": "$presence.recurrenceGroupKey", "nullable": false, "presence": "derived"},
+        {"name": "recurrence_group_key", "source": "recurrenceGroupKey", "nullable": true, "presence": "optional"},
+        {"name": "action_node_id", "source": "$child.Q2.id", "nullable": false, "presence": "derived"},
+        {"name": "activation_root_node_id", "source": "$child.EACT.id", "nullable": false, "presence": "derived"},
+        {"name": "branch_node_id", "source": "$child.Q5.id", "nullable": false, "presence": "derived"},
+        {"name": "initial_timing_node_id", "source": "$child.T1.id", "nullable": false, "presence": "derived"},
+        {"name": "recurrence_node_id", "source": "$child.R1.id", "nullable": false, "presence": "derived"},
+        {"name": "terminating_effect_node_id", "source": "$child.Q7.id", "nullable": false, "presence": "derived"}
+      ],
+      "union": null,
+      "references": [
+        {"column": "action_node_id", "target": "Q2", "targetNodeType": "action", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "activation_root_node_id", "target": "EACT", "targetNodeType": "expression", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "branch_node_id", "target": "Q5", "targetNodeType": "branch", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "initial_timing_node_id", "target": "T1", "targetNodeType": "timing_group", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "recurrence_node_id", "target": "R1", "targetNodeType": "recurrence", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "terminating_effect_node_id", "target": "Q7", "targetNodeType": "terminating_effect", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "recurrence_group_key", "target": "G1", "targetNodeType": "recurrence_group", "scope": "same_projection", "cardinality": "optional_one"}
+      ],
+      "children": [
+        {"target": "Q2", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "EACT", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "Q5", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "T1", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "R1", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "Q7", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "Q10", "cardinality": "zero_or_more", "ordering": "canonical_ordinal"}
+      ]
+    },
+    {
+      "nodeType": "action",
+      "table": "ad_v4_candidate_obligation_actions",
+      "occurrences": ["Q2"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "requirement_node_id", "source": "$parent.id", "nullable": false, "presence": "derived"},
+        {"name": "action_type", "source": "actionType", "nullable": false, "presence": "always"},
+        {"name": "ordered_steps_present", "source": "$presence.orderedSteps", "nullable": false, "presence": "derived"},
+        {"name": "step_count", "source": "$count.Q3", "nullable": false, "presence": "derived"},
+        {"name": "document_ref_count", "source": "$count.Q4", "nullable": false, "presence": "derived"}
+      ],
+      "union": null,
+      "references": [{"column": "requirement_node_id", "target": "Q1", "targetNodeType": "requirement", "scope": "same_projection", "cardinality": "required_one"}],
+      "children": [
+        {"target": "Q3", "cardinality": "zero_or_more", "ordering": "canonical_ordinal"},
+        {"target": "Q4", "cardinality": "zero_or_more", "ordering": "canonical_ordinal"}
+      ]
+    },
+    {
+      "nodeType": "action_step",
+      "table": "ad_v4_candidate_obligation_action_steps",
+      "occurrences": ["Q3"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "action_node_id", "source": "$parent.id", "nullable": false, "presence": "derived"},
+        {"name": "step_text", "source": "$value", "nullable": false, "presence": "always"},
+        {"name": "canonical_ordinal", "source": "$node.ordinal", "nullable": false, "presence": "derived"}
+      ],
+      "union": null,
+      "references": [{"column": "action_node_id", "target": "Q2", "targetNodeType": "action", "scope": "same_projection", "cardinality": "required_one"}],
+      "children": []
+    },
+    {
+      "nodeType": "branch",
+      "table": "ad_v4_candidate_obligation_branches",
+      "occurrences": ["Q5"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "requirement_node_id", "source": "$parent.id", "nullable": false, "presence": "derived"},
+        {"name": "kind", "source": "kind", "nullable": false, "presence": "always"},
+        {"name": "alternative_group_key", "source": "alternativeGroupKey", "nullable": true, "presence": "branch"},
+        {"name": "exclusive", "source": "exclusive", "nullable": true, "presence": "branch"},
+        {"name": "condition_root_node_id", "source": "$child.EBR.id", "nullable": true, "presence": "branch"}
+      ],
+      "union": {"discriminator": "kind", "branches": [
+        {"value": "required", "requiredColumns": [], "forbiddenColumns": ["alternative_group_key", "exclusive", "condition_root_node_id"], "requiredChildren": [], "forbiddenChildren": ["EBR"]},
+        {"value": "conditional", "requiredColumns": ["condition_root_node_id"], "forbiddenColumns": ["alternative_group_key", "exclusive"], "requiredChildren": ["EBR"], "forbiddenChildren": []},
+        {"value": "exception", "requiredColumns": ["condition_root_node_id"], "forbiddenColumns": ["alternative_group_key", "exclusive"], "requiredChildren": ["EBR"], "forbiddenChildren": []},
+        {"value": "alternative_member", "requiredColumns": ["alternative_group_key", "exclusive"], "forbiddenColumns": ["condition_root_node_id"], "requiredChildren": [], "forbiddenChildren": ["EBR"]}
+      ]},
+      "references": [
+        {"column": "requirement_node_id", "target": "Q1", "targetNodeType": "requirement", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "condition_root_node_id", "target": "EBR", "targetNodeType": "expression", "scope": "same_projection", "cardinality": "optional_one"}
+      ],
+      "children": [{"target": "EBR", "cardinality": "branch_defined", "ordering": "fixed_slot"}]
+    },
+    {
+      "nodeType": "expression",
+      "table": "ad_v4_candidate_obligation_expressions",
+      "occurrences": ["EACT", "EBR", "EREC"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "requirement_node_id", "source": "$context.requirement.id", "nullable": false, "presence": "derived"},
+        {"name": "context", "source": "$occurrence.context", "nullable": false, "presence": "derived"},
+        {"name": "expression_path", "source": "$expression.path", "nullable": false, "presence": "derived"},
+        {"name": "node_type", "source": "nodeType", "nullable": false, "presence": "always"},
+        {"name": "required_state", "source": "requirementState", "nullable": true, "presence": "branch"},
+        {"name": "app_target_projection_id", "source": "$resolved.slice3a.projectionId", "nullable": true, "presence": "branch"},
+        {"name": "app_target_node_id", "source": "$resolved.slice3a.semanticNodeId", "nullable": true, "presence": "branch"},
+        {"name": "requirement_target_node_id", "source": "$resolved.requirement.semanticNodeId", "nullable": true, "presence": "branch"}
+      ],
+      "union": {"discriminator": "node_type", "branches": [
+        {"value": "scope_ref", "requiredColumns": ["app_target_projection_id", "app_target_node_id"], "forbiddenColumns": ["required_state", "requirement_target_node_id"], "requiredChildren": [], "forbiddenChildren": ["EEDGE"], "referenceTargets": [{"column": "app_target_node_id", "targetNodeType": "product_scope"}]},
+        {"value": "predicate_ref", "requiredColumns": ["app_target_projection_id", "app_target_node_id"], "forbiddenColumns": ["required_state", "requirement_target_node_id"], "requiredChildren": [], "forbiddenChildren": ["EEDGE"], "referenceTargets": [{"column": "app_target_node_id", "targetNodeType": "condition"}]},
+        {"value": "rule_ref", "requiredColumns": ["app_target_projection_id", "app_target_node_id"], "forbiddenColumns": ["required_state", "requirement_target_node_id"], "requiredChildren": [], "forbiddenChildren": ["EEDGE"], "referenceTargets": [{"column": "app_target_node_id", "targetNodeType": "applicability_rule"}]},
+        {"value": "requirement_state_ref", "requiredColumns": ["required_state", "requirement_target_node_id"], "forbiddenColumns": ["app_target_projection_id", "app_target_node_id"], "requiredChildren": [], "forbiddenChildren": ["EEDGE"], "referenceTargets": [{"column": "requirement_target_node_id", "targetNodeType": "requirement"}]},
+        {"value": "not", "requiredColumns": [], "forbiddenColumns": ["required_state", "app_target_projection_id", "app_target_node_id", "requirement_target_node_id"], "requiredChildren": ["EEDGE:1"], "forbiddenChildren": []},
+        {"value": "all", "requiredColumns": [], "forbiddenColumns": ["required_state", "app_target_projection_id", "app_target_node_id", "requirement_target_node_id"], "requiredChildren": ["EEDGE:2+"], "forbiddenChildren": []},
+        {"value": "any", "requiredColumns": [], "forbiddenColumns": ["required_state", "app_target_projection_id", "app_target_node_id", "requirement_target_node_id"], "requiredChildren": ["EEDGE:2+"], "forbiddenChildren": []}
+      ]},
+      "references": [
+        {"column": "app_target_node_id", "target": "slice3a:product_scope|condition|applicability_rule", "targetNodeType": null, "scope": "same_proposal_slice_3a", "cardinality": "optional_one"},
+        {"column": "requirement_target_node_id", "target": "Q1", "targetNodeType": "requirement", "scope": "same_projection", "cardinality": "optional_one"}
+      ],
+      "children": [{"target": "EEDGE", "cardinality": "branch_defined", "ordering": "canonical_ordinal"}]
+    },
+    {
+      "nodeType": "timing_group",
+      "table": "ad_v4_candidate_obligation_timing_groups",
+      "occurrences": ["T1", "R6", "G3", "G4"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "owner_kind", "source": "$occurrence.ownerKind", "nullable": false, "presence": "derived"},
+        {"name": "owner_node_id", "source": "$parent.id", "nullable": false, "presence": "derived"},
+        {"name": "state", "source": "$derive.timing_state:state_or_known", "nullable": false, "presence": "derived"},
+        {"name": "logic", "source": "logic", "nullable": true, "presence": "branch"},
+        {"name": "reason", "source": "reason", "nullable": true, "presence": "branch"},
+        {"name": "temporal_kind", "source": "temporalScope.kind", "nullable": true, "presence": "branch"},
+        {"name": "canonical_ordinal", "source": "$node.ordinal", "nullable": false, "presence": "derived"},
+        {"name": "term_count", "source": "$count.timingTerms", "nullable": false, "presence": "derived"}
+      ],
+      "union": {"discriminator": "state", "branches": [
+        {"value": "known", "requiredColumns": ["logic"], "forbiddenColumns": ["reason", "temporal_kind"], "requiredChildren": ["timing_term:1+"], "forbiddenChildren": []},
+        {"value": "unknown", "requiredColumns": ["reason", "temporal_kind"], "forbiddenColumns": ["logic"], "requiredChildren": [], "forbiddenChildren": ["timing_term"]},
+        {"value": "not_applicable", "requiredColumns": ["reason", "temporal_kind"], "forbiddenColumns": ["logic"], "requiredChildren": [], "forbiddenChildren": ["timing_term"]}
+      ]},
+      "references": [],
+      "children": [{"target": "T5I|T5R|T5GI|T5GR", "cardinality": "branch_defined", "ordering": "canonical_ordinal"}]
+    },
+    {
+      "nodeType": "timing_term",
+      "table": "ad_v4_candidate_obligation_timing_terms",
+      "occurrences": ["T5I", "T5R", "T5GI", "T5GR"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "timing_group_node_id", "source": "$parent.id", "nullable": false, "presence": "derived"},
+        {"name": "metric", "source": "metric", "nullable": false, "presence": "always"},
+        {"name": "interval_text", "source": "interval", "nullable": false, "presence": "always"},
+        {"name": "interval_numeric", "source": "$decimalPrecheck.value", "nullable": false, "presence": "derived"},
+        {"name": "unit", "source": "unit", "nullable": false, "presence": "always"},
+        {"name": "comparator", "source": "comparator", "nullable": false, "presence": "always"},
+        {"name": "anchor", "source": "anchor", "nullable": false, "presence": "always"},
+        {"name": "canonical_ordinal", "source": "$node.ordinal", "nullable": false, "presence": "derived"}
+      ],
+      "union": null,
+      "references": [{"column": "timing_group_node_id", "target": "T1|R6|G3|G4", "targetNodeType": "timing_group", "scope": "same_projection", "cardinality": "required_one"}],
+      "children": []
+    },
+    {
+      "nodeType": "recurrence",
+      "table": "ad_v4_candidate_obligation_recurrences",
+      "occurrences": ["R1"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "requirement_node_id", "source": "$parent.id", "nullable": false, "presence": "derived"},
+        {"name": "kind", "source": "kind", "nullable": false, "presence": "always"},
+        {"name": "timing_node_id", "source": "$child.R6.id", "nullable": true, "presence": "branch"},
+        {"name": "condition_root_node_id", "source": "$child.EREC.id", "nullable": true, "presence": "branch"},
+        {"name": "reason", "source": "reason", "nullable": true, "presence": "branch"},
+        {"name": "temporal_kind", "source": "temporalScope.kind", "nullable": true, "presence": "branch"}
+      ],
+      "union": {"discriminator": "kind", "branches": [
+        {"value": "none", "requiredColumns": [], "forbiddenColumns": ["timing_node_id", "condition_root_node_id", "reason", "temporal_kind"], "requiredChildren": [], "forbiddenChildren": ["R6", "EREC"]},
+        {"value": "interval", "requiredColumns": ["timing_node_id"], "forbiddenColumns": ["condition_root_node_id", "reason", "temporal_kind"], "requiredChildren": ["R6"], "forbiddenChildren": ["EREC"]},
+        {"value": "conditioned", "requiredColumns": ["timing_node_id", "condition_root_node_id"], "forbiddenColumns": ["reason", "temporal_kind"], "requiredChildren": ["R6", "EREC"], "forbiddenChildren": []},
+        {"value": "unknown", "requiredColumns": ["reason", "temporal_kind"], "forbiddenColumns": ["timing_node_id", "condition_root_node_id"], "requiredChildren": [], "forbiddenChildren": ["R6", "EREC"]}
+      ]},
+      "references": [
+        {"column": "requirement_node_id", "target": "Q1", "targetNodeType": "requirement", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "timing_node_id", "target": "R6", "targetNodeType": "timing_group", "scope": "same_projection", "cardinality": "optional_one"},
+        {"column": "condition_root_node_id", "target": "EREC", "targetNodeType": "expression", "scope": "same_projection", "cardinality": "optional_one"}
+      ],
+      "children": [
+        {"target": "R6", "cardinality": "branch_defined", "ordering": "fixed_slot"},
+        {"target": "EREC", "cardinality": "branch_defined", "ordering": "fixed_slot"}
+      ]
+    },
+    {
+      "nodeType": "terminating_effect",
+      "table": "ad_v4_candidate_obligation_terminating_effects",
+      "occurrences": ["Q7"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "requirement_node_id", "source": "$parent.id", "nullable": false, "presence": "derived"},
+        {"name": "kind", "source": "kind", "nullable": false, "presence": "always"},
+        {"name": "edge_count", "source": "$count.Q9", "nullable": false, "presence": "derived"}
+      ],
+      "union": {"discriminator": "kind", "branches": [
+        {"value": "none", "requiredColumns": [], "forbiddenColumns": [], "requiredChildren": [], "forbiddenChildren": ["Q9"]},
+        {"value": "terminates", "requiredColumns": [], "forbiddenColumns": [], "requiredChildren": [], "forbiddenChildren": []}
+      ]},
+      "references": [{"column": "requirement_node_id", "target": "Q1", "targetNodeType": "requirement", "scope": "same_projection", "cardinality": "required_one"}],
+      "children": [{"target": "Q9", "cardinality": "zero_or_more", "ordering": "canonical_ordinal"}]
+    },
+    {
+      "nodeType": "recurrence_group",
+      "table": "ad_v4_candidate_obligation_recurrence_groups",
+      "occurrences": ["G1"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "recurrence_group_key", "source": "recurrenceGroupKey", "nullable": false, "presence": "always"},
+        {"name": "canonical_ordinal", "source": "$node.ordinal", "nullable": false, "presence": "derived"},
+        {"name": "completion_policy", "source": "completionPolicy", "nullable": false, "presence": "always"},
+        {"name": "initial_timing_node_id", "source": "$child.G3.id", "nullable": false, "presence": "derived"},
+        {"name": "recurring_timing_node_id", "source": "$child.G4.id", "nullable": false, "presence": "derived"},
+        {"name": "member_count", "source": "$count.G2", "nullable": false, "presence": "derived"}
+      ],
+      "union": null,
+      "references": [
+        {"column": "initial_timing_node_id", "target": "G3", "targetNodeType": "timing_group", "scope": "same_projection", "cardinality": "required_one"},
+        {"column": "recurring_timing_node_id", "target": "G4", "targetNodeType": "timing_group", "scope": "same_projection", "cardinality": "required_one"}
+      ],
+      "children": [
+        {"target": "G2", "cardinality": "two_or_more", "ordering": "canonical_ordinal"},
+        {"target": "G3", "cardinality": "exactly_one", "ordering": "fixed_slot"},
+        {"target": "G4", "cardinality": "exactly_one", "ordering": "fixed_slot"}
+      ]
+    },
+    {
+      "nodeType": "amoc_provision",
+      "table": "ad_v4_candidate_obligation_amoc_provisions",
+      "occurrences": ["A1"],
+      "columns": [
+        {"name": "semantic_node_id", "source": "$node.id", "nullable": false, "presence": "derived"},
+        {"name": "proposal_id", "source": "$projection.proposalId", "nullable": false, "presence": "derived"},
+        {"name": "projection_id", "source": "$projection.id", "nullable": false, "presence": "derived"},
+        {"name": "provision_key", "source": "provisionKey", "nullable": false, "presence": "always"},
+        {"name": "canonical_ordinal", "source": "$node.ordinal", "nullable": false, "presence": "derived"},
+        {"name": "authority_assertion_node_id", "source": "$child.A2.id", "nullable": false, "presence": "derived"}
+      ],
+      "union": null,
+      "references": [{"column": "authority_assertion_node_id", "target": "A2", "targetNodeType": "value_assertion", "scope": "same_projection", "cardinality": "required_one"}],
+      "children": [{"target": "A2", "cardinality": "exactly_one", "ordering": "fixed_slot"}]
+    }
+  ],
+  "relationships": [
+    {"id": "Q4", "sourcePattern": "/requirements/{i}/action/approvedDataDocumentRefKeys/{j}", "table": "ad_v4_candidate_obligation_action_document_refs", "tableLabel": "action-document-ref", "idPrefix": "aor", "identityProperties": ["projectionId", "actionNodeId", "documentNodeId", "ordinal"], "ordering": "canonical_ordinal", "cardinality": "zero_or_more"},
+    {"id": "Q9", "sourcePattern": "/requirements/{i}/terminatingEffect/requirementKeys/{j}", "table": "ad_v4_candidate_obligation_termination_edges", "tableLabel": "termination-edge", "idPrefix": "aot", "identityProperties": ["projectionId", "effectNodeId", "terminatedRequirementNodeId", "ordinal"], "ordering": "canonical_ordinal", "cardinality": "zero_or_more"},
+    {"id": "Q10", "sourcePattern": "/requirements/{i}/prerequisiteRequirementKeys/{j}", "table": "ad_v4_candidate_obligation_requirement_dependencies", "tableLabel": "requirement-dependency", "idPrefix": "aop", "identityProperties": ["projectionId", "requirementNodeId", "prerequisiteRequirementNodeId", "ordinal"], "ordering": "canonical_ordinal", "cardinality": "zero_or_more"},
+    {"id": "EEDGE", "sourcePattern": "expression operands", "table": "ad_v4_candidate_obligation_expression_edges", "tableLabel": "expression-edge", "idPrefix": "aog", "identityProperties": ["projectionId", "requirementNodeId", "context", "parentExpressionId", "childExpressionId", "ordinal"], "ordering": "canonical_ordinal", "cardinality": "zero_or_more"},
+    {"id": "G2", "sourcePattern": "/recurrenceGroups/{i}/requirementKeys/{j}", "table": "ad_v4_candidate_obligation_recurrence_group_members", "tableLabel": "recurrence-group-member", "idPrefix": "aom", "identityProperties": ["projectionId", "groupNodeId", "requirementNodeId", "ordinal"], "ordering": "canonical_ordinal", "cardinality": "zero_or_more"},
+    {"id": "CB", "sourcePattern": "/authoritativeCorrections/{i}/changedSemanticRefs/{j}[owner_slice=slice_3b]", "table": "ad_v4_candidate_correction_semantic_bindings", "tableLabel": "correction-binding", "idPrefix": "avk", "identityProperties": ["refId", "semanticId"], "ordering": "unique_reference", "cardinality": "exactly_one_per_reference"},
+    {"id": "REQ", "sourcePattern": "authorized materialization request", "table": "ad_v4_candidate_obligation_materialization_requests", "tableLabel": "materialization-request", "idPrefix": "aoq", "identityProperties": ["actorUserId", "authorizingMembershipId", "endpointAction", "authPolicyVersion", "idempotencyKey"], "ordering": "unique_reference", "cardinality": "exactly_one_per_source"},
+    {"id": "EVT", "sourcePattern": "projection event chain", "table": "ad_v4_candidate_obligation_projection_events", "tableLabel": "projection-event", "idPrefix": "aov", "identityProperties": ["projectionId", "sequenceNumber", "eventHash"], "ordering": "event_sequence", "cardinality": "exactly_one_per_source"}
+  ],
+  "globalAlgorithms": [
+    "restricted_jcs",
+    "expression_tree_walk",
+    "graph_cycle_check",
+    "decimal_precheck",
+    "sequence_precheck",
+    "typed_reconstruction",
+    "projection_fold",
+    "request_fold",
+    "event_fold"
+  ]
+}

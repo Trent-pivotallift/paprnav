@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paprnav.local/contracts/ad-v4-obligation-mapping.schema.json",
+  "title": "Paprnav V4 obligation mapping manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mappingVersion",
+    "generatorVersion",
+    "generatorSourceSha256",
+    "resourceLimits",
+    "domains",
+    "correctionCompatibility",
+    "rootFields",
+    "structuralCounts",
+    "occurrences",
+    "ownerContracts",
+    "relationships",
+    "globalAlgorithms"
+  ],
+  "properties": {
+    "mappingVersion": {"const": "paprnav-ad-v4-obligation-mapping-1"},
+    "generatorVersion": {"const": "paprnav-ad-v4-obligation-mapgen-1"},
+    "generatorSourceSha256": {"$ref": "#/$defs/sha256"},
+    "resourceLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxDepth", "maxTotalNodes", "maxStringLength", "maxArrayItems", "maxAstNodes", "maxGraphEdges", "maxInternalInteger"],
+      "properties": {
+        "maxDepth": {"const": 64},
+        "maxTotalNodes": {"const": 75000},
+        "maxStringLength": {"const": 16384},
+        "maxArrayItems": {"const": 2000},
+        "maxAstNodes": {"const": 20000},
+        "maxGraphEdges": {"const": 40000},
+        "maxInternalInteger": {"const": 2147483647}
+      }
+    },
+    "domains": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subtree", "projection", "row", "request", "authClaims", "event", "correctionBindingSet", "legacyApplicabilityRow"],
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9]*$": {"type": "string", "minLength": 2}
+      }
+    },
+    "correctionCompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespaces", "identityDomainKeys"],
+      "properties": {
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["namespace", "ownerSlice", "targetNodeType"],
+            "properties": {
+              "namespace": {"type": "string", "minLength": 1},
+              "ownerSlice": {"enum": ["foundation", "slice_3a", "slice_3b"]},
+              "targetNodeType": {"type": ["string", "null"]}
+            }
+          },
+          "minItems": 8,
+          "maxItems": 8
+        },
+        "identityDomainKeys": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["correctionRoot", "correctionReference", "slice3aBinding", "slice3bBinding"],
+          "properties": {
+            "correctionRoot": {"type": "string"},
+            "correctionReference": {"type": "string"},
+            "slice3aBinding": {"type": "string"},
+            "slice3bBinding": {"type": "string"}
+          }
+        }
+      }
+    },
+    "rootFields": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "incorporatedDocuments"},
+        {"const": "requirements"},
+        {"const": "recurrenceGroups"},
+        {"const": "amocAuthorityProvisions"}
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "structuralCounts": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z][A-Za-z0-9]*Count$"},
+      "minItems": 22,
+      "maxItems": 22,
+      "uniqueItems": true
+    },
+    "occurrences": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/occurrence"},
+      "minItems": 1
+    },
+    "ownerContracts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/ownerContract"},
+      "minItems": 13,
+      "maxItems": 13
+    },
+    "relationships": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/relationship"},
+      "minItems": 1
+    },
+    "globalAlgorithms": {
+      "type": "array",
+      "items": {"enum": ["restricted_jcs", "expression_tree_walk", "graph_cycle_check", "decimal_precheck", "sequence_precheck", "typed_reconstruction", "projection_fold", "request_fold", "event_fold"]},
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "step": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "name"],
+          "properties": {"op": {"const": "field"}, "name": {"type": "string", "minLength": 1}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["op", "capture"],
+          "properties": {"op": {"const": "each"}, "capture": {"enum": ["i", "j", "k"]}}
+        }
+      ]
+    },
+    "derivation": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["op"], "properties": {"op": {"enum": ["root", "source_pointer", "array_ordinal", "operand_ordinal"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["op", "value"], "properties": {"op": {"const": "constant"}, "value": {"type": ["integer", "string"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["op", "name"], "properties": {"op": {"enum": ["property", "ancestor"]}, "name": {"type": "string", "minLength": 1}}}
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "purpose", "cardinality", "inheritance"],
+      "properties": {
+        "source": {"enum": ["own", "none"]},
+        "purpose": {"type": ["string", "null"]},
+        "cardinality": {"enum": ["zero", "one_or_more"]},
+        "inheritance": {"const": "none"}
+      }
+    },
+    "occurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "selector", "presence", "nodeType", "key", "parent", "ordinal", "ownerTable", "evidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Z][A-Z0-9]*$"},
+        "selector": {"type": "array", "items": {"$ref": "#/$defs/step"}, "minItems": 1},
+        "presence": {"enum": ["required", "optional", "union"]},
+        "nodeType": {"enum": ["incorporated_document", "value_assertion", "requirement", "action", "action_step", "branch", "expression", "timing_group", "timing_term", "recurrence", "terminating_effect", "recurrence_group", "amoc_provision"]},
+        "key": {"$ref": "#/$defs/derivation"},
+        "parent": {"$ref": "#/$defs/derivation"},
+        "ordinal": {"$ref": "#/$defs/derivation"},
+        "ownerTable": {"type": "string", "pattern": "^ad_v4_candidate_obligation_[a-z_]+$"},
+        "ownerKind": {"type": "string"},
+        "context": {"type": "string"},
+        "allowedUnionBranches": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source", "nullable", "presence"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "source": {"type": "string", "minLength": 1},
+        "nullable": {"type": "boolean"},
+        "presence": {"enum": ["always", "optional", "branch", "derived"]}
+      }
+    },
+    "unionBranch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "requiredColumns", "forbiddenColumns", "requiredChildren", "forbiddenChildren"],
+      "properties": {
+        "value": {"type": "string", "minLength": 1},
+        "requiredColumns": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "forbiddenColumns": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "requiredChildren": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "forbiddenChildren": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "referenceTargets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column", "targetNodeType"],
+            "properties": {"column": {"type": "string"}, "targetNodeType": {"type": "string"}}
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["column", "target", "targetNodeType", "scope", "cardinality"],
+      "properties": {
+        "column": {"type": "string"},
+        "target": {"type": "string"},
+        "targetNodeType": {"type": ["string", "null"]},
+        "scope": {"enum": ["same_projection", "same_proposal_slice_3a", "same_proposal_candidate", "shared_correction"]},
+        "cardinality": {"enum": ["required_one", "optional_one", "zero_or_more"]}
+      }
+    },
+    "child": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "cardinality", "ordering"],
+      "properties": {
+        "target": {"type": "string"},
+        "cardinality": {"enum": ["exactly_one", "zero_or_one", "zero_or_more", "one_or_more", "two_or_more", "branch_defined"]},
+        "ordering": {"enum": ["fixed_slot", "canonical_ordinal", "none"]}
+      }
+    },
+    "ownerContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodeType", "table", "occurrences", "columns", "union", "references", "children"],
+      "properties": {
+        "nodeType": {"type": "string"},
+        "table": {"type": "string", "pattern": "^ad_v4_candidate_obligation_[a-z_]+$"},
+        "occurrences": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+        "columns": {"type": "array", "items": {"$ref": "#/$defs/column"}, "minItems": 1},
+        "union": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["discriminator", "branches"],
+              "properties": {
+                "discriminator": {"type": "string"},
+                "branches": {"type": "array", "items": {"$ref": "#/$defs/unionBranch"}, "minItems": 1}
+              }
+            }
+          ]
+        },
+        "references": {"type": "array", "items": {"$ref": "#/$defs/reference"}},
+        "children": {"type": "array", "items": {"$ref": "#/$defs/child"}}
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourcePattern", "table", "tableLabel", "idPrefix", "identityProperties", "ordering", "cardinality"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Z][A-Z0-9]*$"},
+        "sourcePattern": {"type": "string", "minLength": 1},
+        "table": {"type": "string", "pattern": "^ad_v4_candidate_[a-z0-9_]+$"},
+        "tableLabel": {"type": "string", "pattern": "^[a-z][a-z0-9-]+$"},
+        "idPrefix": {"type": "string", "pattern": "^[a-z]{3}$"},
+        "identityProperties": {"type": "array", "items": {"type": "string"}, "minItems": 2, "uniqueItems": true},
+        "ordering": {"enum": ["canonical_ordinal", "lexical_key", "event_sequence", "unique_reference"]},
+        "cardinality": {"enum": ["zero_or_more", "exactly_one_per_source", "exactly_one_per_reference"]}
+      }
+    }
+  }
+}

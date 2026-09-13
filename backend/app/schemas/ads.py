@@ -237,6 +237,57 @@ class ADV4ApplicabilityReconstructionResponse(BaseModel):
     authPolicyVersion: str
 
 
+class ADV4ObligationProjectionResponse(BaseModel):
+    projectionId: str
+    proposalId: str
+    directiveId: str
+    appProjectionId: str
+    validatorVersion: str
+    canonicalizationVersion: str
+    appMaterializerVersion: str
+    materializerVersion: str
+    mappingVersion: str
+    mappingDigest: str
+    proposalCanonicalHash: str
+    evidenceBindingHash: str
+    appProjectionHash: str
+    obligationSubtreeHash: str
+    projectionHash: str
+    gate: str
+    counts: dict[str, int]
+    requestId: Optional[str] = None
+    created: bool = False
+    idempotentRetry: bool = False
+    actingMembershipId: str
+    authPolicyVersion: str
+    createdAt: datetime
+
+
+class ADV4ObligationMaterializationRequest(BaseModel):
+    appProjectionId: str = Field(min_length=1, max_length=36)
+
+
+class ADV4ObligationProjectionListResponse(BaseModel):
+    projections: list[ADV4ObligationProjectionResponse]
+    count: int
+    total: int
+    limit: int
+    offset: int
+
+
+class ADV4ObligationReconstructionResponse(BaseModel):
+    projectionId: str
+    proposalId: str
+    directiveId: str
+    appProjectionId: str
+    gate: str
+    obligationSubtreeHash: str
+    projectionHash: str
+    canonicalObligations: dict[str, Any]
+    actingMembershipId: str
+    authPolicyVersion: str
+
+
 class ADProposalProvenanceResponse(BaseModel):
     stagingDecisionId: str
     actorUserId: Optional[str]

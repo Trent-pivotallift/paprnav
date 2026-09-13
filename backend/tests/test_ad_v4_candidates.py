@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+import app.services.ad_v4_candidates as ad_v4_candidates
+
 from app.models.core import (
     ADEvidenceFragment,
     ADEvidenceFragmentLifecycleEvent,
@@ -19,10 +21,12 @@ from app.services.ad_evidence import _hash_parts
 from app.services.ad_v4_candidates import (
     ADV4Error,
     DOMAINS,
+    DOMAINS_V2,
     canonical_bytes,
     parse_v4_request_bytes,
     store_v4_candidate,
     validate_v4_envelope,
+    verified_candidate,
 )
 from conftest import add_membership, create_organization, create_user
 
@@ -112,6 +116,10 @@ def _parsed(value):
     (b'{"value":null}', "forbidden_json_value"),
     (b'\xff', "invalid_utf8"),
     (b'{"value":"\\ud800"}', "invalid_unicode_scalar"),
+    (b'{"value":"\\u0000"}', "unsupported_unicode_character"),
+    (b'{"\\u0000":"value"}', "unsupported_unicode_character"),
+    (b'{"nested":[{"value":"\\u0000"}]}', "unsupported_unicode_character"),
+    (b'{"nested":[{"\\u0000":"value"}]}', "unsupported_unicode_character"),
 ])
 def test_raw_parser_rejects_noncanonical_inputs(raw, code):
     with pytest.raises(ADV4Error) as caught:
@@ -199,6 +207,53 @@ def test_requirement_sequence_is_typed_unique_and_contiguous(db_session):
         validate_v4_envelope(_parsed(duplicate), directive.id)
     assert sequence.value.code == "invalid_requirement_sequence"
 
+    oversized_integer = deepcopy(_envelope(directive, fragment))
+    oversized_integer["proposal"]["requirements"][0]["sequence"] = "9" * 5_000
+    with pytest.raises(ADV4Error) as safe_conversion:
+        validate_v4_envelope(_parsed(oversized_integer), directive.id)
+    assert safe_conversion.value.code == "invalid_requirement_sequence"
+    assert safe_conversion.value.http_status == 422
+
+    beyond_raw_limit = deepcopy(_envelope(directive, fragment))
+    beyond_raw_limit["proposal"]["requirements"][0]["sequence"] = "9" * 16_385
+    with pytest.raises(ADV4Error) as resource_limit:
+        _parsed(beyond_raw_limit)
+    assert resource_limit.value.code == "resource_limit"
+    assert resource_limit.value.http_status == 413
+
+
+def test_verified_candidate_rejects_forged_requirement_count_before_allocation(db_session):
+    actor, membership, directive, fragment = _setup(db_session)
+    stored = store_v4_candidate(
+        db_session,
+        directive_id=directive.id,
+        parsed=_parsed(_envelope(directive, fragment)),
+        actor=actor,
+        membership_id=membership.id,
+        idempotency_key="sequence-forged-parent",
+    )
+    db_session.commit()
+
+    forged = deepcopy(stored.proposal.parsed_json)
+    template = forged["requirements"][0]
+    forged["requirements"] = []
+    for value in range(1, 2_002):
+        requirement = deepcopy(template)
+        requirement["requirementKey"] = f"requirement-{value:04d}"
+        requirement["sequence"] = str(value)
+        forged["requirements"].append(requirement)
+    candidate = stored.proposal
+    candidate.parsed_json = forged
+    candidate.canonical_bytes = canonical_bytes(forged, candidate.canonicalization_version)
+    domains = DOMAINS_V2 if candidate.validator_version.endswith("-2") else DOMAINS
+    candidate.canonical_hash = hashlib.sha256(domains["proposal"] + candidate.canonical_bytes).hexdigest()
+    db_session.commit()
+
+    with pytest.raises(ADV4Error) as rejected:
+        verified_candidate(db_session, candidate.id)
+    assert rejected.value.code == "requirement_sequence_resource_limit"
+    assert rejected.value.http_status == 409
+
 
 def test_semantic_validator_rejects_dangling_duplicate_and_cyclic_refs(db_session):
     _, _, directive, fragment = _setup(db_session)
@@ -221,6 +276,69 @@ def test_semantic_validator_rejects_dangling_duplicate_and_cyclic_refs(db_sessio
     with pytest.raises(ADV4Error) as cycle:
         validate_v4_envelope(_parsed(cyclic), directive.id)
     assert cycle.value.code == "cyclic_reference"
+
+
+def test_semantic_validator_handles_long_requirement_chains_without_python_recursion(db_session):
+    _, _, directive, fragment = _setup(db_session)
+    value = deepcopy(_envelope(directive, fragment))
+    template = value["proposal"]["requirements"][0]
+    requirement_count = 1_100
+    requirements = []
+    for ordinal in range(requirement_count):
+        requirement = deepcopy(template)
+        requirement["requirementKey"] = f"requirement-{ordinal:04d}"
+        requirement["sequence"] = str(ordinal + 1)
+        if ordinal + 1 < requirement_count:
+            requirement["activationExpression"] = {
+                "nodeType": "requirement_state_ref",
+                "requirementKey": f"requirement-{ordinal + 1:04d}",
+                "requirementState": "unknown",
+            }
+        requirements.append(requirement)
+    value["proposal"]["requirements"] = requirements
+
+    validate_v4_envelope(_parsed(value), directive.id)
+
+    value["proposal"]["requirements"][-1]["activationExpression"] = {
+        "nodeType": "requirement_state_ref",
+        "requirementKey": "requirement-0000",
+        "requirementState": "unknown",
+    }
+    with pytest.raises(ADV4Error) as cycle:
+        validate_v4_envelope(_parsed(value), directive.id)
+    assert cycle.value.code == "cyclic_reference"
+
+
+def test_graph_edge_budget_counts_duplicate_source_occurrences_across_families(
+    db_session, monkeypatch,
+):
+    _, _, directive, fragment = _setup(db_session)
+    value = deepcopy(_envelope(directive, fragment))
+    source = value["proposal"]["requirements"][0]
+    target = deepcopy(source)
+    source["activationExpression"] = {
+        "nodeType": "scope_ref", "scopeKey": "scope-airframe",
+    }
+    target["activationExpression"] = {
+        "nodeType": "scope_ref", "scopeKey": "scope-airframe",
+    }
+    target["requirementKey"] = "requirement-target"
+    target["sequence"] = "2"
+    source["prerequisiteRequirementKeys"] = ["requirement-target"]
+    source["terminatingEffect"] = {
+        "kind": "terminates", "requirementKeys": ["requirement-target"],
+        "evidenceKeys": ["ev-rule"],
+    }
+    value["proposal"]["requirements"].append(target)
+
+    monkeypatch.setattr(ad_v4_candidates, "MAX_GRAPH_EDGES", 2)
+    validate_v4_envelope(_parsed(value), directive.id)
+
+    monkeypatch.setattr(ad_v4_candidates, "MAX_GRAPH_EDGES", 1)
+    with pytest.raises(ADV4Error) as caught:
+        validate_v4_envelope(_parsed(value), directive.id)
+    assert caught.value.code == "resource_limit"
+    assert caught.value.http_status == 413
 
 
 def test_parser_resource_limits_fail_closed_before_schema():

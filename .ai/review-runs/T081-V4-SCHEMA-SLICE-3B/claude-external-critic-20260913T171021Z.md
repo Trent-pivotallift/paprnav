@@ -1,0 +1,48 @@
+# Review: T081-V4-SCHEMA-SLICE-3B (external-critic)
+
+## 1. Scope Limitations
+
+- This slice's normative claims (invariants 25–38 in the decision packet) are almost entirely PostgreSQL-behavior claims: deferred-trigger anchor coalescing, lock ordering, downgrade concurrency, direct-SQL corruption rejection, and catalog parity. I did **not** have a safe, unambiguously disposable PostgreSQL instance in this environment (the only reachable `localhost:5432` container is a long-running project database shared with other work, and no `PAPRNAV_TEST_POSTGRES_URL` was configured), so I did not execute the migration, the trigger suite, or any of the `*_postgres.py` tests myself. I verified those areas by direct code reading (migration file, `20260911_0028_obligation_integrity.sql`, `ad_v4_obligation_persistence.py`) and by cross-checking Python/SQL parity (e.g. `paprnav_v4_lock_key` byte-for-byte match, `avk_` id-prefix check present in both the migration-time compatibility patch and the main completeness validator), rather than by independent execution.
+- I did independently run the full non-Postgres backend test suite (`634 passed, 101 skipped`), which matches the skip pattern expected for Postgres-only tests and shows no regression on the host-only path.
+- I read the entire migration file, the persistence/service write path (`ad_v4_obligation_persistence.py`), the new API routes, the model diff, `ad_v4_graph.py`, and the diffs to `ad_v4_candidates.py`, `ad_v4_applicability.py`, `ad_evidence.py`, `config.py`, `session.py`, and `schemas/ads.py` in full. I sampled (rather than read line-by-line) the 4,300-line `ad_v4_obligations.py` and the 1,526-line integrity SQL file, targeting the areas the decision packet and prior review rounds flagged as highest-risk (sequence/timing bounds, grouped-requirement timing exclusion, correction-binding domain separation, request-guard lock order, anchor coalescing).
+- This task's own ledger (`.ai/review-runs/T081-V4-SCHEMA-SLICE-3B/findings.json` embedded in the packet) already records five prior independent Codex review rounds (design B/H/M, preflight, IA initial/closure-1/closure-2) with every entry closed except one correctly-rejected item. I treated that ledger as informative but not authoritative, per instructions, and looked for evidence its closures were inadequate. I did not find such evidence in the areas I could check.
+
+<!-- CLAUDE_FINDINGS_JSON -->
+```json
+[
+  {
+    "id": "T081-V4-SCHEMA-SLICE-3B-CC-001",
+    "severity": "low",
+    "invariant": "GET performs no insert, update, delete, flush, commit, stale repair, or audit event; a response is wholly before or wholly after a concurrent commit, never a mixed observation (decision.md invariants 29-30).",
+    "summary": "The single-projection detail and reconstruction GET routes each run the full verified-read reconstruction twice inside the same repeatable-read transaction: once inside verified_obligation_projection() and once more explicitly in the route handler (serialize_v4_obligation_projection() / get_v4_obligation_reconstruction()). This does not violate correctness (same snapshot, so results are guaranteed identical), but it doubles the DB round trips and hashing work of the most expensive request path.",
+    "evidence": [
+      "backend/app/services/ad_v4_obligation_persistence.py:1259-1260 — verified_obligation_projection() already calls reconstruct_obligation_projection(db, projection).",
+      "backend/app/api/routes/ads.py: serialize_v4_obligation_projection() (around line 601) calls reconstruct_obligation_projection(db, projection, require_fresh=require_fresh) again for the same projection object returned by verified_obligation_projection().",
+      "backend/app/api/routes/ads.py: get_v4_obligation_reconstruction() calls verified_obligation_projection(...) and then calls reconstruct_obligation_projection(read_db, projection) a second time to obtain the subtree payload.",
+      "list_v4_obligation_projections() amplifies this per row (up to 100 rows/request), each going through serialize_v4_obligation_projection()'s internal duplicate reconstruction."
+    ],
+    "impact": "No correctness or safety impact under the current design (verification is idempotent within one REPEATABLE READ snapshot), but it roughly doubles CPU/DB cost per obligation GET/list call, which matters most for the list endpoint's O(rows) full graph reconstructions.",
+    "requiredClosure": "Optional hardening: have reconstruct_obligation_projection() return the already-computed subtree/typed graph so serialize_v4_obligation_projection() and the reconstruction route can reuse the single verified result instead of invoking the full verified read a second time. Not required to close this slice, since no invariant is violated."
+  }
+]
+```
+
+## 3. Open Questions
+
+- None of the packet's own "Known uncertainty" items (timing precision, alternative-group exclusivity, sequence conversion, mapping-digest scope, 3A version pinning, absent retained AMOC evidence) surfaced a new concern beyond what the packet already discloses; the code I read is consistent with the stated resolutions (e.g. `RESOURCE_LIMITS["maxStringLength"]` checked before `Decimal()` conversion in `_timing_decimal`; grouped-requirement inline-timing/recurrence exclusion enforced in `ad_v4_obligations.py:3089-3095`; retention constrained to `state='unknown'` via `ck_ad_v4_obligation_retention_unknown`).
+- I could not personally reproduce the Postgres-side concurrency/lock-ordering evidence (`PERSIST-PREFLIGHT-005`, the xmin/cmin anchor tests, the downgrade `NOWAIT` interleaving). If a "mandatory final closure" or "staged-state attestation" gate requires fresh, independently-executed Postgres evidence rather than re-citing the prior Codex reviewer's runs, that evidence should be regenerated by whichever agent has a genuinely disposable Postgres instance, since this critic pass did not add new execution evidence for that surface.
+
+## 4. Verification Notes
+
+- `PYTHONPATH=. .venv/bin/pytest -q` (full backend suite, no Postgres DSN configured): **634 passed, 101 skipped**, 2 pre-existing warnings — consistent with the checkpoint's claim that Postgres-only tests skip cleanly outside a configured database.
+- Manually traced the write-lock order in `materialize_obligations()` (`ad_v4_obligation_persistence.py:608-801`) against the decision packet's fixed 10-step order (actor/membership → idempotency advisory lock → proposal → gates in fixed order → evidence bindings/fragments → 3A advisory lock/root → correction roots/refs → 3B advisory lock/root): the code follows this order exactly, including locking gates before re-fetching the verified proposal.
+- Manually traced `paprnav_v4_candidate_obligation_request_guard()` (integrity SQL lines 1380-1446): its lock sequence (actor/membership → idempotency advisory lock → proposal → all three gates → evidence bindings/fragments → 3A advisory lock/root → corrections/refs → 3B advisory lock/root) matches the Python order, which is the correct defense against a direct-SQL request insert bypassing the API's locking discipline.
+- Verified `paprnav_v4_lock_key()` (SQL) and `_advisory_lock()` (Python, `ad_v4_candidates.py:911-914`) compute the identical signed 64-bit value from the first 8 bytes of `sha256(value)`.
+- Verified the downgrade path in the migration (`DOWNGRADE_LOCK_TABLES`, lines 72-99, and `downgrade()`, lines 997-1109) locks the projection root before its children and the shared correction/gate tables last, matches the documented required fix for the previously-closed unsafe lexical-lock finding, and refuses on an enabled gate or any existing 3B row/binding before doing any DDL.
+- Confirmed no released/V3/matching/due-state code references any `ad_v4_candidate_obligation_*` table or ORM class (`grep` across `backend/app` outside the Slice-3B files returned nothing), consistent with invariant 35/36 ("no released reader").
+- Confirmed the real bug fix in `store_v4_candidate()` (`ad_v4_candidates.py`) that now persists `parsed_json` from the canonicalized bytes (`json.loads(proposal_payload)`) instead of the raw transport-order payload, closing a real transport-order-vs-canonical-order divergence for c14n-2 candidates; this is an important, correctly-implemented fix, not merely cosmetic.
+- Confirmed default-off gating end-to-end: `PAPRNAV_AD_V4_SLICE3B_ROUTES_ENABLED` defaults false (`config.py`), `materializer3b_enabled` is inserted `false` by the migration, and all four new routes call either `_require_obligation_application_gate` or go through `materialize_obligations`, which checks it before any other work.
+
+## 5. Brief Summary
+
+This is a very large, already heavily-reviewed slice (five prior independent Codex rounds, all findings closed or correctly rejected, plus a reproduced 634-test host pass by me). Focused independent reading of the migration, the write/lock path, the request-guard trigger, the anchor-coalescing trigger, cross-file domain-separation checks, and the no-released-reader boundary did not surface a new blocker or high-severity defect. The one new item I'm flagging is a low-severity, non-safety-affecting performance redundancy in the GET/list obligation routes (double full verified reconstruction per response). My highest-value caveat is methodological, not a code finding: the majority of this slice's safety claims live in PostgreSQL trigger/lock behavior that I could not independently execute in this environment, so this pass should be read as a thorough static/manual review layered on top of, not a fresh re-execution of, the prior Postgres-based verification evidence.

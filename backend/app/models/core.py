@@ -1511,12 +1511,33 @@ class ADV4CandidateCorrectionRef(Base):
 
 class ADV4CandidateCorrectionSemanticBinding(Base):
     __tablename__ = "ad_v4_candidate_correction_semantic_bindings"
+    __table_args__ = (
+        CheckConstraint(
+            "(binding_slice='slice_3a' AND projection_id IS NOT NULL AND semantic_node_id IS NOT NULL "
+            "AND obligation_projection_id IS NULL AND obligation_semantic_node_id IS NULL) OR "
+            "(binding_slice='slice_3b' AND projection_id IS NULL AND semantic_node_id IS NULL "
+            "AND obligation_projection_id IS NOT NULL AND obligation_semantic_node_id IS NOT NULL)",
+            name="ck_ad_v4_correction_binding_owner_slice",
+        ),
+        ForeignKeyConstraint(
+            ["obligation_projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_projections.id", "ad_v4_candidate_obligation_projections.proposal_id"],
+            name="fk_ad_v4_correction_binding_obligation_projection",
+        ),
+        ForeignKeyConstraint(
+            ["obligation_semantic_node_id", "obligation_projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_semantic_nodes.id", "ad_v4_candidate_obligation_semantic_nodes.projection_id", "ad_v4_candidate_obligation_semantic_nodes.proposal_id"],
+            name="fk_ad_v4_correction_binding_obligation_node",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     correction_ref_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_correction_refs.id"), nullable=False, unique=True)
     proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
-    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False)
-    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=False)
+    projection_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=True)
+    semantic_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    obligation_projection_id: Mapped[Optional[str]] = mapped_column(nullable=True)
+    obligation_semantic_node_id: Mapped[Optional[str]] = mapped_column(nullable=True)
     binding_slice: Mapped[str] = mapped_column(String(32), nullable=False)
     generation: Mapped[int] = mapped_column(Integer, nullable=False)
     binding_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
@@ -1604,6 +1625,775 @@ class ADV4CandidateAppProjectionEvent(Base):
     event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     actor_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     occurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateObligationProjection(Base):
+    __tablename__ = "ad_v4_candidate_obligation_projections"
+    __table_args__ = (
+        CheckConstraint("gate='candidate_only'", name="ck_ad_v4_obligation_projection_gate"),
+        CheckConstraint(
+            "validator_version='paprnav-ad-v4-validator-2' AND canonicalization_version='paprnav-ad-v4-c14n-2'",
+            name="ck_ad_v4_obligation_projection_v2",
+        ),
+        CheckConstraint("materializer_version='paprnav-ad-v4-obligation-materializer-1'", name="ck_ad_v4_obligation_materializer"),
+        CheckConstraint("mapping_version='paprnav-ad-v4-obligation-mapping-1'", name="ck_ad_v4_obligation_mapping_version"),
+        UniqueConstraint("id", "proposal_id", name="uq_ad_v4_obligation_projection_parent_identity"),
+        UniqueConstraint("proposal_id", "materializer_version", name="uq_ad_v4_obligation_projection_parent"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_projection_identity"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False, index=True)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False)
+    validator_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonicalization_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_binding_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    app_projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False)
+    app_projection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    app_materializer_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    materializer_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    mapping_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    mapping_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    obligation_subtree_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    obligation_subtree_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    projection_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    projection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    gate: Mapped[str] = mapped_column(String(32), nullable=False, default="candidate_only")
+    semantic_node_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    datum_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    evidence_link_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    document_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    value_assertion_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    requirement_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    action_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    action_step_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    action_document_ref_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    branch_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    expression_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    expression_edge_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    requirement_dependency_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    timing_group_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    timing_term_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    recurrence_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    terminating_effect_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    termination_edge_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    recurrence_group_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    recurrence_group_member_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    amoc_provision_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    correction_binding_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateObligationMaterializationRequest(Base):
+    __tablename__ = "ad_v4_candidate_obligation_materialization_requests"
+    __table_args__ = (
+        CheckConstraint("actor_role='platform_admin' AND actor_status='active'", name="ck_ad_v4_obligation_request_actor"),
+        CheckConstraint("endpoint_action='materialize_ad_v4_obligations'", name="ck_ad_v4_obligation_request_action"),
+        UniqueConstraint(
+            "actor_user_id", "authorizing_membership_id", "endpoint_action",
+            "auth_policy_version", "idempotency_key",
+            name="uq_ad_v4_obligation_request_idempotency",
+        ),
+        ForeignKeyConstraint(
+            ["projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_projections.id", "ad_v4_candidate_obligation_projections.proposal_id"],
+            name="fk_ad_v4_obligation_request_projection",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    projection_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id"), nullable=False)
+    app_projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False)
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    authorizing_membership_id: Mapped[str] = mapped_column(ForeignKey("organization_memberships.id"), nullable=False)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    auth_policy_name: Mapped[str] = mapped_column(String(96), nullable=False)
+    auth_policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    auth_claims_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    endpoint_action: Mapped[str] = mapped_column(String(96), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateObligationSemanticNode(Base):
+    __tablename__ = "ad_v4_candidate_obligation_semantic_nodes"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 2147483647", name="ck_ad_v4_obligation_node_ordinal"),
+        CheckConstraint(
+            "node_type IN ('incorporated_document','value_assertion','requirement','action','action_step','branch','expression','timing_group','timing_term','recurrence','terminating_effect','recurrence_group','amoc_provision')",
+            name="ck_ad_v4_obligation_node_type",
+        ),
+        UniqueConstraint("id", "projection_id", "proposal_id", name="uq_ad_v4_obligation_node_parent_identity"),
+        UniqueConstraint("projection_id", "node_type", "node_key", name="uq_ad_v4_obligation_node_key"),
+        UniqueConstraint("projection_id", "source_pointer", name="uq_ad_v4_obligation_node_pointer"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_node_identity"),
+        ForeignKeyConstraint(
+            ["projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_projections.id", "ad_v4_candidate_obligation_projections.proposal_id"],
+            name="fk_ad_v4_obligation_node_projection",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    projection_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    parent_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=True)
+    node_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    node_key: Mapped[str] = mapped_column(Text, nullable=False)
+    source_pointer: Mapped[str] = mapped_column(Text, nullable=False)
+    canonical_node_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ADV4CandidateObligationDatum(Base):
+    __tablename__ = "ad_v4_candidate_obligation_data"
+    __table_args__ = (
+        CheckConstraint("value_kind IN ('object','array','string','boolean')", name="ck_ad_v4_obligation_datum_kind"),
+        CheckConstraint(
+            "(value_kind='string' AND string_value IS NOT NULL AND boolean_value IS NULL) OR "
+            "(value_kind='boolean' AND string_value IS NULL AND boolean_value IS NOT NULL) OR "
+            "(value_kind IN ('object','array') AND string_value IS NULL AND boolean_value IS NULL)",
+            name="ck_ad_v4_obligation_datum_union",
+        ),
+        UniqueConstraint("projection_id", "json_pointer", name="uq_ad_v4_obligation_datum_pointer"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_datum_identity"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    semantic_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=True)
+    json_pointer: Mapped[str] = mapped_column(Text, nullable=False)
+    parent_pointer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    property_name: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    array_ordinal: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    value_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    string_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    boolean_value: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    value_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ADV4CandidateObligationEvidenceLink(Base):
+    __tablename__ = "ad_v4_candidate_obligation_evidence_links"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 2147483647", name="ck_ad_v4_obligation_evidence_ordinal"),
+        CheckConstraint(
+            "purpose IN ('incorporated_document_clause','document_identity','document_retention','requirement_clause','action_clause','branch_clause','timing_clause','timing_term_clause','recurrence_clause','termination_clause','amoc_authority_clause')",
+            name="ck_ad_v4_obligation_evidence_purpose",
+        ),
+        UniqueConstraint("semantic_node_id", "purpose", "evidence_key", name="uq_ad_v4_obligation_evidence_link"),
+        UniqueConstraint("semantic_node_id", "purpose", "canonical_ordinal", name="uq_ad_v4_obligation_evidence_ordinal"),
+        UniqueConstraint("link_hash", name="uq_ad_v4_obligation_evidence_hash"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    candidate_binding_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_evidence_bindings.id"), nullable=False)
+    evidence_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    link_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class ADV4CandidateObligationDocument(Base):
+    __tablename__ = "ad_v4_candidate_obligation_documents"
+    __table_args__ = (
+        CheckConstraint(
+            "document_type IN ('service_bulletin','service_letter','service_instruction','maintenance_manual','approved_data','other_reviewed')",
+            name="ck_ad_v4_obligation_document_type",
+        ),
+        UniqueConstraint("projection_id", "document_ref_key", name="uq_ad_v4_obligation_document_key"),
+        UniqueConstraint("projection_id", "canonical_ordinal", name="uq_ad_v4_obligation_document_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    document_ref_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    document_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    document_number_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    revision_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    retention_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+
+
+class ADV4CandidateObligationValueAssertion(Base):
+    __tablename__ = "ad_v4_candidate_obligation_value_assertions"
+    __table_args__ = (
+        CheckConstraint("field_code IN ('document_number','revision','retention','approving_authority')", name="ck_ad_v4_obligation_assertion_field"),
+        CheckConstraint("state IN ('known','unknown','not_applicable')", name="ck_ad_v4_obligation_assertion_state"),
+        CheckConstraint(
+            "(state='known' AND value IS NOT NULL AND reason IS NULL AND temporal_kind IS NULL) OR "
+            "(state IN ('unknown','not_applicable') AND value IS NULL AND reason IS NOT NULL AND temporal_kind IS NOT NULL)",
+            name="ck_ad_v4_obligation_assertion_union",
+        ),
+        CheckConstraint("field_code<>'retention' OR state='unknown'", name="ck_ad_v4_obligation_retention_unknown"),
+        UniqueConstraint("projection_id", "semantic_node_id", name="uq_ad_v4_obligation_assertion_node"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    field_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+
+class ADV4CandidateObligationRequirement(Base):
+    __tablename__ = "ad_v4_candidate_obligation_requirements"
+    __table_args__ = (
+        CheckConstraint("sequence_value BETWEEN 1 AND 2000", name="ck_ad_v4_obligation_requirement_sequence"),
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_requirement_ordinal"),
+        CheckConstraint("requirement_type IN ('inspection','replacement','modification','software_update','limitation','reporting','installation_prohibition','corrective_action','other_reviewed')", name="ck_ad_v4_obligation_requirement_type"),
+        CheckConstraint("recurrence_group_present=(recurrence_group_key IS NOT NULL)", name="ck_ad_v4_obligation_requirement_group_presence"),
+        UniqueConstraint("projection_id", "requirement_key", name="uq_ad_v4_obligation_requirement_key"),
+        UniqueConstraint("projection_id", "sequence_value", name="uq_ad_v4_obligation_requirement_sequence"),
+        UniqueConstraint("projection_id", "canonical_ordinal", name="uq_ad_v4_obligation_requirement_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    sequence_text: Mapped[str] = mapped_column(Text, nullable=False)
+    sequence_value: Mapped[int] = mapped_column(Integer, nullable=False)
+    requirement_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    recurrence_group_present: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    recurrence_group_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    action_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    activation_root_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    branch_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    initial_timing_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    recurrence_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    terminating_effect_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+
+
+class ADV4CandidateObligationAction(Base):
+    __tablename__ = "ad_v4_candidate_obligation_actions"
+    __table_args__ = (
+        CheckConstraint("action_type IN ('inspect','replace','repair','modify','software_update','revise_limitation','report','installation_prohibition','remove','rework','other_reviewed')", name="ck_ad_v4_obligation_action_type"),
+        CheckConstraint("step_count BETWEEN 0 AND 2000 AND document_ref_count BETWEEN 0 AND 2000", name="ck_ad_v4_obligation_action_counts"),
+        CheckConstraint("ordered_steps_present OR step_count=0", name="ck_ad_v4_obligation_action_step_presence"),
+        UniqueConstraint("projection_id", "requirement_node_id", name="uq_ad_v4_obligation_action_requirement"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    ordered_steps_present: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    step_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    document_ref_count: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationActionStep(Base):
+    __tablename__ = "ad_v4_candidate_obligation_action_steps"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_action_step_ordinal"),
+        UniqueConstraint("action_node_id", "canonical_ordinal", name="uq_ad_v4_obligation_action_step_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    action_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    step_text: Mapped[str] = mapped_column(Text, nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationActionDocumentRef(Base):
+    __tablename__ = "ad_v4_candidate_obligation_action_document_refs"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_action_document_ordinal"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_action_document_identity"),
+        UniqueConstraint("action_node_id", "document_node_id", name="uq_ad_v4_obligation_action_document_target"),
+        UniqueConstraint("action_node_id", "canonical_ordinal", name="uq_ad_v4_obligation_action_document_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    action_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    document_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    document_ref_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationBranch(Base):
+    __tablename__ = "ad_v4_candidate_obligation_branches"
+    __table_args__ = (
+        CheckConstraint("kind IN ('required','conditional','exception','alternative_member')", name="ck_ad_v4_obligation_branch_kind"),
+        CheckConstraint(
+            "(kind='required' AND alternative_group_key IS NULL AND exclusive IS NULL AND condition_root_node_id IS NULL) OR "
+            "(kind IN ('conditional','exception') AND alternative_group_key IS NULL AND exclusive IS NULL AND condition_root_node_id IS NOT NULL) OR "
+            "(kind='alternative_member' AND alternative_group_key IS NOT NULL AND exclusive IS NOT NULL AND condition_root_node_id IS NULL)",
+            name="ck_ad_v4_obligation_branch_union",
+        ),
+        UniqueConstraint("projection_id", "requirement_node_id", name="uq_ad_v4_obligation_branch_requirement"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    alternative_group_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    exclusive: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    condition_root_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=True)
+
+
+class ADV4CandidateObligationExpression(Base):
+    __tablename__ = "ad_v4_candidate_obligation_expressions"
+    __table_args__ = (
+        CheckConstraint("context IN ('activation','branch_condition','recurrence_condition')", name="ck_ad_v4_obligation_expression_context"),
+        CheckConstraint("node_type IN ('scope_ref','predicate_ref','rule_ref','requirement_state_ref','not','all','any')", name="ck_ad_v4_obligation_expression_type"),
+        CheckConstraint(
+            "(node_type IN ('scope_ref','predicate_ref','rule_ref') AND required_state IS NULL AND app_target_projection_id IS NOT NULL AND app_target_node_id IS NOT NULL AND requirement_target_node_id IS NULL) OR "
+            "(node_type='requirement_state_ref' AND required_state IS NOT NULL AND app_target_projection_id IS NULL AND app_target_node_id IS NULL AND requirement_target_node_id IS NOT NULL) OR "
+            "(node_type IN ('not','all','any') AND required_state IS NULL AND app_target_projection_id IS NULL AND app_target_node_id IS NULL AND requirement_target_node_id IS NULL)",
+            name="ck_ad_v4_obligation_expression_union",
+        ),
+        UniqueConstraint("projection_id", "requirement_node_id", "context", "expression_path", name="uq_ad_v4_obligation_expression_path"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    context: Mapped[str] = mapped_column(String(32), nullable=False)
+    expression_path: Mapped[str] = mapped_column(Text, nullable=False)
+    node_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    required_state: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    app_target_projection_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=True)
+    app_target_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_app_semantic_nodes.id"), nullable=True)
+    requirement_target_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=True)
+
+
+class ADV4CandidateObligationExpressionEdge(Base):
+    __tablename__ = "ad_v4_candidate_obligation_expression_edges"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_expression_edge_ordinal"),
+        CheckConstraint("context IN ('activation','branch_condition','recurrence_condition')", name="ck_ad_v4_obligation_expression_edge_context"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_expression_edge_identity"),
+        UniqueConstraint("parent_expression_id", "child_expression_id", name="uq_ad_v4_obligation_expression_edge_target"),
+        UniqueConstraint("parent_expression_id", "canonical_ordinal", name="uq_ad_v4_obligation_expression_edge_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    context: Mapped[str] = mapped_column(String(32), nullable=False)
+    parent_expression_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    child_expression_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationRequirementDependency(Base):
+    __tablename__ = "ad_v4_candidate_obligation_requirement_dependencies"
+    __table_args__ = (
+        CheckConstraint("dependency_kind='prerequisite'", name="ck_ad_v4_obligation_requirement_dependency_kind"),
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_requirement_dependency_ordinal"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_requirement_dependency_identity"),
+        UniqueConstraint("requirement_node_id", "prerequisite_requirement_node_id", name="uq_ad_v4_obligation_requirement_dependency_target"),
+        UniqueConstraint("requirement_node_id", "canonical_ordinal", name="uq_ad_v4_obligation_requirement_dependency_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    prerequisite_requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    prerequisite_requirement_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    dependency_kind: Mapped[str] = mapped_column(String(32), nullable=False, default="prerequisite")
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationTimingGroup(Base):
+    __tablename__ = "ad_v4_candidate_obligation_timing_groups"
+    __table_args__ = (
+        CheckConstraint("owner_kind IN ('requirement_initial','requirement_recurrence','recurrence_group_initial','recurrence_group_recurring')", name="ck_ad_v4_obligation_timing_owner_kind"),
+        CheckConstraint("state IN ('known','unknown','not_applicable')", name="ck_ad_v4_obligation_timing_state"),
+        CheckConstraint(
+            "(state='known' AND logic IS NOT NULL AND logic IN ('all','whichever_first','whichever_later') AND reason IS NULL AND temporal_kind IS NULL AND term_count>=1) OR "
+            "(state IN ('unknown','not_applicable') AND logic IS NULL AND reason IS NOT NULL AND temporal_kind IS NOT NULL AND term_count=0)",
+            name="ck_ad_v4_obligation_timing_union",
+        ),
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999 AND term_count BETWEEN 0 AND 2000", name="ck_ad_v4_obligation_timing_counts"),
+        UniqueConstraint("projection_id", "owner_node_id", "owner_kind", name="uq_ad_v4_obligation_timing_owner"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    owner_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    owner_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    logic: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    term_count: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationTimingTerm(Base):
+    __tablename__ = "ad_v4_candidate_obligation_timing_terms"
+    __table_args__ = (
+        CheckConstraint("metric IN ('calendar','aircraft_time','component_time','cycles','other_reviewed')", name="ck_ad_v4_obligation_timing_metric"),
+        CheckConstraint("unit IN ('days','months','years','hours','cycles','source_defined')", name="ck_ad_v4_obligation_timing_unit"),
+        CheckConstraint("comparator IN ('within','before','at_or_before','after','at_or_after')", name="ck_ad_v4_obligation_timing_comparator"),
+        CheckConstraint("anchor IN ('effective_date','last_compliance','installation','manufacture','source_defined')", name="ck_ad_v4_obligation_timing_anchor"),
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_timing_term_ordinal"),
+        UniqueConstraint("timing_group_node_id", "canonical_ordinal", name="uq_ad_v4_obligation_timing_term_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    timing_group_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    metric: Mapped[str] = mapped_column(String(32), nullable=False)
+    interval_text: Mapped[str] = mapped_column(Text, nullable=False)
+    interval_numeric: Mapped[Decimal] = mapped_column(Numeric(), nullable=False)
+    unit: Mapped[str] = mapped_column(String(32), nullable=False)
+    comparator: Mapped[str] = mapped_column(String(32), nullable=False)
+    anchor: Mapped[str] = mapped_column(String(32), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationRecurrence(Base):
+    __tablename__ = "ad_v4_candidate_obligation_recurrences"
+    __table_args__ = (
+        CheckConstraint("kind IN ('none','interval','conditioned','unknown')", name="ck_ad_v4_obligation_recurrence_kind"),
+        CheckConstraint(
+            "(kind='none' AND timing_node_id IS NULL AND condition_root_node_id IS NULL AND reason IS NULL AND temporal_kind IS NULL) OR "
+            "(kind='interval' AND timing_node_id IS NOT NULL AND condition_root_node_id IS NULL AND reason IS NULL AND temporal_kind IS NULL) OR "
+            "(kind='conditioned' AND timing_node_id IS NOT NULL AND condition_root_node_id IS NOT NULL AND reason IS NULL AND temporal_kind IS NULL) OR "
+            "(kind='unknown' AND timing_node_id IS NULL AND condition_root_node_id IS NULL AND reason IS NOT NULL AND temporal_kind IS NOT NULL)",
+            name="ck_ad_v4_obligation_recurrence_union",
+        ),
+        UniqueConstraint("projection_id", "requirement_node_id", name="uq_ad_v4_obligation_recurrence_requirement"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    timing_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=True)
+    condition_root_node_id: Mapped[Optional[str]] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    temporal_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+
+class ADV4CandidateObligationTerminatingEffect(Base):
+    __tablename__ = "ad_v4_candidate_obligation_terminating_effects"
+    __table_args__ = (
+        CheckConstraint("kind IN ('none','terminates')", name="ck_ad_v4_obligation_termination_kind"),
+        CheckConstraint("(kind='none' AND edge_count=0) OR (kind='terminates' AND edge_count>=0)", name="ck_ad_v4_obligation_termination_union"),
+        UniqueConstraint("projection_id", "requirement_node_id", name="uq_ad_v4_obligation_termination_requirement"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    edge_count: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationTerminationEdge(Base):
+    __tablename__ = "ad_v4_candidate_obligation_termination_edges"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_termination_edge_ordinal"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_termination_edge_identity"),
+        UniqueConstraint("effect_node_id", "terminated_requirement_node_id", name="uq_ad_v4_obligation_termination_edge_target"),
+        UniqueConstraint("effect_node_id", "canonical_ordinal", name="uq_ad_v4_obligation_termination_edge_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    effect_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    terminated_requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    terminated_requirement_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationRecurrenceGroup(Base):
+    __tablename__ = "ad_v4_candidate_obligation_recurrence_groups"
+    __table_args__ = (
+        CheckConstraint("completion_policy='all_active_requirements'", name="ck_ad_v4_obligation_group_completion"),
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999 AND member_count BETWEEN 2 AND 2000", name="ck_ad_v4_obligation_group_counts"),
+        UniqueConstraint("projection_id", "recurrence_group_key", name="uq_ad_v4_obligation_group_key"),
+        UniqueConstraint("projection_id", "canonical_ordinal", name="uq_ad_v4_obligation_group_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    recurrence_group_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    completion_policy: Mapped[str] = mapped_column(String(32), nullable=False)
+    initial_timing_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    recurring_timing_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    member_count: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationRecurrenceGroupMember(Base):
+    __tablename__ = "ad_v4_candidate_obligation_recurrence_group_members"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_group_member_ordinal"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_group_member_identity"),
+        UniqueConstraint("group_node_id", "requirement_node_id", name="uq_ad_v4_obligation_group_member_target"),
+        UniqueConstraint("group_node_id", "canonical_ordinal", name="uq_ad_v4_obligation_group_member_ordinal"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    group_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    requirement_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+    requirement_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class ADV4CandidateObligationAmocProvision(Base):
+    __tablename__ = "ad_v4_candidate_obligation_amoc_provisions"
+    __table_args__ = (
+        CheckConstraint("canonical_ordinal BETWEEN 0 AND 1999", name="ck_ad_v4_obligation_amoc_ordinal"),
+        UniqueConstraint("projection_id", "provision_key", name="uq_ad_v4_obligation_amoc_key"),
+        UniqueConstraint("projection_id", "canonical_ordinal", name="uq_ad_v4_obligation_amoc_ordinal"),
+    )
+
+    semantic_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    provision_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    canonical_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    authority_assertion_node_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_semantic_nodes.id"), nullable=False)
+
+
+class ADV4CandidateObligationProjectionEvent(Base):
+    __tablename__ = "ad_v4_candidate_obligation_projection_events"
+    __table_args__ = (
+        CheckConstraint("sequence_number BETWEEN 0 AND 2147483647", name="ck_ad_v4_obligation_event_sequence"),
+        CheckConstraint("event_type IN ('materialized','evidence_invalidated','parent_app_stale','candidate_corrected','candidate_replaced')", name="ck_ad_v4_obligation_event_type"),
+        CheckConstraint(
+            "(event_type='materialized' AND sequence_number=0 AND predecessor_event_hash IS NULL AND cause_kind IS NULL AND cause_id IS NULL AND cause_hash IS NULL) OR "
+            "(event_type<>'materialized' AND sequence_number>0 AND predecessor_event_hash IS NOT NULL AND cause_kind IS NOT NULL AND cause_id IS NOT NULL AND cause_hash IS NOT NULL)",
+            name="ck_ad_v4_obligation_event_union",
+        ),
+        UniqueConstraint("projection_id", "sequence_number", name="uq_ad_v4_obligation_event_sequence"),
+        UniqueConstraint("projection_id", "event_hash", name="uq_ad_v4_obligation_event_hash"),
+        UniqueConstraint("identity_hash", name="uq_ad_v4_obligation_event_identity"),
+        Index(
+            "uq_ad_v4_obligation_event_cause", "projection_id", "cause_kind", "cause_id",
+            unique=True, postgresql_where=text("cause_id IS NOT NULL"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_projections.id"), nullable=False, index=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id"), nullable=False)
+    app_projection_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_app_projections.id"), nullable=False)
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    predecessor_event_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    proposal_canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_binding_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    app_projection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    obligation_subtree_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    projection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    correction_binding_set_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    causing_request_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_obligation_materialization_requests.id"), nullable=False)
+    cause_kind: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    cause_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    cause_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    occurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+def _install_ad_v4_obligation_model_constraints() -> None:
+    """Keep ORM joins aligned with the migration's same-projection boundary."""
+
+    owner_tables = (
+        "ad_v4_candidate_obligation_documents",
+        "ad_v4_candidate_obligation_value_assertions",
+        "ad_v4_candidate_obligation_requirements",
+        "ad_v4_candidate_obligation_actions",
+        "ad_v4_candidate_obligation_action_steps",
+        "ad_v4_candidate_obligation_branches",
+        "ad_v4_candidate_obligation_expressions",
+        "ad_v4_candidate_obligation_timing_groups",
+        "ad_v4_candidate_obligation_timing_terms",
+        "ad_v4_candidate_obligation_recurrences",
+        "ad_v4_candidate_obligation_terminating_effects",
+        "ad_v4_candidate_obligation_recurrence_groups",
+        "ad_v4_candidate_obligation_amoc_provisions",
+    )
+    relationship_tables = (
+        "ad_v4_candidate_obligation_action_document_refs",
+        "ad_v4_candidate_obligation_expression_edges",
+        "ad_v4_candidate_obligation_requirement_dependencies",
+        "ad_v4_candidate_obligation_termination_edges",
+        "ad_v4_candidate_obligation_recurrence_group_members",
+    )
+
+    def attach(table_name: str, columns: list[str], target: list[str], name: str) -> None:
+        ForeignKeyConstraint(
+            columns, target, name=name, ondelete="RESTRICT",
+            table=Base.metadata.tables[table_name],
+        )
+
+    for ordinal, table_name in enumerate(owner_tables):
+        attach(
+            table_name, ["projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_projections.id", "ad_v4_candidate_obligation_projections.proposal_id"],
+            f"fk_aob_owner_projection_{ordinal}",
+        )
+        attach(
+            table_name, ["semantic_node_id", "projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_semantic_nodes.id", "ad_v4_candidate_obligation_semantic_nodes.projection_id", "ad_v4_candidate_obligation_semantic_nodes.proposal_id"],
+            f"fk_aob_owner_node_{ordinal}",
+        )
+    for ordinal, table_name in enumerate(relationship_tables):
+        attach(
+            table_name, ["projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_projections.id", "ad_v4_candidate_obligation_projections.proposal_id"],
+            f"fk_aob_relation_projection_{ordinal}",
+        )
+
+    for ordinal, table_name in enumerate((
+        "ad_v4_candidate_obligation_semantic_nodes",
+        "ad_v4_candidate_obligation_data",
+        "ad_v4_candidate_obligation_evidence_links",
+    )):
+        attach(
+            table_name, ["projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_projections.id", "ad_v4_candidate_obligation_projections.proposal_id"],
+            f"fk_aob_generic_projection_{ordinal}",
+        )
+
+    attach(
+        "ad_v4_candidate_obligation_semantic_nodes",
+        ["parent_node_id", "projection_id", "proposal_id"],
+        ["ad_v4_candidate_obligation_semantic_nodes.id", "ad_v4_candidate_obligation_semantic_nodes.projection_id", "ad_v4_candidate_obligation_semantic_nodes.proposal_id"],
+        "fk_aob_node_parent",
+    )
+    for table_name, column, name in (
+        ("ad_v4_candidate_obligation_data", "semantic_node_id", "fk_aob_data_node"),
+        ("ad_v4_candidate_obligation_evidence_links", "semantic_node_id", "fk_aob_evidence_node"),
+        ("ad_v4_candidate_obligation_documents", "document_number_node_id", "fk_aob_doc_number"),
+        ("ad_v4_candidate_obligation_documents", "revision_node_id", "fk_aob_doc_revision"),
+        ("ad_v4_candidate_obligation_documents", "retention_node_id", "fk_aob_doc_retention"),
+        ("ad_v4_candidate_obligation_requirements", "action_node_id", "fk_aob_req_action"),
+        ("ad_v4_candidate_obligation_requirements", "activation_root_node_id", "fk_aob_req_activation"),
+        ("ad_v4_candidate_obligation_requirements", "branch_node_id", "fk_aob_req_branch"),
+        ("ad_v4_candidate_obligation_requirements", "initial_timing_node_id", "fk_aob_req_initial_timing"),
+        ("ad_v4_candidate_obligation_requirements", "recurrence_node_id", "fk_aob_req_recurrence"),
+        ("ad_v4_candidate_obligation_requirements", "terminating_effect_node_id", "fk_aob_req_termination"),
+        ("ad_v4_candidate_obligation_actions", "requirement_node_id", "fk_aob_action_requirement"),
+        ("ad_v4_candidate_obligation_action_steps", "action_node_id", "fk_aob_step_action"),
+        ("ad_v4_candidate_obligation_branches", "requirement_node_id", "fk_aob_branch_requirement"),
+        ("ad_v4_candidate_obligation_branches", "condition_root_node_id", "fk_aob_branch_condition"),
+        ("ad_v4_candidate_obligation_expressions", "requirement_node_id", "fk_aob_expr_requirement"),
+        ("ad_v4_candidate_obligation_expressions", "requirement_target_node_id", "fk_aob_expr_req_target"),
+        ("ad_v4_candidate_obligation_timing_groups", "owner_node_id", "fk_aob_timing_owner"),
+        ("ad_v4_candidate_obligation_timing_terms", "timing_group_node_id", "fk_aob_term_timing"),
+        ("ad_v4_candidate_obligation_recurrences", "requirement_node_id", "fk_aob_recurrence_requirement"),
+        ("ad_v4_candidate_obligation_recurrences", "timing_node_id", "fk_aob_recurrence_timing"),
+        ("ad_v4_candidate_obligation_recurrences", "condition_root_node_id", "fk_aob_recurrence_condition"),
+        ("ad_v4_candidate_obligation_terminating_effects", "requirement_node_id", "fk_aob_effect_requirement"),
+        ("ad_v4_candidate_obligation_recurrence_groups", "initial_timing_node_id", "fk_aob_group_initial_timing"),
+        ("ad_v4_candidate_obligation_recurrence_groups", "recurring_timing_node_id", "fk_aob_group_recurring_timing"),
+        ("ad_v4_candidate_obligation_amoc_provisions", "authority_assertion_node_id", "fk_aob_amoc_authority"),
+        ("ad_v4_candidate_obligation_action_document_refs", "action_node_id", "fk_aob_docref_action"),
+        ("ad_v4_candidate_obligation_action_document_refs", "document_node_id", "fk_aob_docref_document"),
+        ("ad_v4_candidate_obligation_expression_edges", "requirement_node_id", "fk_aob_expr_edge_requirement"),
+        ("ad_v4_candidate_obligation_expression_edges", "parent_expression_id", "fk_aob_expr_edge_parent"),
+        ("ad_v4_candidate_obligation_expression_edges", "child_expression_id", "fk_aob_expr_edge_child"),
+        ("ad_v4_candidate_obligation_requirement_dependencies", "requirement_node_id", "fk_aob_dep_requirement"),
+        ("ad_v4_candidate_obligation_requirement_dependencies", "prerequisite_requirement_node_id", "fk_aob_dep_prerequisite"),
+        ("ad_v4_candidate_obligation_termination_edges", "effect_node_id", "fk_aob_term_edge_effect"),
+        ("ad_v4_candidate_obligation_termination_edges", "terminated_requirement_node_id", "fk_aob_term_edge_requirement"),
+        ("ad_v4_candidate_obligation_recurrence_group_members", "group_node_id", "fk_aob_member_group"),
+        ("ad_v4_candidate_obligation_recurrence_group_members", "requirement_node_id", "fk_aob_member_requirement"),
+    ):
+        attach(
+            table_name, [column, "projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_semantic_nodes.id", "ad_v4_candidate_obligation_semantic_nodes.projection_id", "ad_v4_candidate_obligation_semantic_nodes.proposal_id"],
+            name,
+        )
+    attach(
+        "ad_v4_candidate_obligation_expressions",
+        ["app_target_projection_id", "proposal_id"],
+        ["ad_v4_candidate_app_projections.id", "ad_v4_candidate_app_projections.proposal_id"],
+        "fk_aob_expr_app_projection",
+    )
+    attach(
+        "ad_v4_candidate_obligation_expressions",
+        ["app_target_node_id", "app_target_projection_id", "proposal_id"],
+        ["ad_v4_candidate_app_semantic_nodes.id", "ad_v4_candidate_app_semantic_nodes.projection_id", "ad_v4_candidate_app_semantic_nodes.proposal_id"],
+        "fk_aob_expr_app_node",
+    )
+    attach(
+        "ad_v4_candidate_obligation_projections",
+        ["app_projection_id", "proposal_id"],
+        ["ad_v4_candidate_app_projections.id", "ad_v4_candidate_app_projections.proposal_id"],
+        "fk_aob_projection_app",
+    )
+    for table_name, name in (
+        ("ad_v4_candidate_obligation_materialization_requests", "fk_aob_request_app"),
+        ("ad_v4_candidate_obligation_projection_events", "fk_aob_event_app"),
+    ):
+        attach(
+            table_name, ["app_projection_id", "proposal_id"],
+            ["ad_v4_candidate_app_projections.id", "ad_v4_candidate_app_projections.proposal_id"],
+            name,
+        )
+    for table_name, name in (
+        ("ad_v4_candidate_obligation_materialization_requests", "fk_aob_request_projection"),
+        ("ad_v4_candidate_obligation_projection_events", "fk_aob_event_projection"),
+    ):
+        attach(
+            table_name, ["projection_id", "proposal_id"],
+            ["ad_v4_candidate_obligation_projections.id", "ad_v4_candidate_obligation_projections.proposal_id"],
+            name,
+        )
+    attach(
+        "ad_v4_candidate_obligation_evidence_links",
+        ["proposal_id", "candidate_binding_id", "evidence_key"],
+        ["ad_v4_candidate_evidence_bindings.proposal_id", "ad_v4_candidate_evidence_bindings.id", "ad_v4_candidate_evidence_bindings.evidence_key"],
+        "fk_aob_evidence_candidate_binding",
+    )
+
+
+_install_ad_v4_obligation_model_constraints()
 
 
 class AirworthinessDirective(TimestampMixin, Base):

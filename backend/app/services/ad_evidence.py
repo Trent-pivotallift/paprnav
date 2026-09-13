@@ -467,6 +467,48 @@ def _has_valid_admission_root(
     )
 
 
+def verified_evidence_lifecycle_events(
+    db: Session,
+    *,
+    fragment: ADEvidenceFragment,
+) -> list[ADEvidenceFragmentLifecycleEvent]:
+    """Return a dense, hash-verified evidence lifecycle chain."""
+
+    events = db.scalars(
+        select(ADEvidenceFragmentLifecycleEvent)
+        .where(ADEvidenceFragmentLifecycleEvent.fragment_id == fragment.id)
+        .order_by(ADEvidenceFragmentLifecycleEvent.sequence_number)
+    ).all()
+    if not events or [event.sequence_number for event in events] != list(
+        range(len(events))
+    ):
+        raise ADEvidenceError(
+            "evidence_lifecycle_integrity",
+            "Evidence lifecycle sequence is incomplete",
+        )
+    for index, event in enumerate(events):
+        predecessor_hash = None if index == 0 else events[index - 1].event_hash
+        if (
+            event.predecessor_event_hash != predecessor_hash
+            or (index == 0 and event.event_type != "admitted")
+            or (index > 0 and event.event_type not in {"superseded", "quarantined"})
+            or event.event_hash != _hash_parts(
+                fragment.id,
+                fragment.fragment_hash,
+                event.event_type,
+                event.actor_user_id,
+                event.reason,
+                event.sequence_number,
+                event.predecessor_event_hash,
+            )
+        ):
+            raise ADEvidenceError(
+                "evidence_lifecycle_integrity",
+                "Evidence lifecycle chain or hash differs",
+            )
+    return events
+
+
 def admit_evidence_fragment(
     db: Session,
     *,

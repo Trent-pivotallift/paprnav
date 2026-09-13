@@ -29,6 +29,7 @@ from app.models.core import (
 )
 from app.core.config import get_settings
 from app.services.ad_evidence import _hash_parts
+from app.services.ad_v4_graph import first_cycle_node
 
 
 SCHEMA_VERSION = "ad_extraction_v4"
@@ -158,6 +159,12 @@ def _walk_unicode(value: Any, pointer: str = "", *, depth: int = 0, counter: lis
     if isinstance(value, str):
         if len(value) > MAX_STRING_LENGTH:
             raise ADV4Error("resource_limit", pointer, "String length limit exceeded", http_status=413)
+        if "\x00" in value:
+            raise ADV4Error(
+                "unsupported_unicode_character",
+                pointer,
+                "U+0000 is not representable by the PostgreSQL JSONB storage boundary",
+            )
         if any(0xD800 <= ord(char) <= 0xDFFF for char in value):
             raise ADV4Error("invalid_unicode_scalar", pointer, "Lone surrogate is forbidden")
         if unicodedata.normalize("NFC", value) != value:
@@ -525,22 +532,18 @@ def _require_ref(key: str, registry: dict[str, Any], pointer: str, namespace: st
 
 
 def _assert_acyclic(graph: dict[str, set[str]], pointer: str) -> None:
-    visiting: set[str] = set()
-    visited: set[str] = set()
+    cycle_node = first_cycle_node(graph)
+    if cycle_node is not None:
+        raise ADV4Error("cyclic_reference", pointer, f"Cycle includes {cycle_node}")
 
-    def visit(node: str) -> None:
-        if node in visiting:
-            raise ADV4Error("cyclic_reference", pointer, f"Cycle includes {node}")
-        if node in visited:
-            return
-        visiting.add(node)
-        for target in graph.get(node, set()):
-            visit(target)
-        visiting.remove(node)
-        visited.add(node)
 
-    for node in graph:
-        visit(node)
+def _count_graph_edge(counters: dict[str, int], pointer: str) -> None:
+    """Count source occurrences, even when graph adjacency deduplicates targets."""
+    counters["edges"] += 1
+    if counters["edges"] > MAX_GRAPH_EDGES:
+        raise ADV4Error(
+            "resource_limit", pointer, "Graph edge limit exceeded", http_status=413,
+        )
 
 
 def _validate_expression_refs(
@@ -559,11 +562,13 @@ def _validate_expression_refs(
         _require_ref(expression["conditionKey"], conditions, f"{pointer}/conditionKey", "conditionDefinitions")
     elif node_type == "rule_ref":
         _require_ref(expression["ruleKey"], rules, f"{pointer}/ruleKey", "applicabilityRules")
+        _count_graph_edge(counters, pointer)
         rule_edges.add(expression["ruleKey"])
     elif node_type == "requirement_state_ref":
         if not allow_requirement_ref:
             raise ADV4Error("cross_namespace_reference", pointer, "Applicability rules cannot reference requirement state")
         _require_ref(expression["requirementKey"], requirements, f"{pointer}/requirementKey", "requirements")
+        _count_graph_edge(counters, pointer)
         requirement_edges.add(expression["requirementKey"])
     elif node_type == "not":
         _validate_expression_refs(
@@ -614,6 +619,7 @@ def _validate_semantic_graph(proposal: dict[str, Any]) -> None:
             )
         for exclusion in rule["exclusionRuleKeys"]:
             _require_ref(exclusion, rules, f"/proposal/applicabilityRules/{index}/exclusionRuleKeys", "applicabilityRules")
+            _count_graph_edge(counters, f"/proposal/applicabilityRules/{index}/exclusionRuleKeys")
             rule_graph[key].add(exclusion)
         if key in rule_graph[key]:
             raise ADV4Error("cyclic_reference", f"/proposal/applicabilityRules/{index}", "Rule cannot reference itself")
@@ -632,10 +638,12 @@ def _validate_semantic_graph(proposal: dict[str, Any]) -> None:
         )
         for prerequisite in requirement["prerequisiteRequirementKeys"]:
             _require_ref(prerequisite, requirements, f"/proposal/requirements/{index}/prerequisiteRequirementKeys", "requirements")
+            _count_graph_edge(counters, f"/proposal/requirements/{index}/prerequisiteRequirementKeys")
             requirement_graph[key].add(prerequisite)
         effect = requirement["terminatingEffect"]
         for terminated in effect.get("requirementKeys", []):
             _require_ref(terminated, requirements, f"/proposal/requirements/{index}/terminatingEffect", "requirements")
+            _count_graph_edge(counters, f"/proposal/requirements/{index}/terminatingEffect")
             requirement_graph[key].add(terminated)
         for document_key in requirement["action"]["approvedDataDocumentRefKeys"]:
             _require_ref(document_key, documents, f"/proposal/requirements/{index}/action/approvedDataDocumentRefKeys", "incorporatedDocuments")
@@ -703,6 +711,7 @@ def _validate_semantic_graph(proposal: dict[str, Any]) -> None:
         if not set(correction["evidenceKeys"]).issubset(set(official[correcting_key]["evidenceKeys"])):
             raise ADV4Error("correction_evidence_mismatch", f"/proposal/authoritativeCorrections/{index}/evidenceKeys", "Correction evidence must come from correcting document")
         correction_graph[original_key].add(correcting_key)
+        _count_graph_edge(counters, f"/proposal/authoritativeCorrections/{index}")
         for ref_index, changed in enumerate(correction["changedSemanticRefs"]):
             namespace = changed["namespace"]
             if namespace == "directiveIdentity":
@@ -719,13 +728,9 @@ def _validate_semantic_graph(proposal: dict[str, Any]) -> None:
         supersession_graph.setdefault(relation["predecessorAdNumber"], set()).add(
             relation["successorAdNumber"]
         )
+        _count_graph_edge(counters, f"/proposal/supersessionRelations/{index}")
         supersession_graph.setdefault(relation["successorAdNumber"], set())
     _assert_acyclic(supersession_graph, "/proposal/supersessionRelations")
-
-    counters["edges"] = sum(len(edges) for edges in rule_graph.values()) + sum(len(edges) for edges in requirement_graph.values()) + sum(len(edges) for edges in correction_graph.values()) + sum(len(edges) for edges in supersession_graph.values())
-    if counters["edges"] > MAX_GRAPH_EDGES:
-        raise ADV4Error("resource_limit", "/proposal", "Graph edge limit exceeded", http_status=413)
-
 
 def _validate_union(node: dict[str, Any], pointer: str) -> None:
     state = node.get("state")
@@ -766,6 +771,54 @@ def _collect_and_validate(value: Any, evidence: set[str], used: set[str], pointe
     elif isinstance(value, list):
         for index, child in enumerate(value):
             _collect_and_validate(child, evidence, used, f"{pointer}/{index}")
+
+
+def _validated_requirement_sequences(
+    proposal: dict[str, Any],
+    *,
+    integrity_read: bool = False,
+) -> list[int]:
+    requirements = proposal.get("requirements")
+    if not isinstance(requirements, list):
+        return []
+    if len(requirements) > MAX_ARRAY_ITEMS:
+        raise ADV4Error(
+            "requirement_sequence_resource_limit",
+            "/proposal/requirements",
+            "Requirement count exceeds the array resource limit",
+            http_status=409 if integrity_read else 413,
+        )
+    expected = {str(value): value for value in range(1, len(requirements) + 1)}
+    seen: set[str] = set()
+    result: list[int] = []
+    status = 409 if integrity_read else 422
+    for index, requirement in enumerate(requirements):
+        sequence = requirement.get("sequence") if isinstance(requirement, dict) else None
+        pointer = f"/proposal/requirements/{index}/sequence"
+        if isinstance(sequence, str) and len(sequence) > MAX_STRING_LENGTH:
+            raise ADV4Error(
+                "requirement_sequence_resource_limit",
+                pointer,
+                "Requirement sequence exceeds the string resource limit",
+                http_status=409 if integrity_read else 413,
+            )
+        if not isinstance(sequence, str) or sequence not in expected or sequence in seen:
+            raise ADV4Error(
+                "invalid_requirement_sequence",
+                "/proposal/requirements",
+                "Requirement sequence values must be unique and contiguous from 1",
+                http_status=status,
+            )
+        seen.add(sequence)
+        result.append(expected[sequence])
+    if seen != set(expected):
+        raise ADV4Error(
+            "invalid_requirement_sequence",
+            "/proposal/requirements",
+            "Requirement sequence values must be unique and contiguous from 1",
+            http_status=status,
+        )
+    return result
 
 
 def _validate_v2_semantics(proposal: dict[str, Any]) -> None:
@@ -816,13 +869,7 @@ def validate_v4_envelope(
             raise ADV4Error("schema_type", f"/proposal/{name}", "Expected array")
     if not proposal["productScopes"] or not proposal["applicabilityRules"] or not proposal["requirements"]:
         raise ADV4Error("minimum_candidate", "/proposal", "Candidate requires scope, rule, and requirement")
-    sequences = [int(requirement["sequence"]) for requirement in proposal["requirements"]]
-    if sorted(sequences) != list(range(1, len(sequences) + 1)):
-        raise ADV4Error(
-            "invalid_requirement_sequence",
-            "/proposal/requirements",
-            "Requirement sequence values must be unique and contiguous from 1",
-        )
+    _validated_requirement_sequences(proposal)
     bindings = _require_object(proposal["evidenceBindings"], "/proposal/evidenceBindings")
     if not bindings:
         raise ADV4Error("missing_evidence", "/proposal/evidenceBindings", "At least one evidence binding is required")
@@ -888,7 +935,11 @@ def require_v4_database_gate(db: Session, gate_key: str, *, lock: bool = False) 
     except Exception as exc:
         raise ADV4Error("schema_capability_mismatch", "", "V4 database capability is unavailable", http_status=409) from exc
     if gate is None or not gate.enabled:
-        code = "validator2_write_gate_disabled" if gate_key == "validator2_write_enabled" else "materializer3a_gate_disabled"
+        code = {
+            "validator2_write_enabled": "validator2_write_gate_disabled",
+            "materializer3a_enabled": "materializer3a_gate_disabled",
+            "materializer3b_enabled": "materializer3b_gate_disabled",
+        }.get(gate_key, "schema_capability_mismatch")
         raise ADV4Error(code, "", f"V4 database gate {gate_key} is disabled", http_status=409)
 
 
@@ -1028,6 +1079,11 @@ def store_v4_candidate(
     scope = f"{actor.id}:{membership.id}:{ENDPOINT_ACTION}:{POLICY_VERSION}:{idempotency_key}"
     _advisory_lock(db, f"idem:{scope}")
     proposal_payload = canonical_bytes(proposal_value, canonicalization_version)
+    # Persist the exact JSON value represented by canonical_bytes. The c14n-2
+    # profile normalizes semantic-set arrays, so retaining the transport order
+    # in parsed_json would make PostgreSQL's JSON/byte identity check disagree
+    # with the authoritative payload for otherwise valid proposals.
+    canonical_proposal_value = json.loads(proposal_payload)
     domains = DOMAINS_V2 if validator_version == VALIDATOR_VERSION_V2 else DOMAINS
     envelopes = PROFILE_ENVELOPES[validator_version]
     proposal_hash = hashlib.sha256(domains["proposal"] + proposal_payload).hexdigest()
@@ -1070,7 +1126,7 @@ def store_v4_candidate(
             id=new_id("avp"), directive_id=directive_id, schema_version=SCHEMA_VERSION,
             canonicalization_version=canonicalization_version,
             validator_version=validator_version, canonical_bytes=proposal_payload,
-            parsed_json=proposal_value, canonical_hash=proposal_hash,
+            parsed_json=canonical_proposal_value, canonical_hash=proposal_hash,
             evidence_binding_bytes=canonical_bytes(binding_envelope, canonicalization_version),
             evidence_binding_hash=binding_hash, binding_count=len(snapshots), gate="candidate_only",
         )
@@ -1180,6 +1236,7 @@ def verified_candidate(db: Session, proposal_id: str) -> ADV4CandidateProposal:
     if hashlib.sha256(domains["proposal"] + candidate.canonical_bytes).hexdigest() != candidate.canonical_hash:
         raise ADV4Error("candidate_integrity", "", "Stored canonical hash differs", http_status=409)
     validate_v4_schema({"proposal": candidate.parsed_json, "submissionContext": {"relationships": []}}, candidate.validator_version)
+    _validated_requirement_sequences(candidate.parsed_json, integrity_read=True)
     return candidate
 
 

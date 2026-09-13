@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
+from sqlalchemy.exc import DBAPIError
+
+from app.api.routes import ads as ads_routes
+from app.api.routes.ads import _obligation_database_error
 
 from app.core.config import get_settings
 from app.models.core import (
@@ -24,22 +29,390 @@ from app.models.core import (
     ADV4CandidateAppSearchHintMember,
     ADV4CandidateAppSemanticNode,
     ADV4CandidateAppValueAssertion,
+    ADV4CandidateObligationProjection,
+    ADV4CandidateObligationAction,
     ADV4FeatureGate,
     ADTargetApplicability,
 )
-from conftest import TEST_PASSWORD, login
+from conftest import (
+    TEST_PASSWORD,
+    add_membership,
+    create_organization,
+    create_user,
+    login,
+)
 from test_ad_v4_api import _envelope, _headers, _seed_candidate_source
 
 
-def _enable(monkeypatch, db, *, validator: bool, materializer: bool) -> None:
+def _enable(
+    monkeypatch, db, *, validator: bool, materializer: bool,
+    obligations: bool = False,
+) -> None:
     monkeypatch.setenv("PAPRNAV_AD_V4_VALIDATOR2_WRITES_ENABLED", "true" if validator else "false")
     monkeypatch.setenv("PAPRNAV_AD_V4_SLICE3A_ROUTES_ENABLED", "true" if materializer else "false")
+    monkeypatch.setenv(
+        "PAPRNAV_AD_V4_SLICE3B_ROUTES_ENABLED",
+        "true" if obligations else "false",
+    )
     get_settings.cache_clear()
     db.add_all([
         ADV4FeatureGate(gate_key="validator2_write_enabled", enabled=validator, changed_by="test"),
         ADV4FeatureGate(gate_key="materializer3a_enabled", enabled=materializer, changed_by="test"),
+        ADV4FeatureGate(gate_key="materializer3b_enabled", enabled=obligations, changed_by="test"),
     ])
     db.commit()
+
+
+@pytest.mark.parametrize(
+    ("sqlstate", "code"),
+    (
+        ("P0001", "projection_integrity"),
+        ("23514", "projection_integrity"),
+        ("40P01", "transaction_conflict"),
+        ("40001", "transaction_conflict"),
+        ("57014", "transaction_conflict"),
+        ("55P03", "transaction_conflict"),
+    ),
+)
+def test_obligation_database_failures_have_controlled_api_mapping(
+    sqlstate: str, code: str,
+) -> None:
+    translated = _obligation_database_error(SimpleNamespace(
+        orig=SimpleNamespace(sqlstate=sqlstate),
+    ))
+    assert translated is not None
+    assert translated.code == code
+    assert translated.http_status == 409
+    assert _obligation_database_error(SimpleNamespace(
+        orig=SimpleNamespace(sqlstate="XX000"),
+    )) is None
+
+
+@pytest.mark.parametrize(
+    ("sqlstate", "code"),
+    (
+        ("P0001", "projection_integrity"),
+        ("23514", "projection_integrity"),
+        ("40P01", "transaction_conflict"),
+        ("40001", "transaction_conflict"),
+        ("57014", "transaction_conflict"),
+        ("55P03", "transaction_conflict"),
+    ),
+)
+def test_obligation_post_translates_expected_database_failures(
+    client, db_session, monkeypatch, sqlstate: str, code: str,
+) -> None:
+    admin, membership, directive, _ = _seed_candidate_source(db_session)
+    _enable(
+        monkeypatch, db_session, validator=True, materializer=True,
+        obligations=True,
+    )
+    login(client, admin.email)
+
+    class DriverFailure(Exception):
+        pass
+
+    driver_failure = DriverFailure("injected database failure")
+    driver_failure.sqlstate = sqlstate
+
+    def fail_materialization(*args, **kwargs):
+        raise DBAPIError("injected", {}, driver_failure)
+
+    monkeypatch.setattr(
+        ads_routes, "materialize_obligations", fail_materialization,
+    )
+    response = client.post(
+        f"/api/v1/ads/directives/{directive.id}/v4/"
+        "candidate-proposals/avp_injected/obligation-projection",
+        headers={
+            "Idempotency-Key": "database-error-regression",
+            "Paprnav-Acting-Membership-Id": membership.id,
+        },
+        json={"appProjectionId": "avx_injected"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == code
+
+
+@pytest.mark.parametrize(
+    "route_kind", ("detail", "reconstruction", "list"),
+)
+@pytest.mark.parametrize(
+    ("sqlstate", "code"),
+    (
+        ("P0001", "projection_integrity"),
+        ("23514", "projection_integrity"),
+        ("40P01", "transaction_conflict"),
+        ("40001", "transaction_conflict"),
+        ("57014", "transaction_conflict"),
+        ("55P03", "transaction_conflict"),
+    ),
+)
+def test_obligation_gets_translate_every_expected_database_failure(
+    client, db_session, monkeypatch, route_kind: str, sqlstate: str, code: str,
+) -> None:
+    admin, membership, directive, _ = _seed_candidate_source(db_session)
+    _enable(
+        monkeypatch, db_session, validator=True, materializer=True,
+        obligations=True,
+    )
+    login(client, admin.email)
+
+    class DriverFailure(Exception):
+        pass
+
+    driver_failure = DriverFailure("injected read database failure")
+    driver_failure.sqlstate = sqlstate
+
+    class FailingReadSession:
+        def __enter__(self):
+            raise DBAPIError("injected", {}, driver_failure)
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    monkeypatch.setattr(
+        ads_routes, "repeatable_read_only_session",
+        lambda bind: FailingReadSession(),
+    )
+    base = (
+        f"/api/v1/ads/directives/{directive.id}/v4/"
+        "candidate-proposals/avp_injected/obligation-projection"
+    )
+    path = {
+        "detail": base,
+        "reconstruction": f"{base}/reconstruction",
+        "list": f"/api/v1/ads/directives/{directive.id}/v4/obligation-projections",
+    }[route_kind]
+    response = client.get(path, headers={
+        "Paprnav-Acting-Membership-Id": membership.id,
+    })
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == code
+
+
+@pytest.mark.parametrize(
+    "route_kind", ("post", "detail", "reconstruction", "list"),
+)
+def test_obligation_routes_reraise_unknown_database_failures(
+    client, db_session, monkeypatch, route_kind: str,
+) -> None:
+    admin, membership, directive, _ = _seed_candidate_source(db_session)
+    _enable(
+        monkeypatch, db_session, validator=True, materializer=True,
+        obligations=True,
+    )
+    login(client, admin.email)
+
+    class DriverFailure(Exception):
+        pass
+
+    driver_failure = DriverFailure("injected unknown database failure")
+    driver_failure.sqlstate = "XX000"
+
+    def fail(*args, **kwargs):
+        raise DBAPIError("injected", {}, driver_failure)
+
+    class FailingReadSession:
+        def __enter__(self):
+            fail()
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+    if route_kind == "post":
+        monkeypatch.setattr(ads_routes, "materialize_obligations", fail)
+    else:
+        monkeypatch.setattr(
+            ads_routes, "repeatable_read_only_session",
+            lambda bind: FailingReadSession(),
+        )
+    base = (
+        f"/api/v1/ads/directives/{directive.id}/v4/"
+        "candidate-proposals/avp_injected/obligation-projection"
+    )
+    path = {
+        "post": base,
+        "detail": base,
+        "reconstruction": f"{base}/reconstruction",
+        "list": f"/api/v1/ads/directives/{directive.id}/v4/obligation-projections",
+    }[route_kind]
+    headers = {"Paprnav-Acting-Membership-Id": membership.id}
+    with pytest.raises(DBAPIError):
+        if route_kind == "post":
+            client.post(
+                path,
+                headers={**headers, "Idempotency-Key": "unknown-database-error"},
+                json={"appProjectionId": "avx_injected"},
+            )
+        else:
+            client.get(path, headers=headers)
+
+
+def _create_obligation_parent(client, db_session, monkeypatch):
+    admin, membership, directive, fragment = _seed_candidate_source(db_session)
+    _enable(
+        monkeypatch, db_session, validator=True, materializer=True,
+        obligations=True,
+    )
+    login(client, admin.email)
+    envelope = _envelope(directive, fragment)
+    candidate = client.post(
+        f"/api/v1/ads/directives/{directive.id}/v4/candidate-proposals",
+        content=json.dumps(envelope, separators=(",", ":")).encode(),
+        headers=_headers(membership.id, "obligation-matrix-candidate"),
+    )
+    assert candidate.status_code == 201, candidate.text
+    proposal_id = candidate.json()["proposalId"]
+    app_path = (
+        f"/api/v1/ads/directives/{directive.id}/v4/"
+        f"candidate-proposals/{proposal_id}/applicability-projection"
+    )
+    app = client.post(app_path, headers={
+        "Idempotency-Key": "obligation-matrix-app",
+        "Paprnav-Acting-Membership-Id": membership.id,
+    })
+    assert app.status_code == 201, app.text
+    obligation_path = (
+        f"/api/v1/ads/directives/{directive.id}/v4/"
+        f"candidate-proposals/{proposal_id}/obligation-projection"
+    )
+    return admin, membership, directive, app.json()["projectionId"], obligation_path
+
+
+@pytest.mark.parametrize(
+    ("validator_gate", "app_gate", "obligation_gate"),
+    (
+        (False, False, False),
+        (False, False, True),
+        (False, True, False),
+        (False, True, True),
+        (True, False, False),
+        (True, False, True),
+        (True, True, False),
+        (True, True, True),
+    ),
+)
+def test_obligation_post_covers_every_database_gate_combination_without_leaks(
+    client, db_session, monkeypatch,
+    validator_gate: bool, app_gate: bool, obligation_gate: bool,
+) -> None:
+    _, membership, _, app_projection_id, path = _create_obligation_parent(
+        client, db_session, monkeypatch,
+    )
+    values = {
+        "validator2_write_enabled": validator_gate,
+        "materializer3a_enabled": app_gate,
+        "materializer3b_enabled": obligation_gate,
+    }
+    for gate_key, enabled in values.items():
+        db_session.query(ADV4FeatureGate).filter_by(
+            gate_key=gate_key,
+        ).one().enabled = enabled
+    db_session.commit()
+
+    response = client.post(
+        path,
+        headers={
+            "Idempotency-Key": "obligation-database-gate-matrix",
+            "Paprnav-Acting-Membership-Id": membership.id,
+        },
+        json={"appProjectionId": app_projection_id},
+    )
+    if all(values.values()):
+        assert response.status_code == 201, response.text
+        assert db_session.query(ADV4CandidateObligationProjection).count() == 1
+    else:
+        assert response.status_code == 409, response.text
+        assert db_session.query(ADV4CandidateObligationProjection).count() == 0
+
+
+@pytest.mark.parametrize(
+    ("validator_application", "obligation_application"),
+    ((False, False), (False, True), (True, False), (True, True)),
+)
+def test_obligation_post_covers_every_application_gate_combination_without_leaks(
+    client, db_session, monkeypatch,
+    validator_application: bool, obligation_application: bool,
+) -> None:
+    _, membership, _, app_projection_id, path = _create_obligation_parent(
+        client, db_session, monkeypatch,
+    )
+    monkeypatch.setenv(
+        "PAPRNAV_AD_V4_VALIDATOR2_WRITES_ENABLED",
+        "true" if validator_application else "false",
+    )
+    monkeypatch.setenv(
+        "PAPRNAV_AD_V4_SLICE3B_ROUTES_ENABLED",
+        "true" if obligation_application else "false",
+    )
+    get_settings.cache_clear()
+    response = client.post(
+        path,
+        headers={
+            "Idempotency-Key": "obligation-application-gate-matrix",
+            "Paprnav-Acting-Membership-Id": membership.id,
+        },
+        json={"appProjectionId": app_projection_id},
+    )
+    if validator_application and obligation_application:
+        assert response.status_code == 201, response.text
+        assert db_session.query(ADV4CandidateObligationProjection).count() == 1
+    else:
+        assert response.status_code in {404, 409}, response.text
+        assert db_session.query(ADV4CandidateObligationProjection).count() == 0
+
+
+@pytest.mark.parametrize(
+    "authority_case",
+    (
+        "inactive_user", "inactive_membership", "wrong_role",
+        "wrong_user", "wrong_membership", "maintenance_shop",
+    ),
+)
+def test_obligation_post_authority_matrix_rejects_without_rows(
+    client, db_session, monkeypatch, authority_case: str,
+) -> None:
+    admin, membership, _, app_projection_id, path = _create_obligation_parent(
+        client, db_session, monkeypatch,
+    )
+    acting_membership_id = membership.id
+    if authority_case == "inactive_user":
+        admin.status = "inactive"
+    elif authority_case == "inactive_membership":
+        membership.status = "inactive"
+    elif authority_case == "wrong_role":
+        membership.role = "reviewer"
+    elif authority_case == "maintenance_shop":
+        membership.role = "maintenance_technician"
+    else:
+        other = create_user(
+            db_session,
+            f"obligation-{authority_case}@example.test",
+            "Other obligation actor",
+        )
+        other_org = create_organization(
+            db_session, "Other obligation organization", "platform",
+        )
+        other_membership = add_membership(
+            db_session, other_org, other, "platform_admin",
+        )
+        if authority_case == "wrong_user":
+            login(client, other.email)
+        else:
+            acting_membership_id = other_membership.id
+    db_session.commit()
+
+    response = client.post(
+        path,
+        headers={
+            "Idempotency-Key": f"obligation-authority-{authority_case}",
+            "Paprnav-Acting-Membership-Id": acting_membership_id,
+        },
+        json={"appProjectionId": app_projection_id},
+    )
+    assert response.status_code in {401, 403}, response.text
+    assert db_session.query(ADV4CandidateObligationProjection).count() == 0
 
 
 def test_v2_candidate_materialize_retry_and_reconstruct(client, db_session, monkeypatch) -> None:
@@ -84,6 +457,96 @@ def test_v2_candidate_materialize_retry_and_reconstruct(client, db_session, monk
     assert db_session.query(ADV4CandidateAppProjection).count() == 1
     assert db_session.query(ADV4CandidateAppDatum).count() > 0
     assert db_session.query(ADV4CandidateAppSemanticNode).count() == 3
+
+
+def test_v2_obligation_create_retry_detail_list_and_reconstruction(
+    client, db_session, monkeypatch,
+) -> None:
+    admin, membership, directive, fragment = _seed_candidate_source(db_session)
+    _enable(
+        monkeypatch, db_session, validator=True, materializer=True,
+        obligations=True,
+    )
+    login(client, admin.email)
+    envelope = _envelope(directive, fragment)
+    candidate_response = client.post(
+        f"/api/v1/ads/directives/{directive.id}/v4/candidate-proposals",
+        content=json.dumps(envelope, separators=(",", ":")).encode(),
+        headers=_headers(membership.id, "v2-obligation-candidate"),
+    )
+    assert candidate_response.status_code == 201, candidate_response.text
+    proposal_id = candidate_response.json()["proposalId"]
+    app_path = (
+        f"/api/v1/ads/directives/{directive.id}/v4/"
+        f"candidate-proposals/{proposal_id}/applicability-projection"
+    )
+    app_response = client.post(app_path, headers={
+        "Idempotency-Key": "v2-obligation-app",
+        "Paprnav-Acting-Membership-Id": membership.id,
+    })
+    assert app_response.status_code == 201, app_response.text
+    app_projection_id = app_response.json()["projectionId"]
+    obligation_path = (
+        f"/api/v1/ads/directives/{directive.id}/v4/"
+        f"candidate-proposals/{proposal_id}/obligation-projection"
+    )
+    headers = {
+        "Idempotency-Key": "v2-obligation-create",
+        "Paprnav-Acting-Membership-Id": membership.id,
+    }
+    created = client.post(
+        obligation_path, headers=headers,
+        json={"appProjectionId": app_projection_id},
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["created"] is True
+    assert body["idempotentRetry"] is False
+    assert body["appProjectionId"] == app_projection_id
+    assert body["gate"] == "candidate_only"
+    assert body["counts"]["requirementCount"] == len(
+        envelope["proposal"]["requirements"]
+    )
+
+    retry = client.post(
+        obligation_path, headers=headers,
+        json={"appProjectionId": app_projection_id},
+    )
+    assert retry.status_code == 200, retry.text
+    assert retry.json()["projectionId"] == body["projectionId"]
+    assert retry.json()["requestId"] == body["requestId"]
+    assert retry.json()["idempotentRetry"] is True
+
+    audit_headers = {"Paprnav-Acting-Membership-Id": membership.id}
+    detail = client.get(obligation_path, headers=audit_headers)
+    assert detail.status_code == 200, detail.text
+    reconstruction = client.get(
+        f"{obligation_path}/reconstruction", headers=audit_headers,
+    )
+    assert reconstruction.status_code == 200, reconstruction.text
+    assert reconstruction.json()["canonicalObligations"] == {
+        key: envelope["proposal"][key]
+        for key in (
+            "incorporatedDocuments", "requirements",
+            "recurrenceGroups", "amocAuthorityProvisions",
+        )
+    }
+    listed = client.get(
+        f"/api/v1/ads/directives/{directive.id}/v4/obligation-projections",
+        headers=audit_headers,
+    )
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["count"] == listed.json()["total"] == 1
+    assert db_session.query(ADV4CandidateObligationProjection).count() == 1
+
+    action = db_session.query(ADV4CandidateObligationAction).one()
+    action.action_type = "repair"
+    db_session.commit()
+    corrupted = client.get(
+        f"{obligation_path}/reconstruction", headers=audit_headers,
+    )
+    assert corrupted.status_code == 409
+    assert corrupted.json()["detail"]["code"] == "projection_integrity"
 
 
 def test_reconstruction_api_rejects_typed_identity_hash_drift(client, db_session, monkeypatch) -> None:

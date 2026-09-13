@@ -1,0 +1,274 @@
+{
+  "taskId": "T081-V4-SCHEMA-SLICE-3B",
+  "stage": "closure",
+  "generatedAt": "2026-09-13T17:28:50+00:00",
+  "baseRef": "9ad410b7c4021244ac36a6fab44b1dd021f5d05c",
+  "head": "9ad410b7c4021244ac36a6fab44b1dd021f5d05c",
+  "scopePaths": [],
+  "scopeFingerprint": "59ff1e2b19b98243a0af39ad1372faf1d0f743655a726d3067d8a0d3d8848d51",
+  "files": [
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": "M ",
+      "size": 81655,
+      "sha256": "664b4f6a16934a9a29a934551047560aa027ced311855bda2d0e6f94c42a3569",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/contracts/ad_v4_obligation_mapping.schema.json",
+      "status": "A ",
+      "size": 11187,
+      "sha256": "d81c31048ebfc1fc393f62672403f9d0b7222d46550a3b9170a6b1e648672781",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/contracts/ad_v4_obligation_mapping_v1.json",
+      "status": "A ",
+      "size": 46580,
+      "sha256": "ebff9e8fe36187cfe1f881779936b8dfff3ff41f860eaf1e7542aa85e5e06bbf",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/contracts/ad_v4_slice3b_rollout.md",
+      "status": "A ",
+      "size": 825,
+      "sha256": "06a633d45f09d196274feb67fc7e4c6547ffeb7a0e2fe64e1134c7b352eea1ae",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "status": "M ",
+      "size": 8148,
+      "sha256": "e03864ac2e8c14ec49009f6ede9b347b87f48a3cfc21a25ca0c9964dbca383c9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/sql/20260911_0028_obligation_expectations.sql",
+      "status": "A ",
+      "size": 126945,
+      "sha256": "c8d1f6508b2708ae0a0c7c64ca9cefe7aa144e5d268e1d1118aee3bda25432b7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/sql/20260911_0028_obligation_integrity.sql",
+      "status": "A ",
+      "size": 83052,
+      "sha256": "d2db777166d1785d179d5bff5d572a95131b2a570df0b2c2a04dab4edd6d879e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260911_0028_add_ad_v4_obligations.py",
+      "status": "A ",
+      "size": 67620,
+      "sha256": "754c86b18ff6901cf14b17c28562b45511107a3b78acdb4b646d6b2deefcff8c",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/session.py",
+      "status": "M ",
+      "size": 1286,
+      "sha256": "301bdc7dd9fbfe32c77002df56e25bd2a233a7f0b6b7085f753fe95b0b75b396",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": "M ",
+      "size": 212038,
+      "sha256": "6144b13b25e17c7b3fe237a138d240b643f622d3f96e53a4265ff6c0981bc374",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": "M ",
+      "size": 11731,
+      "sha256": "e0e9a593701e9ad0cb690d8047dda80e772795572555ef754fd145ff7a55c8d4",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_evidence.py",
+      "status": "M ",
+      "size": 23456,
+      "sha256": "9e2bc3c36932cb55eac250367a9ee22338a843f01264a4060f3988b0af8bf8eb",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_applicability.py",
+      "status": "M ",
+      "size": 187237,
+      "sha256": "9a2cdf3b19ad300c956a6a01cbb9f790351560b7af03c98c736855d80ac68a6f",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_candidates.py",
+      "status": "M ",
+      "size": 72277,
+      "sha256": "f703395fe2c232e9db4859b4bb2b04cb080c41f5d6634b6c1a029914de0a4586",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_graph.py",
+      "status": "A ",
+      "size": 901,
+      "sha256": "39d3f1e63740e83ee99c2c4d2c9f2061f7239ec4b74e2830977d727f417a80aa",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_obligation_mapping_v1.py",
+      "status": "A ",
+      "size": 43561,
+      "sha256": "cc0a7f22072a3d6963d89d976f498a5dc97781b0d3ca5c5f23ea8980e60871f8",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_obligation_persistence.py",
+      "status": "A ",
+      "size": 49634,
+      "sha256": "3451b15942bfac5d0e3d09b96c390ef941da8dcf0108b276ff7c53bff3cf4be5",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_obligations.py",
+      "status": "A ",
+      "size": 190822,
+      "sha256": "689431734557d54305cafe9eafa02a9a87c529cc7c1ed799d45a56f2120299a0",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_applicability.py",
+      "status": "M ",
+      "size": 53303,
+      "sha256": "49b94addcb0677b723b7bda98087917a57410b493eef4fec382a069c6589af79",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_candidates.py",
+      "status": "M ",
+      "size": 29975,
+      "sha256": "f3ccbee3237914cdf524ef5a89f5e62bf38a32b8dd9266750ed851a8b46c3a71",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_obligation_persistence_postgres.py",
+      "status": "A ",
+      "size": 78348,
+      "sha256": "12af7a5949dfbe8304f8022e159c11c914c1c18b4524b0ec613447d6cba7c29d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_obligation_rollout_postgres.py",
+      "status": "A ",
+      "size": 5318,
+      "sha256": "4bf3d95c478441e8425281c03632e7f146f86b8095b4d882f89be7b9e1be54d8",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_obligation_serializer_postgres.py",
+      "status": "A ",
+      "size": 14767,
+      "sha256": "bd71315cd1eacb764ffa3f20f7b35230f2fa9d65fadc1c11c14ff6876b375b32",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_obligations.py",
+      "status": "A ",
+      "size": 159385,
+      "sha256": "9781e94ab0965d790f5c0f0670f34525b942160864efc972d9032c67ff70a1dc",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_obligations_calibration.py",
+      "status": "A ",
+      "size": 10433,
+      "sha256": "2ebe7d81fa80b522df10126c26077d36149ac75d69330bffa7734bd373513a45",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_postgres.py",
+      "status": "M ",
+      "size": 43597,
+      "sha256": "74c06f731057e2c6de3cb213e95c370565ee85d9781a64100276cba9a72c672d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "scripts/generate_ad_v4_obligation_mapping.py",
+      "status": "A ",
+      "size": 25458,
+      "sha256": "e44e694fc4df95dc7af243a4bcbfe5810ebd66c1819c0c6bb2810cf7fefae14c",
+      "readStatus": "readable"
+    }
+  ],
+  "reviewInputs": [
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/decision.md",
+      "status": "review_input",
+      "size": 48397,
+      "sha256": "78f35bb02ad7054df73b4e30b436bd7dac15ca1c8020ecd68e7df8af01ab9f1a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/findings.json",
+      "status": "review_input",
+      "size": 86553,
+      "sha256": "d17a313e08871eaec7b972db4d512fd26b56e8651b6b962ce687ae2cfcfa8b35",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/normative-mapping-matrix.md",
+      "status": "review_input",
+      "size": 31387,
+      "sha256": "b9c7dc0fa30c0e840f80c9599113eebf000cec7478c8bcd94eb4ce3f5b6c4c55",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/implementation-persistence-api-scope.md",
+      "status": "review_input",
+      "size": 4091,
+      "sha256": "ff70dcde9ed66093effcd73bef74fc6d691b23c2abc7d5279f99ae137e18f686",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/adversarial-implementation-persistence-api-closure-2.md",
+      "status": "review_input",
+      "size": 2655,
+      "sha256": "33a0d625bad32d99341022b0c61a8e81cf07cc75042e124a508190e6934be071",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/claude-external-critic-20260913T171021Z.md",
+      "status": "review_input",
+      "size": 9663,
+      "sha256": "68c90e392c1a6561df57673eb1e386a3e2972948e3eaed5d9f847575010aca9c",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/claude-external-critic-20260913T171021Z.findings.json",
+      "status": "review_input",
+      "size": 2353,
+      "sha256": "a1dab457b6454462078b8a82accc859c8e2773d421961c47be62ca8e1b786d3b",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/closure.md",
+      "status": "review_input",
+      "size": 7358,
+      "sha256": "6af458d354d3751f1088e06744cede95ada5dfa9e97dbc0322791df076002605",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/adversarial-closure-final.md",
+      "status": "review_input",
+      "size": 3225,
+      "sha256": "0f9d88878c271b2c805549db187440fe67c7a5328b56881893fbc0990854841b",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-3B/checkpoint.md",
+      "status": "review_input",
+      "size": 18329,
+      "sha256": "50c78e8303a8219d69ab32bb5bdc669fe8f0eb0f78fd6458dd309c1b276d1367",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [],
+  "outOfScopeReason": null
+}

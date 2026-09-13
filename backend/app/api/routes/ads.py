@@ -7,6 +7,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from sqlalchemy import func, or_, select, update
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
@@ -16,7 +17,7 @@ from app.api.routes.aircraft import (
     get_visible_aircraft_or_404,
 )
 from app.core.config import get_settings
-from app.db.session import get_db
+from app.db.session import get_db, repeatable_read_only_session
 from app.models.core import (
     ADDiscoveryRecord,
     ADCoverageSet,
@@ -34,6 +35,8 @@ from app.models.core import (
     ADV4CandidateProposal,
     ADV4CandidateAppMaterializationRequest,
     ADV4CandidateAppProjection,
+    ADV4CandidateObligationMaterializationRequest,
+    ADV4CandidateObligationProjection,
     ADV4CandidateSubmission,
     AircraftADDueState,
     AirworthinessDirective,
@@ -54,6 +57,10 @@ from app.schemas.ads import (
     ADV4ApplicabilityProjectionListResponse,
     ADV4ApplicabilityProjectionResponse,
     ADV4ApplicabilityReconstructionResponse,
+    ADV4ObligationMaterializationRequest,
+    ADV4ObligationProjectionListResponse,
+    ADV4ObligationProjectionResponse,
+    ADV4ObligationReconstructionResponse,
     ADV4SubmissionAuditResponse,
     ADV4SubmissionRelationshipAuditResponse,
     ADProposalProvenanceResponse,
@@ -126,6 +133,15 @@ from app.services.ad_v4_applicability import (
     reconstruct_applicability,
     verified_app_projection,
 )
+from app.services.ad_v4_obligation_persistence import (
+    POLICY_VERSION as OBLIGATION_PROJECTION_POLICY_VERSION,
+    authorize_obligation_audit,
+    materialize_obligations,
+    obligation_projection_counts,
+    reconstruct_obligation_projection,
+    verified_obligation_projection,
+)
+from app.services.ad_v4_obligations import ObligationIntegrityError
 from app.services.ad_recurrence import due_state_payload
 from app.services.installed_components import component_display_name
 from app.services.observability import record_product_event, record_workflow_status
@@ -194,6 +210,25 @@ def v4_http_error(exc: ADV4Error) -> HTTPException:
         status_code=exc.http_status,
         detail={"code": exc.code, "jsonPointer": exc.pointer, "message": str(exc)},
     )
+
+
+def _obligation_database_error(exc: DBAPIError) -> ADV4Error | None:
+    sqlstate = getattr(exc.orig, "sqlstate", None)
+    if sqlstate == "P0001" or (
+        isinstance(sqlstate, str) and sqlstate.startswith("23")
+    ):
+        return ADV4Error(
+            "projection_integrity", "",
+            "PostgreSQL rejected the obligation projection transaction",
+            http_status=409,
+        )
+    if sqlstate in {"40P01", "40001", "57014", "55P03"}:
+        return ADV4Error(
+            "transaction_conflict", "",
+            "Obligation projection transaction must be retried",
+            http_status=409,
+        )
+    return None
 
 
 def serialize_v4_candidate(
@@ -563,6 +598,243 @@ def list_v4_applicability_projections(
     except ADV4Error as exc:
         db.rollback()
         raise v4_http_error(exc) from exc
+
+
+def serialize_v4_obligation_projection(
+    db: Session,
+    projection: ADV4CandidateObligationProjection,
+    *,
+    acting_membership_id: str,
+    request_row: ADV4CandidateObligationMaterializationRequest | None = None,
+    created: bool = False,
+    idempotent_retry: bool = False,
+    require_fresh: bool = True,
+) -> ADV4ObligationProjectionResponse:
+    reconstruct_obligation_projection(
+        db, projection, require_fresh=require_fresh,
+    )
+    return ADV4ObligationProjectionResponse(
+        projectionId=projection.id,
+        proposalId=projection.proposal_id,
+        directiveId=projection.directive_id,
+        appProjectionId=projection.app_projection_id,
+        validatorVersion=projection.validator_version,
+        canonicalizationVersion=projection.canonicalization_version,
+        appMaterializerVersion=projection.app_materializer_version,
+        materializerVersion=projection.materializer_version,
+        mappingVersion=projection.mapping_version,
+        mappingDigest=projection.mapping_digest,
+        proposalCanonicalHash=projection.proposal_canonical_hash,
+        evidenceBindingHash=projection.evidence_binding_hash,
+        appProjectionHash=projection.app_projection_hash,
+        obligationSubtreeHash=projection.obligation_subtree_hash,
+        projectionHash=projection.projection_hash,
+        gate=projection.gate,
+        counts=obligation_projection_counts(projection),
+        requestId=request_row.id if request_row else None,
+        created=created,
+        idempotentRetry=idempotent_retry,
+        actingMembershipId=acting_membership_id,
+        authPolicyVersion=OBLIGATION_PROJECTION_POLICY_VERSION,
+        createdAt=projection.created_at,
+    )
+
+
+@router.post(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/obligation-projection",
+    response_model=ADV4ObligationProjectionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_v4_obligation_projection(
+    directive_id: str,
+    proposal_id: str,
+    request: ADV4ObligationMaterializationRequest,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", min_length=1, max_length=255,
+    ),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ObligationProjectionResponse:
+    try:
+        result = materialize_obligations(
+            db,
+            directive_id=directive_id,
+            proposal_id=proposal_id,
+            app_projection_id=request.appProjectionId,
+            actor=current_user,
+            membership_id=acting_membership_id,
+            idempotency_key=idempotency_key,
+        )
+        db.commit()
+        db.refresh(result.projection)
+        db.refresh(result.request)
+        if not result.created:
+            response.status_code = status.HTTP_200_OK
+        return serialize_v4_obligation_projection(
+            db, result.projection,
+            acting_membership_id=acting_membership_id,
+            request_row=result.request,
+            created=result.created,
+            idempotent_retry=result.idempotent_retry,
+            require_fresh=False,
+        )
+    except ObligationIntegrityError as exc:
+        db.rollback()
+        raise v4_http_error(ADV4Error(
+            "projection_integrity", "", str(exc), http_status=409,
+        )) from exc
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        db.rollback()
+        translated = _obligation_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.get(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/obligation-projection",
+    response_model=ADV4ObligationProjectionResponse,
+)
+def get_v4_obligation_projection(
+    directive_id: str,
+    proposal_id: str,
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ObligationProjectionResponse:
+    try:
+        with repeatable_read_only_session(db.get_bind()) as read_db:
+            authorize_obligation_audit(
+                read_db, current_user, acting_membership_id,
+            )
+            projection = verified_obligation_projection(
+                read_db, directive_id=directive_id, proposal_id=proposal_id,
+            )
+            return serialize_v4_obligation_projection(
+                read_db, projection,
+                acting_membership_id=acting_membership_id,
+            )
+    except ObligationIntegrityError as exc:
+        raise v4_http_error(ADV4Error(
+            "projection_integrity", "", str(exc), http_status=409,
+        )) from exc
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        translated = _obligation_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.get(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/obligation-projection/reconstruction",
+    response_model=ADV4ObligationReconstructionResponse,
+)
+def get_v4_obligation_reconstruction(
+    directive_id: str,
+    proposal_id: str,
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ObligationReconstructionResponse:
+    try:
+        with repeatable_read_only_session(db.get_bind()) as read_db:
+            authorize_obligation_audit(
+                read_db, current_user, acting_membership_id,
+            )
+            projection = verified_obligation_projection(
+                read_db, directive_id=directive_id, proposal_id=proposal_id,
+            )
+            subtree = reconstruct_obligation_projection(read_db, projection)
+            return ADV4ObligationReconstructionResponse(
+                projectionId=projection.id,
+                proposalId=projection.proposal_id,
+                directiveId=projection.directive_id,
+                appProjectionId=projection.app_projection_id,
+                gate=projection.gate,
+                obligationSubtreeHash=projection.obligation_subtree_hash,
+                projectionHash=projection.projection_hash,
+                canonicalObligations=subtree,
+                actingMembershipId=acting_membership_id,
+                authPolicyVersion=OBLIGATION_PROJECTION_POLICY_VERSION,
+            )
+    except ObligationIntegrityError as exc:
+        raise v4_http_error(ADV4Error(
+            "projection_integrity", "", str(exc), http_status=409,
+        )) from exc
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        translated = _obligation_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.get(
+    "/directives/{directive_id}/v4/obligation-projections",
+    response_model=ADV4ObligationProjectionListResponse,
+)
+def list_v4_obligation_projections(
+    directive_id: str,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ObligationProjectionListResponse:
+    try:
+        with repeatable_read_only_session(db.get_bind()) as read_db:
+            authorize_obligation_audit(
+                read_db, current_user, acting_membership_id,
+            )
+            total = read_db.scalar(select(func.count()).select_from(
+                ADV4CandidateObligationProjection,
+            ).where(
+                ADV4CandidateObligationProjection.directive_id == directive_id,
+            )) or 0
+            rows = read_db.scalars(select(
+                ADV4CandidateObligationProjection,
+            ).where(
+                ADV4CandidateObligationProjection.directive_id == directive_id,
+            ).order_by(
+                ADV4CandidateObligationProjection.created_at.desc(),
+                ADV4CandidateObligationProjection.id.desc(),
+            ).offset(offset).limit(limit)).all()
+            responses = [serialize_v4_obligation_projection(
+                read_db, row, acting_membership_id=acting_membership_id,
+            ) for row in rows]
+            return ADV4ObligationProjectionListResponse(
+                projections=responses, count=len(responses), total=total,
+                limit=limit, offset=offset,
+            )
+    except ObligationIntegrityError as exc:
+        raise v4_http_error(ADV4Error(
+            "projection_integrity", "", str(exc), http_status=409,
+        )) from exc
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        translated = _obligation_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
 @router.get(
     "/source-documents/{source_document_id}/pages/{page_number}",
     response_model=ADSourcePageEvidenceResponse,
