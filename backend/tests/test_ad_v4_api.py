@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import DBAPIError
 
+from app.api.routes import ads as ads_routes
+from app.api.routes.ads import _candidate_database_error
 from app.models.core import (
     ADEvidenceFragment,
     ADEvidenceFragmentLifecycleEvent,
@@ -13,6 +18,31 @@ from app.models.core import (
 )
 from app.services.ad_evidence import _hash_parts
 from conftest import TEST_PASSWORD, add_membership, create_organization, create_user, login
+
+
+@pytest.mark.parametrize(
+    ("sqlstate", "code"),
+    (
+        ("P0001", "candidate_integrity"),
+        ("23514", "candidate_integrity"),
+        ("40P01", "transaction_conflict"),
+        ("40001", "transaction_conflict"),
+        ("57014", "transaction_conflict"),
+        ("55P03", "transaction_conflict"),
+    ),
+)
+def test_candidate_database_failures_have_controlled_api_mapping(
+    sqlstate: str, code: str,
+) -> None:
+    translated = _candidate_database_error(SimpleNamespace(
+        orig=SimpleNamespace(sqlstate=sqlstate),
+    ))
+    assert translated is not None
+    assert translated.code == code
+    assert translated.http_status == 409
+    assert _candidate_database_error(SimpleNamespace(
+        orig=SimpleNamespace(sqlstate="XX000"),
+    )) is None
 
 
 def _seed_candidate_source(db):
@@ -140,6 +170,43 @@ def _headers(membership_id: str, key: str = "v4-api-key") -> dict[str, str]:
         "Idempotency-Key": key,
         "Paprnav-Acting-Membership-Id": membership_id,
     }
+
+
+@pytest.mark.parametrize(
+    ("sqlstate", "code"),
+    (
+        ("P0001", "candidate_integrity"),
+        ("23514", "candidate_integrity"),
+        ("40P01", "transaction_conflict"),
+        ("40001", "transaction_conflict"),
+        ("57014", "transaction_conflict"),
+        ("55P03", "transaction_conflict"),
+    ),
+)
+def test_candidate_post_translates_expected_database_failures(
+    client: TestClient, db_session, monkeypatch: pytest.MonkeyPatch,
+    sqlstate: str, code: str,
+) -> None:
+    admin, membership, directive, fragment = _seed_candidate_source(db_session)
+    login(client, admin.email)
+
+    class DriverFailure(Exception):
+        pass
+
+    driver_failure = DriverFailure("injected candidate database failure")
+    driver_failure.sqlstate = sqlstate
+
+    def fail_candidate_write(*args, **kwargs):
+        raise DBAPIError("injected", {}, driver_failure)
+
+    monkeypatch.setattr(ads_routes, "store_v4_candidate", fail_candidate_write)
+    response = client.post(
+        f"/api/v1/ads/directives/{directive.id}/v4/candidate-proposals",
+        json=_envelope(directive, fragment),
+        headers=_headers(membership.id, f"candidate-db-{sqlstate}"),
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == code
 
 
 def test_admin_raw_post_retry_list_detail_and_v3_isolation(client: TestClient, db_session) -> None:

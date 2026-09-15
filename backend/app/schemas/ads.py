@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -286,6 +286,243 @@ class ADV4ObligationReconstructionResponse(BaseModel):
     canonicalObligations: dict[str, Any]
     actingMembershipId: str
     authPolicyVersion: str
+
+
+class ADV4ReviewCaseCreateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    expectedAuthorizationObservationHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    expectedInputIdentityHash: Optional[str] = Field(
+        default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+
+
+class ADV4ReviewAnnotation(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    pointer: str = Field(min_length=1, max_length=1024)
+    text: str = Field(min_length=1, max_length=4096)
+
+
+class ADV4ReviewDraftCreateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    expectedAuthorizationObservationHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    expectedPredecessorEventHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    expectedInputIdentityHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    annotations: list[ADV4ReviewAnnotation] = Field(max_length=128)
+    intendedAction: Literal["undecided", "reject"] = "undecided"
+
+
+class ADV4ReviewRequestCreateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    expectedAuthorizationObservationHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    expectedPredecessorEventHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    expectedInputIdentityHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    draftRevisionId: Optional[str] = Field(default=None, min_length=1, max_length=36)
+
+
+class ADV4ReviewRejectRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    expectedAuthorizationObservationHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    expectedPredecessorEventHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    expectedRequestId: str = Field(min_length=1, max_length=36)
+    expectedInputIdentityHash: str = Field(
+        min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
+    reasonCodes: list[Literal[
+        "candidate_integrity",
+        "source_identity_or_evidence_missing",
+        "evidence_not_current",
+        "projection_integrity",
+        "unsupported_version",
+        "input_changed",
+        "remediation_requested",
+    ]] = Field(min_length=1, max_length=7)
+    explanation: str = Field(min_length=1, max_length=4096)
+
+
+class ADV4ReviewEventResponse(BaseModel):
+    eventId: str
+    sequenceNumber: int
+    predecessorEventHash: Optional[str]
+    eventType: str
+    resultingState: str
+    eventHash: str
+    actorUserId: str
+    authorizingMembershipId: str
+    occurredAt: datetime
+
+
+class ADV4ReviewProposalInputResponse(BaseModel):
+    state: str
+    id: str
+    storedCanonicalHash: str
+    verifiedCanonicalHash: Optional[str] = None
+    errorCode: Optional[str] = None
+
+
+class ADV4ReviewEvidenceInputResponse(BaseModel):
+    state: str
+    storedBindingHash: str
+    verifiedBindingHash: Optional[str] = None
+    headSetHash: Optional[str] = None
+    errorCode: Optional[str] = None
+
+
+class ADV4ReviewProjectionInputResponse(BaseModel):
+    state: str
+    id: Optional[str] = None
+    storedHash: Optional[str] = None
+    eventHeadHash: Optional[str] = None
+    errorCode: Optional[str] = None
+
+
+class ADV4ReviewInputIdentityResponse(BaseModel):
+    version: str
+    directiveId: str
+    proposal: ADV4ReviewProposalInputResponse
+    evidence: ADV4ReviewEvidenceInputResponse
+    applicabilityProjection: ADV4ReviewProjectionInputResponse
+    obligationProjection: ADV4ReviewProjectionInputResponse
+
+
+class ADV4ReviewObservationResponse(BaseModel):
+    version: str
+    inputIdentityHash: str
+    observedAt: str = Field(
+        pattern=r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$"
+    )
+
+
+class ADV4ReviewProposalObservationResponse(BaseModel):
+    proposalId: str
+    directiveId: str
+    inputIdentityHash: str
+    observationHash: str
+    inputIdentity: ADV4ReviewInputIdentityResponse
+    observation: ADV4ReviewObservationResponse
+    authorizationObservationHashes: dict[str, str]
+
+
+class ADV4ReviewDraftResponse(BaseModel):
+    draftRevisionId: str
+    revisionNumber: int
+    inputIdentityHash: str
+    observationHash: str
+    annotations: list[ADV4ReviewAnnotation]
+    intendedAction: str
+    rowHash: str
+    actorUserId: str
+    authorizingMembershipId: str
+    createdAt: datetime
+
+
+class ADV4ReviewRequestResponse(BaseModel):
+    reviewRequestId: str
+    draftRevisionId: Optional[str]
+    inputIdentityHash: str
+    observationHash: str
+    cutoffHash: str
+    authorshipSetHash: str
+    authorshipSourceCount: int
+    rowHash: str
+    actorUserId: str
+    authorizingMembershipId: str
+    requestedAt: datetime
+
+
+class ADV4ReviewRejectionResponse(BaseModel):
+    rejectionId: str
+    reviewRequestId: str
+    requestedInputIdentityHash: str
+    requestedObservationHash: str
+    decisionInputIdentityHash: str
+    decisionObservationHash: str
+    reasonCodes: list[str]
+    explanation: str
+    rowHash: str
+    actorUserId: str
+    authorizingMembershipId: str
+    rejectedAt: datetime
+
+
+class ADV4ReviewSignoffResponse(BaseModel):
+    signoffId: str
+    reviewRequestId: str
+    rejectionId: str
+    action: Literal["reject"]
+    requestedInputIdentityHash: str
+    requestedObservationHash: str
+    decisionInputIdentityHash: str
+    decisionObservationHash: str
+    authorizationObservationHash: str
+    signatureHash: str
+    rowHash: str
+    actorUserId: str
+    authorizingMembershipId: str
+    signedAt: datetime
+
+
+class ADV4ReviewCaseResponse(BaseModel):
+    caseId: str
+    proposalId: str
+    directiveId: str
+    caseSequence: int
+    state: str
+    proposalCanonicalHash: str
+    inputIdentityHash: str
+    observationHash: str
+    inputIdentity: ADV4ReviewInputIdentityResponse
+    observation: ADV4ReviewObservationResponse
+    authorizationObservationHashes: dict[str, str]
+    latestEventHash: str
+    draftRevisionId: Optional[str] = None
+    reviewRequestId: Optional[str] = None
+    rejectionId: Optional[str] = None
+    signoffId: Optional[str] = None
+    drafts: list[ADV4ReviewDraftResponse] = Field(default_factory=list)
+    reviewRequest: Optional[ADV4ReviewRequestResponse] = None
+    rejection: Optional[ADV4ReviewRejectionResponse] = None
+    signoff: Optional[ADV4ReviewSignoffResponse] = None
+    events: list[ADV4ReviewEventResponse] = Field(default_factory=list)
+    draftTotal: int
+    draftLimit: int
+    draftOffset: int
+    eventTotal: int
+    eventLimit: int
+    eventOffset: int
+    idempotentRetry: bool = False
+    createdAt: datetime
+
+
+class ADV4ReviewCaseListResponse(BaseModel):
+    cases: list[ADV4ReviewCaseResponse]
+    count: int
+    total: int
+    limit: int
+    offset: int
+    authorizationObservationHashes: dict[str, str]
 
 
 class ADProposalProvenanceResponse(BaseModel):

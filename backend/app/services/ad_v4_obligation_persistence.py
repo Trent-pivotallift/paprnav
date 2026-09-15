@@ -627,6 +627,7 @@ def materialize_obligations(
         f"{POLICY_VERSION}:{idempotency_key}"
     )
     _advisory_lock(db, f"idem:{scope}")
+    _advisory_lock(db, f"candidate-relationship-graph:{directive_id}")
     # Lock the immutable candidate before any database gate row. An existing
     # obligation projection is looked up only after the parent locks below.
     proposal = db.scalar(select(ADV4CandidateProposal).where(

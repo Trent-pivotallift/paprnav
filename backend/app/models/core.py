@@ -3068,3 +3068,177 @@ class WorkflowStatusEvent(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
     actor = relationship("User", foreign_keys=[actor_user_id])
+
+
+MAX_CASES_PER_PROPOSAL = 100
+MAX_DRAFT_REVISIONS_PER_CASE = 1000
+MAX_EVENTS_PER_CASE = 1003
+MAX_DRAFT_AUTHORITATIVE_BYTES_PER_CASE = 16 * 1024 * 1024
+MAX_REQUESTED_AUTHORITATIVE_BYTES_PER_CASE = 28 * 1024 * 1024
+MAX_AUTHORITATIVE_BYTES_PER_CASE = 40 * 1024 * 1024
+
+
+class _ADV4ReviewRecord:
+    """Immutable review record. Database validators own the commit boundary."""
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("ad_v4_candidate_proposals.id", ondelete="RESTRICT"), nullable=False)
+    directive_id: Mapped[str] = mapped_column(ForeignKey("airworthiness_directives.id", ondelete="RESTRICT"), nullable=False)
+    actor_user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    authorizing_membership_id: Mapped[str] = mapped_column(ForeignKey("organization_memberships.id", ondelete="RESTRICT"), nullable=False)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="RESTRICT"), nullable=False)
+    auth_snapshot_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    auth_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    auth_policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    endpoint_action: Mapped[str] = mapped_column(String(96), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    contract_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+
+
+class _ADV4ReviewObservation:
+    input_identity_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    input_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    observation_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    observation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    observed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ADV4ReviewCase(_ADV4ReviewRecord, _ADV4ReviewObservation, Base):
+    __tablename__ = "ad_v4_review_cases"
+    proposal_canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    case_sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    predecessor_case_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    row_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ADV4ReviewDraftRevision(_ADV4ReviewRecord, _ADV4ReviewObservation, Base):
+    __tablename__ = "ad_v4_review_draft_revisions"
+    case_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    predecessor_draft_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    expected_predecessor_event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    annotation_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    annotation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    intended_action: Mapped[str] = mapped_column(String(32), nullable=False)
+    row_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ADV4ReviewRequest(_ADV4ReviewRecord, _ADV4ReviewObservation, Base):
+    __tablename__ = "ad_v4_review_requests"
+    case_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    draft_revision_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    expected_predecessor_event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    cutoff_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    cutoff_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    authorship_set_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    authorship_set_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    authorship_source_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    row_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ADV4ReviewRejection(_ADV4ReviewRecord, Base):
+    __tablename__ = "ad_v4_review_rejections"
+    case_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    proposal_canonical_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_input_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_observation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_input_identity_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    decision_input_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_observation_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    decision_observation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_observed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    reasons_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    reasons_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expected_predecessor_event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    row_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    rejected_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ADV4SignoffEvent(_ADV4ReviewRecord, Base):
+    __tablename__ = "ad_v4_signoff_events"
+    case_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    rejection_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    rejection_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_input_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_observation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_input_identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_observation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    authorization_observation_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    signature_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    row_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    signed_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ADV4ReviewCaseEvent(_ADV4ReviewRecord, Base):
+    __tablename__ = "ad_v4_review_case_events"
+    case_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    predecessor_event_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    resulting_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    draft_revision_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    review_request_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    rejection_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    signoff_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    auth_policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    endpoint_action: Mapped[str] = mapped_column(String(96), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_canonical_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    occurred_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+def _install_ad_v4_review_model_constraints() -> None:
+    tables = (ADV4ReviewCase.__table__, ADV4ReviewDraftRevision.__table__, ADV4ReviewRequest.__table__, ADV4ReviewRejection.__table__, ADV4SignoffEvent.__table__, ADV4ReviewCaseEvent.__table__)
+    for ordinal, table in enumerate(tables):
+        table.append_constraint(CheckConstraint("contract_version='paprnav-ad-v4-candidate-review-1'", name=f"ck_ar4_{ordinal}_version"))
+        table.append_constraint(UniqueConstraint("id", "proposal_id", "directive_id", name=f"uq_ar4_{ordinal}_identity"))
+        if ordinal:
+            table.append_constraint(UniqueConstraint("id", "case_id", name=f"uq_ar4_{ordinal}_case_identity"))
+            table.append_constraint(ForeignKeyConstraint(["case_id", "proposal_id", "directive_id"], ["ad_v4_review_cases.id", "ad_v4_review_cases.proposal_id", "ad_v4_review_cases.directive_id"], name=f"fk_ar4_{ordinal}_case", ondelete="RESTRICT", deferrable=True, initially="DEFERRED"))
+        for column in table.c:
+            if column.name.endswith("_hash"):
+                table.append_constraint(CheckConstraint(f"length({column.name})=64", name=f"ck_ar4_{ordinal}_{column.name}"))
+            elif column.name.endswith("_bytes"):
+                table.append_constraint(CheckConstraint(f"length({column.name}) BETWEEN 2 AND 1048576", name=f"ck_ar4_{ordinal}_{column.name}"))
+    tables[0].append_constraint(UniqueConstraint("proposal_id", "case_sequence", name="uq_ar4_case_sequence"))
+    tables[0].append_constraint(CheckConstraint(f"case_sequence BETWEEN 0 AND {MAX_CASES_PER_PROPOSAL - 1}", name="ck_ar4_case_capacity"))
+    Index("ix_ar4_case_queue", tables[0].c.created_at, tables[0].c.id)
+    Index("ix_ar4_case_directive", tables[0].c.directive_id, tables[0].c.created_at, tables[0].c.id)
+    tables[0].append_constraint(CheckConstraint("(case_sequence=0 AND predecessor_case_id IS NULL) OR (case_sequence>0 AND predecessor_case_id IS NOT NULL)", name="ck_ar4_case_predecessor"))
+    tables[0].append_constraint(ForeignKeyConstraint(["predecessor_case_id", "proposal_id", "directive_id"], ["ad_v4_review_cases.id", "ad_v4_review_cases.proposal_id", "ad_v4_review_cases.directive_id"], name="fk_ar4_case_predecessor", ondelete="RESTRICT", deferrable=True, initially="DEFERRED"))
+    tables[1].append_constraint(UniqueConstraint("case_id", "revision_number", name="uq_ar4_draft_revision"))
+    tables[1].append_constraint(CheckConstraint(f"revision_number BETWEEN 0 AND {MAX_DRAFT_REVISIONS_PER_CASE - 1}", name="ck_ar4_draft_capacity"))
+    tables[1].append_constraint(CheckConstraint("(revision_number=0 AND predecessor_draft_id IS NULL) OR (revision_number>0 AND predecessor_draft_id IS NOT NULL)", name="ck_ar4_draft_predecessor"))
+    tables[1].append_constraint(CheckConstraint("intended_action IN ('undecided','reject')", name="ck_ar4_draft_intent"))
+    for ordinal in (2, 3, 4):
+        tables[ordinal].append_constraint(UniqueConstraint("case_id", name=f"uq_ar4_{ordinal}_one_per_case"))
+    tables[2].append_constraint(CheckConstraint("authorship_source_count>=0", name="ck_ar4_request_authorship_count"))
+    tables[3].append_constraint(UniqueConstraint("request_id", name="uq_ar4_rejection_request"))
+    tables[4].append_constraint(UniqueConstraint("rejection_id", name="uq_ar4_signoff_rejection"))
+    tables[4].append_constraint(CheckConstraint("action='reject'", name="ck_ar4_signoff_action"))
+    refs = ((1, "predecessor_draft_id", 1), (2, "draft_revision_id", 1), (3, "request_id", 2), (4, "request_id", 2), (4, "rejection_id", 3), (5, "draft_revision_id", 1), (5, "review_request_id", 2), (5, "rejection_id", 3), (5, "signoff_id", 4))
+    for ordinal, column, target in refs:
+        tables[ordinal].append_constraint(ForeignKeyConstraint([column, "case_id"], [f"{tables[target].name}.id", f"{tables[target].name}.case_id"], name=f"fk_ar4_{ordinal}_{column}", ondelete="RESTRICT", deferrable=True, initially="DEFERRED"))
+    events = tables[5]
+    events.append_constraint(UniqueConstraint("case_id", "sequence_number", name="uq_ar4_event_sequence"))
+    events.append_constraint(CheckConstraint(f"sequence_number BETWEEN 0 AND {MAX_EVENTS_PER_CASE - 1}", name="ck_ar4_event_capacity"))
+    events.append_constraint(UniqueConstraint("case_id", "event_hash", name="uq_ar4_event_hash"))
+    events.append_constraint(UniqueConstraint("case_id", "predecessor_event_hash", name="uq_ar4_event_predecessor"))
+    events.append_constraint(UniqueConstraint("actor_user_id", "authorizing_membership_id", "endpoint_action", "auth_policy_version", "idempotency_key", name="uq_ar4_event_idempotency"))
+    events.append_constraint(CheckConstraint("(sequence_number=0 AND predecessor_event_hash IS NULL AND event_type='case_created') OR (sequence_number>0 AND predecessor_event_hash IS NOT NULL AND event_type<>'case_created')", name="ck_ar4_event_predecessor"))
+    events.append_constraint(CheckConstraint("(event_type='case_created' AND resulting_state='draft' AND draft_revision_id IS NULL AND review_request_id IS NULL AND rejection_id IS NULL AND signoff_id IS NULL) OR (event_type='draft_saved' AND resulting_state='draft' AND draft_revision_id IS NOT NULL AND review_request_id IS NULL AND rejection_id IS NULL AND signoff_id IS NULL) OR (event_type='review_requested' AND resulting_state='pending_review' AND draft_revision_id IS NULL AND review_request_id IS NOT NULL AND rejection_id IS NULL AND signoff_id IS NULL) OR (event_type='review_rejected' AND resulting_state='rejected' AND draft_revision_id IS NULL AND review_request_id IS NOT NULL AND rejection_id IS NOT NULL AND signoff_id IS NOT NULL)", name="ck_ar4_event_union"))
+    Index("uq_ar4_terminal", events.c.case_id, unique=True, postgresql_where=text("event_type='review_rejected'"), sqlite_where=text("event_type='review_rejected'"))
+
+
+_install_ad_v4_review_model_constraints()

@@ -1,0 +1,323 @@
+{
+  "taskId": "T081-V4-SCHEMA-SLICE-4",
+  "stage": "closure",
+  "generatedAt": "2026-09-14T12:38:22+00:00",
+  "baseRef": "4840a0b4bc5d7334ddcf51a80e39c8fa84b7b0c2",
+  "head": "4840a0b4bc5d7334ddcf51a80e39c8fa84b7b0c2",
+  "scopePaths": [],
+  "scopeFingerprint": "1085a6cdf0249c9ff8b398a100de0ad21df7d013a4b595b9514292b8910475d6",
+  "files": [
+    {
+      "path": ".ai/MODEL_ROUTING.md",
+      "status": "??",
+      "size": 8400,
+      "sha256": "8019680d63b13cf53206a1c75569954abb3793de8051b032237933a98567bd36",
+      "readStatus": "readable"
+    },
+    {
+      "path": "AGENTS.md",
+      "status": " M",
+      "size": 2214,
+      "sha256": "2295cae2d1394c07fe3573d4d790985eb1b85c9a6514a94d851d55337f3fc0cb",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/ads.py",
+      "status": " M",
+      "size": 94318,
+      "sha256": "34b23d0a891d081f014e58dba7b4a35f4c2a82b9b08f83b36327f5dca2e9c5fb",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/contracts/ad_v4_slice4_rollout.md",
+      "status": "??",
+      "size": 2003,
+      "sha256": "843192a2019d51dfa56eede6201ee4654c9ada4cd283095b024ee0d2ab32d4ed",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "status": " M",
+      "size": 8652,
+      "sha256": "e384665dcdad19d937cb6774247ed8f398ad13c568dd47872afc3d1f68b681fb",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/sql/20260913_0029_review_case_integrity.sql",
+      "status": "??",
+      "size": 44538,
+      "sha256": "92cc8cb8c73356f8194fe2e995c1ca7ba9892d88d07e17f4cea67cc34d39cf7e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260913_0029_add_ad_v4_review_cases.py",
+      "status": "??",
+      "size": 15388,
+      "sha256": "325277f7ffb8c9e100028c6f32e39263b0a336591b88634f641ed24737041a8f",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": " M",
+      "size": 226329,
+      "sha256": "be50bfb1009cd24b1787cf2ceeff1377e92a82c2825aaa74023dec74852ae7ac",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/ads.py",
+      "status": " M",
+      "size": 18647,
+      "sha256": "99f65097345b362be1d73a7adc950d834ef30678c67c23378cc3ba61151f86a0",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_extraction.py",
+      "status": " M",
+      "size": 92258,
+      "sha256": "d0d3b4a345e59fcfe4b5cfb95b47739cd48f44d2333b43d5ca5cb1c8c29ea6db",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_applicability.py",
+      "status": " M",
+      "size": 187308,
+      "sha256": "8489dd259dad93f3c4eb0981c09e449333929f5388705e550b1323a8b25686ce",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_candidates.py",
+      "status": " M",
+      "size": 72614,
+      "sha256": "1956a092ff4be35cc2941654982b8aa6067ca43e888aff09c80190171f0414d9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_obligation_persistence.py",
+      "status": " M",
+      "size": 49705,
+      "sha256": "4106b5e430ef3a0af774e4fbddabba567454f7e1c9087b0d4f23092072736fe7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/ad_v4_reviews.py",
+      "status": "??",
+      "size": 107024,
+      "sha256": "c9811b48f063f943bedd4d06c34b19e0b9fb2d37888dffdbf154705bc3188a91",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/storage.py",
+      "status": " M",
+      "size": 8518,
+      "sha256": "326487b15a30d75904108c3ebcc6a5c4deb3e3b9211017fd680bfae461bbc37b",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_api.py",
+      "status": " M",
+      "size": 16055,
+      "sha256": "092ca3334be1fb614fdda9cbc686c5362e48566756a7f9161190607f2cda2494",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_obligation_persistence_postgres.py",
+      "status": " M",
+      "size": 78348,
+      "sha256": "c2ff98cce618d24f46458f6e1a2858e6d2ce8057e26832d3db96bcfe2f445015",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_postgres.py",
+      "status": " M",
+      "size": 43597,
+      "sha256": "797240fbfb0801c7343b14426c815f03a35a1bb95fed9318bbc0b7cbbd342bfc",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_review_case_migration_postgres.py",
+      "status": "??",
+      "size": 43781,
+      "sha256": "3070e1862b9ea42fb0f82ddd2dea6995ed2f4a067532d63d8ce17753fe2ef7bd",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_review_lock_order_postgres.py",
+      "status": "??",
+      "size": 10128,
+      "sha256": "cb4ffe0efbaf0c2510bbfe9018aa1f8f87698e1d1efb872a8c34cf10a3886da9",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_review_rollout_postgres.py",
+      "status": "??",
+      "size": 5409,
+      "sha256": "7545c7dfbdb8b3203538a85a0952d371484ea608243f7ad7966c5147b11ed1ba",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_review_service_bounds.py",
+      "status": "??",
+      "size": 48914,
+      "sha256": "24abe2c6fdfa7770af063619b021a5bbd4295113a52aef05a3b7f57cb731072c",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_review_service_postgres.py",
+      "status": "??",
+      "size": 17001,
+      "sha256": "c750ea96ee211756e64c2f33302a67ec5f80af7e2a59833457a1fa9e44571d1a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_reviews.py",
+      "status": "??",
+      "size": 9179,
+      "sha256": "40869d3de9dbd0ab830f18f9d75d01e464840369206498b688e15dba1eecb67e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_storage.py",
+      "status": " M",
+      "size": 6468,
+      "sha256": "6788e6c45a5c89da5a3297092c71dab18ecd29d5f053b4ce53e8c4a2efd4e33a",
+      "readStatus": "readable"
+    }
+  ],
+  "reviewInputs": [
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/decision.md",
+      "status": "review_input",
+      "size": 39002,
+      "sha256": "2c5a020540be5a996f0eb52edc6ea7f5cc1d8b359897d077cc9d297813de7971",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/findings.json",
+      "status": "review_input",
+      "size": 30763,
+      "sha256": "7ac4836cd873629202bf52eddb3cef8bc2c0865db806f341aef2e1787acf77f5",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/closure.md",
+      "status": "review_input",
+      "size": 8444,
+      "sha256": "14b8e50fe63d9802f58eb7e164673f69f4e26b673c1829a355ebb764ade281fe",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/normative-gate-and-form-matrix.md",
+      "status": "review_input",
+      "size": 32650,
+      "sha256": "1d38a293ab03dfc0664e1a01a43f563c10f404d18355e6c4859709dd5b23c3be",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/implementation-verification.md",
+      "status": "review_input",
+      "size": 5601,
+      "sha256": "33645eb503bef33198bfe86c1069df16bf7df8d19e36a93fdc9549d3368fce0b",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/model-routing-policy-integration.md",
+      "status": "review_input",
+      "size": 4915,
+      "sha256": "e9426dc98a0902191dc0b1df202efd060c7c47d49d706b592e8c2829b70a51e6",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/model-routing-policy-metadata-supplement.md",
+      "status": "review_input",
+      "size": 1118,
+      "sha256": "87d3146756ae2c7db3d4e5a93780b8ae02d78afaa5504739559c4afe8cc2ce75",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-closure-final.md",
+      "status": "review_input",
+      "size": 3182,
+      "sha256": "e575abc57f92f7f553b465f552d2f9e09338fbe1ef734e14e306cb4bfa005199",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-design-initial.md",
+      "status": "review_input",
+      "size": 7751,
+      "sha256": "15f53fdea19ca5b52c8af9b648ef29afcd65ce28df9e95230a4c1bd14dbdf096",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-design-closure-1.md",
+      "status": "review_input",
+      "size": 1379,
+      "sha256": "b1b3d7ed54f2bcbe208fb28a9b3832f804937600723c796238a2426c72fd886b",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-design-closure-2.md",
+      "status": "review_input",
+      "size": 1022,
+      "sha256": "1144533313869e4644e5aa2226f7b092d931b7c93beb7d536dc67dff1bae9125",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-design-final.md",
+      "status": "review_input",
+      "size": 1278,
+      "sha256": "69803af2288fdc51c7936137aafb028d3a04a4665a58aeb52bb6dc7bc3b7eb53",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-implementation-initial.md",
+      "status": "review_input",
+      "size": 1868,
+      "sha256": "864950e0ed8b64d85f17acf177147ef016ab7061b9efbb67ec59fad46139f535",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-implementation-closure-1.md",
+      "status": "review_input",
+      "size": 2894,
+      "sha256": "c62a02782b3c078258a71d6f9cbbc03f95c63a05e6de843bbaebd16b690e9092",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-implementation-closure-2.md",
+      "status": "review_input",
+      "size": 3921,
+      "sha256": "87bd237f19dfeeb01b7176324c81b38d13b5d6e2782707d11e6e3daeb5b06b5a",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-implementation-closure-3.md",
+      "status": "review_input",
+      "size": 2618,
+      "sha256": "9ce64726a703480bb22b7758cc7fd3d8f900d0aeb31794b855fc4f646eee7771",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-implementation-closure-4.md",
+      "status": "review_input",
+      "size": 1737,
+      "sha256": "12bcf21165e0f9179d10278041c25c0bb636138fe180b27875292ca4b598f6bd",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-implementation-closure-5.md",
+      "status": "review_input",
+      "size": 3746,
+      "sha256": "093f85e5a5c7df8add7b194dbe5c15381f9b6cb580c7f9269f6f332461b4730e",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4/adversarial-closure-model-routing-fail-1.md",
+      "status": "review_input",
+      "size": 1942,
+      "sha256": "09bbf97073fd78bce3d9bc86193ff288c330a9ea56f37fdfb083b95766686e11",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [],
+  "outOfScopeReason": null
+}

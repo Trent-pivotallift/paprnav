@@ -1658,7 +1658,7 @@ def test_downgrade_root_first_lock_order_refuses_without_deadlock():
         with engine.connect() as connection:
             assert connection.scalar(text(
                 "SELECT version_num FROM alembic_version"
-            )) == "20260911_0028"
+            )) == "20260913_0029"
     finally:
         if process is not None and process.poll() is None:
             process.terminate()

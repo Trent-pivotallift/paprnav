@@ -61,6 +61,13 @@ from app.schemas.ads import (
     ADV4ObligationProjectionListResponse,
     ADV4ObligationProjectionResponse,
     ADV4ObligationReconstructionResponse,
+    ADV4ReviewCaseCreateRequest,
+    ADV4ReviewCaseListResponse,
+    ADV4ReviewCaseResponse,
+    ADV4ReviewDraftCreateRequest,
+    ADV4ReviewRejectRequest,
+    ADV4ReviewRequestCreateRequest,
+    ADV4ReviewProposalObservationResponse,
     ADV4SubmissionAuditResponse,
     ADV4SubmissionRelationshipAuditResponse,
     ADProposalProvenanceResponse,
@@ -142,6 +149,15 @@ from app.services.ad_v4_obligation_persistence import (
     verified_obligation_projection,
 )
 from app.services.ad_v4_obligations import ObligationIntegrityError
+from app.services.ad_v4_reviews import (
+    create_review_case,
+    list_review_cases,
+    reject_review_case,
+    review_proposal_observation,
+    request_review,
+    save_review_draft,
+    verified_review_case,
+)
 from app.services.ad_recurrence import due_state_payload
 from app.services.installed_components import component_display_name
 from app.services.observability import record_product_event, record_workflow_status
@@ -212,6 +228,25 @@ def v4_http_error(exc: ADV4Error) -> HTTPException:
     )
 
 
+def _candidate_database_error(exc: DBAPIError) -> ADV4Error | None:
+    sqlstate = getattr(exc.orig, "sqlstate", None)
+    if sqlstate == "P0001" or (
+        isinstance(sqlstate, str) and sqlstate.startswith("23")
+    ):
+        return ADV4Error(
+            "candidate_integrity", "",
+            "PostgreSQL rejected the candidate transaction",
+            http_status=409,
+        )
+    if sqlstate in {"40P01", "40001", "57014", "55P03"}:
+        return ADV4Error(
+            "transaction_conflict", "",
+            "Candidate transaction must be retried",
+            http_status=409,
+        )
+    return None
+
+
 def _obligation_database_error(exc: DBAPIError) -> ADV4Error | None:
     sqlstate = getattr(exc.orig, "sqlstate", None)
     if sqlstate == "P0001" or (
@@ -226,6 +261,25 @@ def _obligation_database_error(exc: DBAPIError) -> ADV4Error | None:
         return ADV4Error(
             "transaction_conflict", "",
             "Obligation projection transaction must be retried",
+            http_status=409,
+        )
+    return None
+
+
+def _review_database_error(exc: DBAPIError) -> ADV4Error | None:
+    sqlstate = getattr(exc.orig, "sqlstate", None)
+    if sqlstate == "P0001" or (
+        isinstance(sqlstate, str) and sqlstate.startswith("23")
+    ):
+        return ADV4Error(
+            "review_integrity", "",
+            "PostgreSQL rejected the V4 review transaction",
+            http_status=409,
+        )
+    if sqlstate in {"40P01", "40001", "57014", "55P03"}:
+        return ADV4Error(
+            "transaction_conflict", "",
+            "V4 review transaction must be retried",
             http_status=409,
         )
     return None
@@ -363,6 +417,12 @@ async def create_v4_candidate_proposal(
     except ADV4Error as exc:
         db.rollback()
         raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        db.rollback()
+        translated = _candidate_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
     if stored.idempotent_retry or stored.content_reused:
         response.status_code = status.HTTP_200_OK
     return serialize_v4_candidate(
@@ -830,6 +890,310 @@ def list_v4_obligation_projections(
         raise v4_http_error(exc) from exc
     except DBAPIError as exc:
         translated = _obligation_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.get(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/review-observation",
+    response_model=ADV4ReviewProposalObservationResponse,
+    response_model_exclude_none=True,
+)
+def get_v4_review_proposal_observation(
+    directive_id: str,
+    proposal_id: str,
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ReviewProposalObservationResponse:
+    try:
+        with repeatable_read_only_session(db.get_bind()) as read_db:
+            result = review_proposal_observation(
+                read_db,
+                directive_id=directive_id,
+                proposal_id=proposal_id,
+                actor=current_user,
+                membership_id=acting_membership_id,
+            )
+            return ADV4ReviewProposalObservationResponse(**result)
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        translated = _review_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.post(
+    "/directives/{directive_id}/v4/candidate-proposals/{proposal_id}/review-cases",
+    response_model=ADV4ReviewCaseResponse,
+    response_model_exclude_none=True,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_v4_review_case(
+    directive_id: str,
+    proposal_id: str,
+    request: ADV4ReviewCaseCreateRequest,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", min_length=1, max_length=255,
+    ),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ReviewCaseResponse:
+    try:
+        result = create_review_case(
+            db,
+            directive_id=directive_id,
+            proposal_id=proposal_id,
+            actor=current_user,
+            membership_id=acting_membership_id,
+            idempotency_key=idempotency_key,
+            expected_authorization_observation_hash=(
+                request.expectedAuthorizationObservationHash
+            ),
+            expected_input_identity_hash=request.expectedInputIdentityHash,
+        )
+        db.commit()
+        if result.get("idempotentRetry"):
+            response.status_code = status.HTTP_200_OK
+        return ADV4ReviewCaseResponse(**result)
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        db.rollback()
+        translated = _review_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.post(
+    "/v4/review-cases/{case_id}/drafts",
+    response_model=ADV4ReviewCaseResponse,
+    response_model_exclude_none=True,
+    status_code=status.HTTP_201_CREATED,
+)
+def save_v4_review_draft(
+    case_id: str,
+    request: ADV4ReviewDraftCreateRequest,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", min_length=1, max_length=255,
+    ),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ReviewCaseResponse:
+    try:
+        result = save_review_draft(
+            db,
+            case_id=case_id,
+            actor=current_user,
+            membership_id=acting_membership_id,
+            idempotency_key=idempotency_key,
+            expected_authorization_observation_hash=(
+                request.expectedAuthorizationObservationHash
+            ),
+            expected_input_identity_hash=request.expectedInputIdentityHash,
+            expected_predecessor_event_hash=request.expectedPredecessorEventHash,
+            annotations=[item.model_dump() for item in request.annotations],
+            intended_action=request.intendedAction,
+        )
+        db.commit()
+        if result.get("idempotentRetry"):
+            response.status_code = status.HTTP_200_OK
+        return ADV4ReviewCaseResponse(**result)
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        db.rollback()
+        translated = _review_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.post(
+    "/v4/review-cases/{case_id}/review-request",
+    response_model=ADV4ReviewCaseResponse,
+    response_model_exclude_none=True,
+    status_code=status.HTTP_201_CREATED,
+)
+def request_v4_review(
+    case_id: str,
+    request: ADV4ReviewRequestCreateRequest,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", min_length=1, max_length=255,
+    ),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ReviewCaseResponse:
+    try:
+        result = request_review(
+            db,
+            case_id=case_id,
+            actor=current_user,
+            membership_id=acting_membership_id,
+            idempotency_key=idempotency_key,
+            expected_authorization_observation_hash=(
+                request.expectedAuthorizationObservationHash
+            ),
+            expected_input_identity_hash=request.expectedInputIdentityHash,
+            expected_predecessor_event_hash=request.expectedPredecessorEventHash,
+            draft_revision_id=request.draftRevisionId,
+        )
+        db.commit()
+        if result.get("idempotentRetry"):
+            response.status_code = status.HTTP_200_OK
+        return ADV4ReviewCaseResponse(**result)
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        db.rollback()
+        translated = _review_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.post(
+    "/v4/review-cases/{case_id}/rejection",
+    response_model=ADV4ReviewCaseResponse,
+    response_model_exclude_none=True,
+    status_code=status.HTTP_201_CREATED,
+)
+def reject_v4_review(
+    case_id: str,
+    request: ADV4ReviewRejectRequest,
+    response: Response,
+    idempotency_key: str = Header(
+        alias="Idempotency-Key", min_length=1, max_length=255,
+    ),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ReviewCaseResponse:
+    try:
+        result = reject_review_case(
+            db,
+            case_id=case_id,
+            actor=current_user,
+            membership_id=acting_membership_id,
+            idempotency_key=idempotency_key,
+            expected_authorization_observation_hash=(
+                request.expectedAuthorizationObservationHash
+            ),
+            expected_input_identity_hash=request.expectedInputIdentityHash,
+            expected_predecessor_event_hash=request.expectedPredecessorEventHash,
+            expected_request_id=request.expectedRequestId,
+            reason_codes=request.reasonCodes,
+            explanation=request.explanation,
+        )
+        db.commit()
+        if result.get("idempotentRetry"):
+            response.status_code = status.HTTP_200_OK
+        return ADV4ReviewCaseResponse(**result)
+    except ADV4Error as exc:
+        db.rollback()
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        db.rollback()
+        translated = _review_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.get(
+    "/v4/review-cases/{case_id}",
+    response_model=ADV4ReviewCaseResponse,
+    response_model_exclude_none=True,
+)
+def get_v4_review_case(
+    case_id: str,
+    draft_limit: int = Query(default=100, ge=1, le=100, alias="draftLimit"),
+    draft_offset: int = Query(default=0, ge=0, le=10000, alias="draftOffset"),
+    event_limit: int = Query(default=100, ge=1, le=100, alias="eventLimit"),
+    event_offset: int = Query(default=0, ge=0, le=10000, alias="eventOffset"),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ReviewCaseResponse:
+    try:
+        with repeatable_read_only_session(db.get_bind()) as read_db:
+            result = verified_review_case(
+                read_db,
+                case_id=case_id,
+                actor=current_user,
+                membership_id=acting_membership_id,
+                draft_limit=draft_limit,
+                draft_offset=draft_offset,
+                event_limit=event_limit,
+                event_offset=event_offset,
+            )
+            return ADV4ReviewCaseResponse(**result)
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        translated = _review_database_error(exc)
+        if translated is None:
+            raise
+        raise v4_http_error(translated) from exc
+
+
+@router.get(
+    "/v4/review-cases",
+    response_model=ADV4ReviewCaseListResponse,
+    response_model_exclude_none=True,
+)
+def list_v4_review_cases(
+    directive_id: str | None = Query(default=None, alias="directiveId"),
+    proposal_id: str | None = Query(default=None, alias="proposalId"),
+    limit: int = Query(default=25, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    acting_membership_id: str = Header(
+        alias="Paprnav-Acting-Membership-Id", min_length=1, max_length=36,
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ADV4ReviewCaseListResponse:
+    try:
+        with repeatable_read_only_session(db.get_bind()) as read_db:
+            result = list_review_cases(
+                read_db,
+                actor=current_user,
+                membership_id=acting_membership_id,
+                directive_id=directive_id,
+                proposal_id=proposal_id,
+                limit=limit,
+                offset=offset,
+            )
+            return ADV4ReviewCaseListResponse(**result)
+    except ADV4Error as exc:
+        raise v4_http_error(exc) from exc
+    except DBAPIError as exc:
+        translated = _review_database_error(exc)
         if translated is None:
             raise
         raise v4_http_error(translated) from exc

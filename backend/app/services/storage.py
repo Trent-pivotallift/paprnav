@@ -166,12 +166,34 @@ def read_stored_file_bytes(
     settings: Settings,
     storage_backend: str,
     storage_key: str,
+    max_size_bytes: int | None = None,
 ) -> bytes:
+    if max_size_bytes is not None and (
+        type(max_size_bytes) is not int or max_size_bytes < 0
+    ):
+        raise ValueError("Stored-file read byte limit must be a nonnegative integer")
     if storage_backend == "s3":
         if not settings.s3_upload_bucket:
             raise ValueError("PAPRNAV_S3_UPLOAD_BUCKET is required when PAPRNAV_STORAGE_BACKEND=s3")
         response = get_s3_client(settings.aws_region).get_object(Bucket=settings.s3_upload_bucket, Key=storage_key)
-        return response["Body"].read()
+        body = response["Body"]
+        content_length = response.get("ContentLength")
+        if (
+            max_size_bytes is not None
+            and isinstance(content_length, int)
+            and content_length > max_size_bytes
+        ):
+            close = getattr(body, "close", None)
+            if callable(close):
+                close()
+            raise ValueError("Stored file exceeds read byte limit")
+        payload = body.read() if max_size_bytes is None else body.read(max_size_bytes + 1)
+        if max_size_bytes is not None and len(payload) > max_size_bytes:
+            close = getattr(body, "close", None)
+            if callable(close):
+                close()
+            raise ValueError("Stored file exceeds read byte limit")
+        return payload
 
     if storage_backend != "local":
         raise ValueError(f"Unknown upload storage backend: {storage_backend}")
@@ -180,7 +202,15 @@ def read_stored_file_bytes(
     path = (root / storage_key).resolve()
     if root not in path.parents and path != root:
         raise ValueError("Invalid storage key")
-    return path.read_bytes()
+    if max_size_bytes is not None and path.stat().st_size > max_size_bytes:
+        raise ValueError("Stored file exceeds read byte limit")
+    if max_size_bytes is None:
+        return path.read_bytes()
+    with path.open("rb") as source:
+        payload = source.read(max_size_bytes + 1)
+    if len(payload) > max_size_bytes:
+        raise ValueError("Stored file exceeds read byte limit")
+    return payload
 
 
 def store_upload_file(

@@ -817,7 +817,7 @@ def test_99_occupied_v4_downgrade_refuses_without_deleting_audit_rows():
     assert POSTGRES_URL
     engine = create_engine(POSTGRES_URL, pool_pre_ping=True)
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260911_0028"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260913_0029"
         assert connection.scalar(text("SELECT count(*) FROM ad_v4_candidate_proposals")) >= 2
     engine.dispose()
 

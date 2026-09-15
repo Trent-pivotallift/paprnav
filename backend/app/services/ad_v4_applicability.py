@@ -3018,6 +3018,7 @@ def materialize_applicability(
     membership = _authorization(db, actor, membership_id)
     scope = f"{actor.id}:{membership.id}:{ENDPOINT_ACTION}:{POLICY_VERSION}:{idempotency_key}"
     _advisory_lock(db, f"idem:{scope}")
+    _advisory_lock(db, f"candidate-relationship-graph:{directive_id}")
     candidate = db.scalar(select(ADV4CandidateProposal).where(ADV4CandidateProposal.id == proposal_id).with_for_update())
     if candidate is None or candidate.directive_id != directive_id:
         raise ADV4Error("not_found", "", "Candidate proposal not found", http_status=404)

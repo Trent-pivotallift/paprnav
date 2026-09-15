@@ -85,6 +85,9 @@ class Settings:
     ad_v4_validator2_writes_enabled: bool = False
     ad_v4_slice3a_routes_enabled: bool = False
     ad_v4_slice3b_routes_enabled: bool = False
+    ad_v4_slice4_reads_enabled: bool = False
+    ad_v4_slice4_drafts_enabled: bool = False
+    ad_v4_slice4_decisions_enabled: bool = False
 
 
 def parse_bool(value: Optional[str], default: bool = False) -> bool:
@@ -187,5 +190,14 @@ def get_settings() -> Settings:
         ),
         ad_v4_slice3b_routes_enabled=parse_bool(
             os.getenv("PAPRNAV_AD_V4_SLICE3B_ROUTES_ENABLED")
+        ),
+        ad_v4_slice4_reads_enabled=parse_bool(
+            os.getenv("PAPRNAV_AD_V4_SLICE4_READS_ENABLED")
+        ),
+        ad_v4_slice4_drafts_enabled=parse_bool(
+            os.getenv("PAPRNAV_AD_V4_SLICE4_DRAFTS_ENABLED")
+        ),
+        ad_v4_slice4_decisions_enabled=parse_bool(
+            os.getenv("PAPRNAV_AD_V4_SLICE4_DECISIONS_ENABLED")
         ),
     )

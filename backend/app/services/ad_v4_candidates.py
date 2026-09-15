@@ -1008,8 +1008,6 @@ def _validate_candidate_relationship_graph(
 ) -> dict[str, ADV4CandidateProposal]:
     """Serialize and reject candidate correction/replacement graph cycles."""
 
-    if not relationships:
-        return {}
     _advisory_lock(db, f"candidate-relationship-graph:{directive_id}")
     rows = db.execute(
         select(
@@ -1108,12 +1106,17 @@ def store_v4_candidate(
         if prior.directive_id != directive_id or prior.request_hash != request_hash:
             raise ADV4Error("idempotency_conflict", "", "Idempotency key was used for different canonical content", http_status=409)
         return StoredV4Candidate(db.get(ADV4CandidateProposal, prior.proposal_id), prior, True, True)  # type: ignore[arg-type]
+    # Serialize both new content and resubmissions before locking evidence.
+    # Review and materialization writers acquire the relationship lock before
+    # proposal/binding/fragment locks; taking fragments first creates a cycle
+    # with an administrator freezing or rejecting a review of this candidate.
+    _advisory_lock(db, f"content:{directive_id}:{validator_version}:{canonicalization_version}:{proposal_hash}")
+    _advisory_lock(db, f"candidate-relationship-graph:{directive_id}")
     snapshots = _binding_snapshot(db, directive_id, proposal_value)
     binding_envelope = {"version": envelopes["binding"], "bindings": snapshots}
     if validator_version == VALIDATOR_VERSION_V2:
         binding_envelope.update({"validatorVersion": validator_version, "canonicalizationVersion": canonicalization_version})
     binding_hash = _domain_hash("bindings", binding_envelope, canonicalization_version)
-    _advisory_lock(db, f"content:{directive_id}:{validator_version}:{canonicalization_version}:{proposal_hash}")
     candidate = db.scalar(select(ADV4CandidateProposal).where(
         ADV4CandidateProposal.directive_id == directive_id,
         ADV4CandidateProposal.validator_version == validator_version,

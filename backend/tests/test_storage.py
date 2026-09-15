@@ -1,10 +1,17 @@
 from io import BytesIO
+from types import SimpleNamespace
 from urllib.parse import parse_qs
 
 import pytest
 
 from app.core.config import Settings
-from app.services.storage import s3_upload_key, store_s3_file, store_upload_file
+from app.services import storage
+from app.services.storage import (
+    read_stored_file_bytes,
+    s3_upload_key,
+    store_s3_file,
+    store_upload_file,
+)
 
 
 class FakeS3Client:
@@ -124,3 +131,66 @@ def test_store_upload_file_requires_bucket_for_s3_backend() -> None:
             max_size_bytes=1024,
             cost_allocation_tags={"Project": "paprnav"},
         )
+
+
+def test_bounded_local_read_accepts_exact_limit_and_refuses_oversize(
+    tmp_path,
+) -> None:
+    source = tmp_path / "retained.pdf"
+    source.write_bytes(b"12345")
+    settings = SimpleNamespace(local_storage_path=str(tmp_path))
+
+    assert read_stored_file_bytes(
+        settings=settings,
+        storage_backend="local",
+        storage_key="retained.pdf",
+        max_size_bytes=5,
+    ) == b"12345"
+    with pytest.raises(ValueError, match="exceeds read byte limit"):
+        read_stored_file_bytes(
+            settings=settings,
+            storage_backend="local",
+            storage_key="retained.pdf",
+            max_size_bytes=4,
+        )
+
+
+@pytest.mark.parametrize("declared_length", [5, 1])
+def test_bounded_s3_read_checks_metadata_and_stream_sentinel(
+    monkeypatch, declared_length: int,
+) -> None:
+    class Body:
+        def __init__(self) -> None:
+            self.read_sizes: list[int] = []
+            self.closed = False
+
+        def read(self, size: int) -> bytes:
+            self.read_sizes.append(size)
+            return b"12345"[:size]
+
+        def close(self) -> None:
+            self.closed = True
+
+    body = Body()
+    client = SimpleNamespace(get_object=lambda **_: {
+        "Body": body,
+        "ContentLength": declared_length,
+    })
+    monkeypatch.setattr(storage, "get_s3_client", lambda _region: client)
+    settings = SimpleNamespace(
+        s3_upload_bucket="retained",
+        aws_region="us-east-1",
+    )
+
+    with pytest.raises(ValueError, match="exceeds read byte limit"):
+        read_stored_file_bytes(
+            settings=settings,
+            storage_backend="s3",
+            storage_key="retained.pdf",
+            max_size_bytes=4,
+        )
+    if declared_length > 4:
+        assert body.read_sizes == []
+    else:
+        assert body.read_sizes == [5]
+    assert body.closed is True

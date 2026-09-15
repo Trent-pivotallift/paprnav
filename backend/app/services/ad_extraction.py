@@ -1657,13 +1657,19 @@ def extract_full_text_pages(directive: AirworthinessDirective) -> list[dict[str,
     return pages
 
 
-def verified_retained_document_bytes(document: Any, *, settings: Any | None = None) -> bytes:
+def verified_retained_document_bytes(
+    document: Any,
+    *,
+    settings: Any | None = None,
+    max_size_bytes: int | None = None,
+) -> bytes:
     """Read once and return only the exact retained bytes whose identity verifies."""
 
     payload = read_stored_file_bytes(
         settings=settings or get_settings(),
         storage_backend=document.storage_backend,
         storage_key=document.storage_key,
+        max_size_bytes=max_size_bytes,
     )
     if (
         hashlib.sha256(payload).hexdigest() != document.content_hash

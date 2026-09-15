@@ -1,5 +1,14 @@
 # Paprnav agent workflow
 
+## Mandatory model routing
+
+Route every meaningful phase by risk, complexity, and review history according
+to [`.ai/MODEL_ROUTING.md`](.ai/MODEL_ROUTING.md). At phase start and whenever
+role, model, or effort changes, emit the required model-routing notice. Preserve
+builder/reviewer separation, record known assignments in review artifacts, and
+apply the documented escalation and fallback rules without silently claiming
+an unavailable model.
+
 Use the adversarial review process for changes involving regulatory or safety
 semantics, schemas or migrations, authorization, audit evidence, destructive
 data operations, provider/billing decisions, infrastructure/IAM, or public API
