@@ -1,5 +1,5 @@
 {
-  "version": "paprnav-pilot-policy-matrix-v5",
+  "version": "paprnav-pilot-policy-matrix-v7",
   "executableAuthority": {
     "module": "scripts/pilot_iam_authority.py",
     "provider": "hashicorp/aws@5.100.0",
@@ -12,11 +12,11 @@
     "terraformSourceSha256": {
       "database.tf": "47370debfe1e71b803ddc821afe70819e44c3d2fd572e2b4f69ca54b6aaa6dcd",
       "ecs_runtime.tf": "a26e117cec908e595a459332133247c019e4bf4e8e44d0f2177a0f4ad9590650",
-      "load_balancer.tf": "8ee9a4afc3f5c9330ce77283cb00a89e787ee1cab1c0f85d9a9536344d37a48f",
-      "main.tf": "cfb8cfe8890dafc421d462731bce87405baa3b0ae1c847ab70380c99b5b6f4ea",
+      "load_balancer.tf": "337f2d6baf6ae86590715c82a2bdf67c1bb5313a225a85aac5222e5ce159bafe",
+      "main.tf": "54334f4b833288b88338d6f4be4d1ee2ee16f95e4919dc7ebdd5b962acd9f289",
       "network.tf": "4ef5f37229962dc3b90da425193a74491a7c23afef7c159f038e9ae075f6aa0f",
-      "outputs.tf": "6dd533bde5befa1f9540f537fffcc5f4ec3ee4ce979fb365c9c8a681a91a42d8",
-      "variables.tf": "8ab402c401f0d394e0ae715654477c4ef2d914cdcb8614a2af4cc24a6442012f",
+      "outputs.tf": "92036a25d5cce6dd7b678568ee8d39d637bc8d8e3840c65f40594391483d3c63",
+      "variables.tf": "50fd901cf29394780e17232795feaad79d559ee93eacef773a6039edb74d00d3",
       "versions.tf": "eb83c7bbbee497ea0f928408b58d12fe7ac2120d08d41f427c091988ed03a6cf"
     }
   },
@@ -27,6 +27,13 @@
   "supplementPolicyArn": "arn:aws:iam::527257972989:policy/paprnav-terraform-deploy-pilot-supplement",
   "deployRoleArn": "arn:aws:iam::527257972989:role/paprnav-terraform-deploy",
   "effectiveAuthorizationNote": "The supplement is a separate customer-managed policy. The existing broad baseline remains attached and unchanged, so operator authorization limits must not be represented as effective IAM denies.",
+  "externalDns": {
+    "provider": "Squarespace",
+    "zoneName": "paprnav.com",
+    "pilotHostname": "pilot.paprnav.com",
+    "recordType": "CNAME",
+    "terraformDnsMutation": false
+  },
   "publicationPreconditions": {
     "customerManagedPolicyCharacterLimit": 6144,
     "requiredAvailableRoleAttachmentSlots": 1,
@@ -89,30 +96,13 @@
       "principal": "Terraform deploy role",
       "actions": ["acm:ListCertificates", "acm:DescribeCertificate", "acm:ListTagsForCertificate", "acm:GetCertificate"],
       "resourceTemplate": "arn:aws:acm:${REGION}:${ACCOUNT}:certificate/*",
-      "condition": "Read-only lookup only; certificate write actions remain outside the Terraform deploy role."
+      "condition": "aws:RequestedRegion=${REGION}; read-only lookup only; certificate write actions remain outside the Terraform deploy role."
     },
     {
       "principal": "Terraform deploy role",
       "actions": ["wafv2:CreateWebACL", "wafv2:GetWebACL", "wafv2:UpdateWebACL", "wafv2:DeleteWebACL", "wafv2:CreateRegexPatternSet", "wafv2:GetRegexPatternSet", "wafv2:UpdateRegexPatternSet", "wafv2:DeleteRegexPatternSet", "wafv2:GetWebACLForResource", "wafv2:AssociateWebACL", "wafv2:DisassociateWebACL", "wafv2:ListWebACLs", "wafv2:ListRegexPatternSets", "wafv2:ListTagsForResource", "wafv2:TagResource", "wafv2:UntagResource"],
-      "resourceTemplate": "exact Paprnav regional web-ACL/regex-pattern-set ARN patterns, plus the Paprnav ALB ARN only for association"
-    },
-    {
-      "principal": "Terraform deploy role",
-      "actions": ["route53:ListHostedZones", "route53:GetChange"],
-      "resourceTemplate": "*",
-      "condition": "Inventory and asynchronous change-status reads only."
-    },
-    {
-      "principal": "Terraform deploy role",
-      "actions": ["route53:GetHostedZone", "route53:ListResourceRecordSets", "route53:ListTagsForResource"],
-      "resourceTemplate": "arn:aws:route53:::hostedzone/${HOSTED_ZONE_ID}",
-      "condition": "Read-only exact-zone reconciliation."
-    },
-    {
-      "principal": "Terraform deploy role",
-      "actions": ["route53:ChangeResourceRecordSets"],
-      "resourceTemplate": "arn:aws:route53:::hostedzone/${HOSTED_ZONE_ID}",
-      "condition": "ForAllValues:StringEquals requires every normalized record name=${PILOT_HOSTNAME}, every type=A, and every action in CREATE,UPSERT,DELETE."
+      "resourceTemplate": "exact Paprnav regional web-ACL/regex-pattern-set ARN patterns, plus the Paprnav ALB ARN only for association",
+      "condition": "Inventory is aws:RequestedRegion=${REGION}; create also requires aws:RequestTag/Project=paprnav and aws:RequestTag/Environment=pilot. Existing-resource lifecycle retains live v1 scope."
     },
     {
       "principal": "Terraform deploy role",
@@ -123,7 +113,8 @@
     {
       "principal": "Terraform deploy role",
       "actions": ["scheduler:GetSchedule", "scheduler:CreateSchedule", "scheduler:UpdateSchedule", "scheduler:DeleteSchedule"],
-      "resourceTemplate": "arn:aws:scheduler:${REGION}:${ACCOUNT}:schedule/default/paprnav-pilot-worker"
+      "resourceTemplate": "arn:aws:scheduler:${REGION}:${ACCOUNT}:schedule/default/paprnav-pilot-worker",
+      "condition": "aws:RequestedRegion=${REGION}"
     },
     {
       "principal": "Terraform deploy role",
@@ -139,19 +130,24 @@
     },
     {
       "principal": "Terraform deploy role",
-      "actions": ["secretsmanager:CreateSecret", "secretsmanager:DescribeSecret", "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:DeleteSecret", "secretsmanager:RestoreSecret", "secretsmanager:PutResourcePolicy", "secretsmanager:GetResourcePolicy", "secretsmanager:DeleteResourcePolicy"],
-      "resourceTemplate": "arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:/paprnav/pilot/*",
+      "actions": ["secretsmanager:CreateSecret", "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:DeleteSecret", "secretsmanager:RestoreSecret"],
+      "resourceTemplate": "CreateSecret on * only for /paprnav/pilot/* names with aws:RequestedRegion=${REGION}, Project=paprnav and Environment=pilot request tags; lifecycle only on arn:aws:secretsmanager:${REGION}:${ACCOUNT}:secret:/paprnav/pilot/*",
       "excludes": ["secretsmanager:UpdateSecret", "secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue"]
     },
     {
+      "principal": "Terraform deploy role (existing baseline)",
+      "actions": ["secretsmanager:DescribeSecret", "secretsmanager:GetResourcePolicy", "kms:DescribeKey"],
+      "resourceTemplate": "*",
+      "condition": "Existing baseline AccountAndPlanReadAccess already covers Terraform secret metadata and the exact configured KMS key read; no supplement delta."
+    },
+    {
       "principal": "Terraform deploy role",
-      "actions": ["secretsmanager:CreateSecret", "secretsmanager:TagResource", "kms:DescribeKey"],
-      "resourceTemplate": "RDS-managed rds!db-* names and exact aws/secretsmanager KMS key"
+      "actions": ["secretsmanager:CreateSecret", "secretsmanager:TagResource"],
+      "resourceTemplate": "RDS-managed rds!db-* names; CreateSecret is region-constrained"
     }
   ],
   "terraformLifecycle": [
     {"terraformTypes": ["data.aws_availability_zones"], "lifecycle": {"read": ["ec2:DescribeAvailabilityZones"]}, "authority": "baseline AccountAndPlanReadAccess"},
-    {"terraformTypes": ["data.aws_route53_zone"], "lifecycle": {"read": ["route53:ListHostedZones", "route53:GetHostedZone", "route53:ListResourceRecordSets", "route53:ListTagsForResource"]}, "authority": "supplement Route53Inventory and Route53ReadExactPilotZone"},
     {"terraformTypes": ["data.aws_acm_certificate"], "lifecycle": {"read": ["acm:ListCertificates", "acm:DescribeCertificate", "acm:ListTagsForCertificate", "acm:GetCertificate"]}, "authority": "supplement ACM read-only statements"},
     {"terraformTypes": ["aws_vpc", "aws_internet_gateway", "aws_subnet", "aws_route_table", "aws_route_table_association", "aws_security_group"], "lifecycle": {"create": ["ec2:*"], "read": ["ec2:Describe*"], "update": ["ec2:*"], "delete": ["ec2:*"]}, "authority": "baseline RegionalDeploymentAccess in us-east-1"},
     {"terraformTypes": ["aws_s3_bucket", "aws_s3_bucket_public_access_block", "aws_s3_bucket_versioning", "aws_s3_bucket_server_side_encryption_configuration", "aws_s3_bucket_lifecycle_configuration"], "lifecycle": {"create": ["s3:CreateBucket", "s3:PutBucket*", "s3:PutEncryptionConfiguration", "s3:PutLifecycleConfiguration"], "read": ["s3:GetBucket*", "s3:GetEncryptionConfiguration", "s3:GetLifecycleConfiguration", "s3:ListBucket"], "update": ["s3:PutBucket*", "s3:PutEncryptionConfiguration", "s3:PutLifecycleConfiguration"], "delete": ["s3:DeleteBucket", "s3:DeleteBucketPolicy"]}, "authority": "baseline TerraformStateAndPaprnNavBuckets on Paprnav bucket ARNs"},
@@ -161,9 +157,8 @@
     {"terraformTypes": ["aws_budgets_budget"], "lifecycle": {"create": ["budgets:*"], "read": ["budgets:Describe*"], "update": ["budgets:*"], "delete": ["budgets:*"]}, "authority": "baseline BudgetsForPilotCostGuardrails"},
     {"terraformTypes": ["aws_iam_role", "aws_iam_role_policy", "aws_iam_role_policy_attachment"], "lifecycle": {"create": ["iam:CreateRole", "iam:PutRolePolicy", "iam:AttachRolePolicy", "iam:PassRole"], "read": ["iam:Get*", "iam:List*"], "update": ["iam:UpdateRole", "iam:UpdateAssumeRolePolicy", "iam:PutRolePolicy", "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:PassRole"], "delete": ["iam:DeleteRole", "iam:DeleteRolePolicy", "iam:DetachRolePolicy"]}, "authority": "baseline exact Paprnav role/policy ARN patterns and service-constrained pass-role"},
     {"terraformTypes": ["aws_db_subnet_group", "aws_db_instance"], "lifecycle": {"create": ["rds:*", "iam:CreateServiceLinkedRole"], "read": ["rds:Describe*", "rds:ListTagsForResource"], "update": ["rds:*"], "delete": ["rds:*"]}, "authority": "baseline regional RDS plus supplement exact RDS service-linked role"},
-    {"terraformTypes": ["aws_secretsmanager_secret"], "lifecycle": {"create": ["secretsmanager:CreateSecret", "secretsmanager:TagResource"], "read": ["secretsmanager:DescribeSecret", "secretsmanager:GetResourcePolicy"], "update": ["STOP:secretsmanager:UpdateSecret", "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:PutResourcePolicy", "secretsmanager:DeleteResourcePolicy"], "delete": ["secretsmanager:DeleteSecret", "secretsmanager:RestoreSecret"]}, "authority": "supplement exact /paprnav/pilot/* metadata/lifecycle; UpdateSecret/GetSecretValue/PutSecretValue omitted from deploy authority and UpdateSecret is an explicit stop gate"},
+    {"terraformTypes": ["aws_secretsmanager_secret"], "lifecycle": {"create": ["secretsmanager:CreateSecret", "secretsmanager:TagResource"], "read": ["secretsmanager:DescribeSecret", "secretsmanager:GetResourcePolicy"], "update": ["STOP:secretsmanager:UpdateSecret", "secretsmanager:TagResource", "secretsmanager:UntagResource"], "delete": ["secretsmanager:DeleteSecret"]}, "authority": "strict live v1 CreateSecret and exact /paprnav/pilot/* lifecycle plus existing baseline metadata reads; UpdateSecret/GetSecretValue/PutSecretValue omitted from deploy authority and UpdateSecret is an explicit stop gate"},
     {"terraformTypes": ["aws_lb", "aws_lb_target_group", "aws_lb_listener", "aws_lb_listener_rule"], "lifecycle": {"create": ["elasticloadbalancing:*", "iam:CreateServiceLinkedRole"], "read": ["elasticloadbalancing:Describe*"], "update": ["elasticloadbalancing:*"], "delete": ["elasticloadbalancing:*"]}, "authority": "baseline regional ELB plus supplement exact ELB service-linked role"},
-    {"terraformTypes": ["aws_route53_record"], "lifecycle": {"create": ["route53:ChangeResourceRecordSets", "route53:GetChange"], "read": ["route53:GetHostedZone", "route53:ListResourceRecordSets", "route53:ListTagsForResource"], "update": ["route53:ChangeResourceRecordSets", "route53:GetChange"], "delete": ["route53:ChangeResourceRecordSets", "route53:GetChange"]}, "authority": "supplement exact hosted zone and all-values canonical hostname/A/action batch conditions"},
     {"terraformTypes": ["aws_wafv2_regex_pattern_set", "aws_wafv2_web_acl", "aws_wafv2_web_acl_association"], "lifecycle": {"create": ["wafv2:CreateWebACL", "wafv2:CreateRegexPatternSet", "wafv2:AssociateWebACL", "wafv2:TagResource"], "read": ["wafv2:GetWebACL", "wafv2:GetRegexPatternSet", "wafv2:GetWebACLForResource", "wafv2:ListWebACLs", "wafv2:ListRegexPatternSets", "wafv2:ListTagsForResource"], "update": ["wafv2:UpdateWebACL", "wafv2:UpdateRegexPatternSet", "wafv2:AssociateWebACL", "wafv2:DisassociateWebACL", "wafv2:TagResource", "wafv2:UntagResource"], "delete": ["wafv2:DeleteWebACL", "wafv2:DeleteRegexPatternSet", "wafv2:DisassociateWebACL"]}, "authority": "supplement Paprnav regional WAF ARN patterns and Paprnav ALB association"},
     {"terraformTypes": ["aws_scheduler_schedule"], "lifecycle": {"create": ["scheduler:CreateSchedule", "iam:PassRole"], "read": ["scheduler:ListSchedules", "scheduler:GetSchedule"], "update": ["scheduler:UpdateSchedule", "iam:PassRole"], "delete": ["scheduler:DeleteSchedule"]}, "authority": "supplement exact default/paprnav-pilot-worker schedule and exact scheduler target-role pass-through"}
   ],

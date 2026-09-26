@@ -29,8 +29,12 @@ SECRET_NAMES = {
     "aws_secretsmanager_secret.invitation_signing": "/paprnav/pilot/invitation-signing",
     "aws_secretsmanager_secret.first_admin_password": "/paprnav/pilot/first-admin-password",
 }
+PILOT_HOSTNAME = "pilot.paprnav.com"
+DNS_ZONE_NAME = "paprnav.com"
+PILOT_CERTIFICATE_ARN = f"arn:aws:acm:{REGION}:{ACCOUNT}:certificate/f2f3ca73-7168-485b-b283-933cdb9915dd"
+ECS_EXECUTION_POLICY_ARN = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 EXCLUDED = ("secretsmanager:UpdateSecret", "secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue")
-GENERATOR_SHA256 = "008f8b5c3ae73b89c09337efb31e3919b4c22d968c36a820f2c85e61de5a9b33"
+GENERATOR_SHA256 = "750b1f4ab0ea3cd3a18dbf862851c27b32dad6c6a35b4bf9d0b3be9712395614"
 BASELINE_SHA256 = "dc7e543afbd7b42f459118591499e9d11f7b5b1be29f8a93e2bf22a8f722083d"
 
 
@@ -127,7 +131,8 @@ def policy_contract(generated: dict, baseline: dict, root: Path = ROOT) -> None:
     generator = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(generator)
     inputs = generated["inputs"]
-    expected = generator.generate(inputs["hostedZoneId"], inputs["pilotHostname"], inputs["operatorUpdaterPrincipalArn"], inputs["secretsManagerKmsKeyArn"])
+    require(inputs.get("dnsProvider") == "Squarespace" and inputs.get("dnsZoneName") == DNS_ZONE_NAME, "generated DNS ownership differs from operator input")
+    expected = generator.generate(inputs["dnsZoneName"], inputs["pilotHostname"], inputs["operatorUpdaterPrincipalArn"], inputs["secretsManagerKmsKeyArn"])
     require(generated == expected, "generated policy differs from exact reviewed construction")
     forbidden_secret_overlap([baseline, generated["deployPolicySupplement"]])
 
@@ -171,7 +176,6 @@ def allowed(policies: list[dict], action: str, resource: str, context: dict | No
 # This intentionally includes read-after-write, tags, and delete cleanup calls.
 LIFECYCLE = {
     "data.aws_availability_zones": ("", "ec2:DescribeAvailabilityZones", "", ""),
-    "data.aws_route53_zone": ("", "route53:ListHostedZones route53:GetHostedZone route53:ListTagsForResource", "", ""),
     "data.aws_acm_certificate": ("", "acm:ListCertificates acm:DescribeCertificate acm:ListTagsForCertificate acm:GetCertificate", "", ""),
     "aws_vpc": ("ec2:CreateVpc ec2:CreateTags ec2:ModifyVpcAttribute", "ec2:DescribeVpcs ec2:DescribeVpcAttribute", "ec2:ModifyVpcAttribute ec2:CreateTags ec2:DeleteTags", "ec2:DeleteVpc"),
     "aws_internet_gateway": ("ec2:CreateInternetGateway ec2:AttachInternetGateway ec2:CreateTags", "ec2:DescribeInternetGateways", "ec2:CreateTags ec2:DeleteTags", "ec2:DetachInternetGateway ec2:DeleteInternetGateway"),
@@ -202,7 +206,6 @@ LIFECYCLE = {
     "aws_lb_target_group": ("elasticloadbalancing:CreateTargetGroup elasticloadbalancing:ModifyTargetGroupAttributes elasticloadbalancing:AddTags", "elasticloadbalancing:DescribeTargetGroups elasticloadbalancing:DescribeTargetGroupAttributes elasticloadbalancing:DescribeTags", "elasticloadbalancing:ModifyTargetGroup elasticloadbalancing:ModifyTargetGroupAttributes elasticloadbalancing:AddTags elasticloadbalancing:RemoveTags", "elasticloadbalancing:DeleteTargetGroup"),
     "aws_lb_listener": ("elasticloadbalancing:CreateListener elasticloadbalancing:AddTags", "elasticloadbalancing:DescribeListeners elasticloadbalancing:DescribeTags", "elasticloadbalancing:ModifyListener elasticloadbalancing:AddTags elasticloadbalancing:RemoveTags", "elasticloadbalancing:DeleteListener"),
     "aws_lb_listener_rule": ("elasticloadbalancing:CreateRule elasticloadbalancing:AddTags", "elasticloadbalancing:DescribeRules elasticloadbalancing:DescribeTags", "elasticloadbalancing:ModifyRule elasticloadbalancing:SetRulePriorities elasticloadbalancing:AddTags elasticloadbalancing:RemoveTags", "elasticloadbalancing:DeleteRule"),
-    "aws_route53_record": ("route53:ChangeResourceRecordSets route53:GetChange", "route53:GetHostedZone route53:ListResourceRecordSets", "route53:ChangeResourceRecordSets route53:GetChange", "route53:ChangeResourceRecordSets route53:GetChange"),
     "aws_wafv2_regex_pattern_set": ("wafv2:CreateRegexPatternSet", "wafv2:GetRegexPatternSet wafv2:ListTagsForResource", "wafv2:UpdateRegexPatternSet wafv2:TagResource wafv2:UntagResource", "wafv2:DeleteRegexPatternSet"),
     "aws_wafv2_web_acl": ("wafv2:CreateWebACL", "wafv2:GetWebACL wafv2:ListTagsForResource", "wafv2:UpdateWebACL wafv2:TagResource wafv2:UntagResource", "wafv2:DeleteWebACL"),
     "aws_wafv2_web_acl_association": ("wafv2:AssociateWebACL", "wafv2:GetWebACLForResource", "wafv2:AssociateWebACL wafv2:DisassociateWebACL", "wafv2:DisassociateWebACL"),
@@ -256,7 +259,11 @@ def role_resource(address: str) -> str:
 def requirements(sources: dict[str, str], inputs: dict) -> list[dict]:
     """Expand the pinned current graph, including explicit for_each/count members."""
     rows = []
-    region_context = {"aws:RequestedRegion": REGION, "aws:RequestTag/Project": "paprnav"}
+    region_context = {
+        "aws:RequestedRegion": REGION,
+        "aws:RequestTag/Project": "paprnav",
+        "aws:RequestTag/Environment": "pilot",
+    }
     for address, typ in instances(sources).items():
         if typ == "local":
             rows.append({"address": address, "phase": "local", "decision": "local-only"})
@@ -285,10 +292,8 @@ def requirements(sources: dict[str, str], inputs: dict) -> list[dict]:
                     scope = role_resource(address)
                 elif typ == "aws_secretsmanager_secret":
                     scope = f"arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:{SECRET_NAMES[address]}-*"
-                elif action.startswith("route53:") and action not in {"route53:ListHostedZones", "route53:GetChange"}:
-                    scope = "arn:aws:route53:::hostedzone/" + inputs["hostedZoneId"]
-                    if action == "route53:ChangeResourceRecordSets":
-                        context.update({"route53:ChangeResourceRecordSetsNormalizedRecordNames": [inputs["pilotHostname"]], "route53:ChangeResourceRecordSetsRecordTypes": ["A"], "route53:ChangeResourceRecordSetsActions": [{"create": "CREATE", "update": "UPSERT", "delete": "DELETE"}[phase]]})
+                    if action == "secretsmanager:CreateSecret":
+                        context["secretsmanager:Name"] = SECRET_NAMES[address]
                 elif action.startswith("acm:") and action != "acm:ListCertificates":
                     scope = f"arn:aws:acm:{REGION}:{ACCOUNT}:certificate/*"
                 elif action.startswith("scheduler:") and action != "scheduler:ListSchedules":
@@ -419,6 +424,177 @@ def has_unknown(value: Any) -> bool:
     return value is True
 
 
+def normalized_iam_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: normalized_iam_value(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        values = [normalized_iam_value(item) for item in value]
+        return sorted(values, key=lambda item: json.dumps(item, sort_keys=True))
+    return value
+
+
+def canonical_iam_policy(value: Any) -> tuple:
+    """Canonicalize only the IAM document subset used by pilot runtime roles."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise Stop("invalid planned IAM policy JSON") from exc
+    require(isinstance(value, dict) and value.get("Version") == "2012-10-17", "invalid planned IAM policy")
+    statements = many(value.get("Statement", []))
+    require(statements, "empty planned IAM policy")
+    result = []
+    textract = {
+        "textract:DetectDocumentText",
+        "textract:StartDocumentTextDetection",
+        "textract:GetDocumentTextDetection",
+    }
+    for statement in statements:
+        require(isinstance(statement, dict), "invalid planned IAM statement")
+        require(set(statement) <= {"Sid", "Effect", "Action", "Resource", "Principal", "Condition"}, "unsupported planned IAM statement")
+        require(statement.get("Effect") == "Allow", "unreviewed runtime IAM effect")
+        actions = tuple(sorted(many(statement.get("Action", []))))
+        require(actions and all(isinstance(action, str) and "*" not in action and "?" not in action for action in actions), "wildcard/invalid runtime action")
+        resources = tuple(sorted(many(statement["Resource"]))) if "Resource" in statement else ()
+        require(all(isinstance(resource, str) for resource in resources), "invalid runtime resource")
+        if "*" in resources:
+            require(set(actions) == textract and resources == ("*",), "wildcard runtime grant")
+        principal = normalized_iam_value(statement.get("Principal"))
+        require(principal != "*" and "*" not in json.dumps(principal), "unreviewed runtime principal")
+        result.append((statement.get("Effect"), actions, resources, principal, normalized_iam_value(statement.get("Condition", {}))))
+    return tuple(sorted(result, key=repr))
+
+
+def expected_iam_policy(*statements: dict) -> tuple:
+    return canonical_iam_policy({"Version": "2012-10-17", "Statement": list(statements)})
+
+
+def planned_after(changes: dict[str, dict], address: str, typ: str) -> dict:
+    require(address in changes, f"missing planned semantic resource: {address}")
+    item = changes[address]
+    require(item.get("type") == typ, f"planned semantic type mismatch: {address}")
+    change = item.get("change")
+    require(isinstance(change, dict) and isinstance(change.get("after"), dict), f"unknown planned values: {address}")
+    return change["after"]
+
+
+def validate_planned_runtime(plan: dict, changes: dict[str, dict], generated: dict) -> None:
+    """Bind pilot-critical IAM, ECS, certificate and external-DNS planned values."""
+    variables = plan["variables"]
+    expected_variables = {
+        "external_mode": True,
+        "pilot_hostname": PILOT_HOSTNAME,
+        "dns_zone_name": DNS_ZONE_NAME,
+        "pilot_certificate_arn": PILOT_CERTIFICATE_ARN,
+        "policy_updater_principal_arn": generated["inputs"]["operatorUpdaterPrincipalArn"],
+    }
+    for key, value in expected_variables.items():
+        require(variables.get(key, {}).get("value") == value, f"unknown or drifted input: {key}")
+    require("route53_zone_id" not in variables, "stale Route 53 zone input")
+    require(generated["inputs"]["pilotHostname"] == PILOT_HOSTNAME, "generated hostname differs from operator input")
+    require(not any(item.get("type", "").startswith("aws_route53_") for item in changes.values()), "Route 53 mutation contradicts Squarespace handoff")
+
+    role_names = {
+        **{f'aws_iam_role.ecs_execution["{name}"]': f"paprnav-pilot-{name}-execution-role" for name in ("api", "frontend", "worker", "bootstrap")},
+        "aws_iam_role.api_task": "paprnav-pilot-api-task-role",
+        "aws_iam_role.frontend_task": "paprnav-pilot-frontend-task-role",
+        "aws_iam_role.worker_task": "paprnav-pilot-worker-task-role",
+        "aws_iam_role.migration_reference_task": "paprnav-pilot-migration-reference-task-role",
+        "aws_iam_role.runtime_role_task": "paprnav-pilot-runtime-role-task-role",
+        "aws_iam_role.first_admin_task": "paprnav-pilot-first-admin-task-role",
+        "aws_iam_role.worker_scheduler": "paprnav-pilot-worker-scheduler-role",
+    }
+    ecs_trust = expected_iam_policy({"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"Service": "ecs-tasks.amazonaws.com"}})
+    scheduler_trust = expected_iam_policy({"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"Service": "scheduler.amazonaws.com"}})
+    role_arns = {}
+    for address, name in role_names.items():
+        values = planned_after(changes, address, "aws_iam_role")
+        arn = f"arn:aws:iam::{ACCOUNT}:role/{name}"
+        require(values.get("name") == name and values.get("arn") == arn, f"unknown/drifted planned role: {address}")
+        require(canonical_iam_policy(values.get("assume_role_policy")) == (scheduler_trust if address.endswith("worker_scheduler") else ecs_trust), f"unreviewed principal: {address}")
+        role_arns[address] = arn
+
+    for name in ("api", "frontend", "worker", "bootstrap"):
+        address = f'aws_iam_role_policy_attachment.ecs_execution_managed["{name}"]'
+        values = planned_after(changes, address, "aws_iam_role_policy_attachment")
+        require(values.get("role") == role_names[f'aws_iam_role.ecs_execution["{name}"]'] and values.get("policy_arn") == ECS_EXECUTION_POLICY_ARN, f"unreviewed execution attachment: {address}")
+
+    secret_arns = {}
+    for address, name in SECRET_NAMES.items():
+        values = planned_after(changes, address, "aws_secretsmanager_secret")
+        arn = values.get("arn")
+        require(isinstance(arn, str) and re.fullmatch(rf"arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:{re.escape(name)}-[A-Za-z0-9]{{6}}", arn), f"unknown planned secret ARN: {address}")
+        secret_arns[address] = arn
+    db = planned_after(changes, "aws_db_instance.postgres", "aws_db_instance")
+    master = db.get("master_user_secret")
+    require(isinstance(master, list) and len(master) == 1 and isinstance(master[0], dict), "unknown planned RDS master secret")
+    master_secret_arn = master[0].get("secret_arn")
+    require(isinstance(master_secret_arn, str) and re.fullmatch(rf"arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:rds!db-[A-Za-z0-9]+", master_secret_arn), "unknown planned RDS master secret ARN")
+    bucket = planned_after(changes, "aws_s3_bucket.app_artifacts", "aws_s3_bucket").get("arn")
+    require(bucket == f"arn:aws:s3:::paprnav-pilot-artifacts-{ACCOUNT}", "unknown/drifted artifact bucket ARN")
+    cluster_arn = planned_after(changes, "aws_ecs_cluster.main", "aws_ecs_cluster").get("arn")
+    require(cluster_arn == f"arn:aws:ecs:{REGION}:{ACCOUNT}:cluster/paprnav-pilot", "unknown/drifted ECS cluster ARN")
+
+    task_roles = {
+        "aws_ecs_task_definition.api": ("api", "api", "api_task"),
+        "aws_ecs_task_definition.frontend": ("frontend", "frontend", "frontend_task"),
+        "aws_ecs_task_definition.worker": ("worker", "worker", "worker_task"),
+        'aws_ecs_task_definition.bootstrap["migration"]': ("bootstrap-migration", "bootstrap", "migration_reference_task"),
+        'aws_ecs_task_definition.bootstrap["reference"]': ("bootstrap-reference", "bootstrap", "migration_reference_task"),
+        'aws_ecs_task_definition.bootstrap["runtime-role"]': ("bootstrap-runtime-role", "bootstrap", "runtime_role_task"),
+        'aws_ecs_task_definition.bootstrap["first-admin"]': ("bootstrap-first-admin", "bootstrap", "first_admin_task"),
+    }
+    task_arns = {}
+    for address, (family_suffix, execution_key, task_key) in task_roles.items():
+        values = planned_after(changes, address, "aws_ecs_task_definition")
+        family = f"paprnav-pilot-{family_suffix}"
+        arn = values.get("arn")
+        require(values.get("family") == family and isinstance(arn, str) and re.fullmatch(rf"arn:aws:ecs:{REGION}:{ACCOUNT}:task-definition/{re.escape(family)}:[1-9][0-9]*", arn), f"unknown/drifted task definition: {address}")
+        require(values.get("execution_role_arn") == role_arns[f'aws_iam_role.ecs_execution["{execution_key}"]'] and values.get("task_role_arn") == role_arns[f"aws_iam_role.{task_key}"], f"task role reference drift: {address}")
+        task_arns[address] = arn
+
+    reads = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+    artifact = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:GetObjectTagging", "s3:PutObjectTagging"]
+    policies = {
+        "aws_iam_role_policy.api_execution_secrets": ("paprnav-pilot-api-execution-secrets", role_names['aws_iam_role.ecs_execution["api"]'], expected_iam_policy({"Effect": "Allow", "Action": reads, "Resource": [secret_arns["aws_secretsmanager_secret.database_url"], secret_arns["aws_secretsmanager_secret.invitation_signing"]]})),
+        "aws_iam_role_policy.worker_execution_secrets": ("paprnav-pilot-worker-execution-secrets", role_names['aws_iam_role.ecs_execution["worker"]'], expected_iam_policy({"Effect": "Allow", "Action": reads, "Resource": [secret_arns["aws_secretsmanager_secret.database_url"]]})),
+        "aws_iam_role_policy.api_task": ("paprnav-pilot-api-task", role_names["aws_iam_role.api_task"], expected_iam_policy({"Effect": "Allow", "Action": artifact, "Resource": f"{bucket}/*"}, {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": bucket})),
+        "aws_iam_role_policy.worker_task": ("paprnav-pilot-worker-task", role_names["aws_iam_role.worker_task"], expected_iam_policy({"Effect": "Allow", "Action": artifact, "Resource": f"{bucket}/*"}, {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": bucket}, {"Effect": "Allow", "Action": ["textract:DetectDocumentText", "textract:StartDocumentTextDetection", "textract:GetDocumentTextDetection"], "Resource": "*"})),
+        "aws_iam_role_policy.migration_reference_secrets": ("paprnav-pilot-migration-reference-secrets", role_names["aws_iam_role.migration_reference_task"], expected_iam_policy({"Effect": "Allow", "Action": reads, "Resource": master_secret_arn})),
+        "aws_iam_role_policy.runtime_role_secrets": ("paprnav-pilot-runtime-role-secrets", role_names["aws_iam_role.runtime_role_task"], expected_iam_policy({"Effect": "Allow", "Action": reads, "Resource": master_secret_arn}, {"Effect": "Allow", "Action": ["secretsmanager:PutSecretValue", "secretsmanager:DescribeSecret"], "Resource": secret_arns["aws_secretsmanager_secret.database_url"]})),
+        "aws_iam_role_policy.first_admin_secrets": ("paprnav-pilot-first-admin-secrets", role_names["aws_iam_role.first_admin_task"], expected_iam_policy({"Effect": "Allow", "Action": reads, "Resource": [master_secret_arn, secret_arns["aws_secretsmanager_secret.first_admin_password"]]})),
+        "aws_iam_role_policy.worker_scheduler": ("paprnav-pilot-worker-scheduler", role_names["aws_iam_role.worker_scheduler"], expected_iam_policy({"Effect": "Allow", "Action": "ecs:RunTask", "Resource": task_arns["aws_ecs_task_definition.worker"], "Condition": {"ArnEquals": {"ecs:cluster": cluster_arn}}}, {"Effect": "Allow", "Action": "iam:PassRole", "Resource": [role_arns['aws_iam_role.ecs_execution["worker"]'], role_arns["aws_iam_role.worker_task"]], "Condition": {"StringEquals": {"iam:PassedToService": "ecs-tasks.amazonaws.com"}}})),
+    }
+    for address, (name, role, policy) in policies.items():
+        values = planned_after(changes, address, "aws_iam_role_policy")
+        require(values.get("name") == name and values.get("role") == role, f"runtime policy attachment drift: {address}")
+        require(canonical_iam_policy(values.get("policy")) == policy, f"runtime policy drift: {address}")
+
+    schedule = planned_after(changes, "aws_scheduler_schedule.worker", "aws_scheduler_schedule")
+    target = schedule.get("target")
+    require(schedule.get("name") == "paprnav-pilot-worker" and schedule.get("group_name") == "default" and schedule.get("state") == "DISABLED", "worker schedule identity/state drift")
+    require(isinstance(target, list) and len(target) == 1 and isinstance(target[0], dict), "unknown worker schedule target")
+    ecs_parameters = target[0].get("ecs_parameters")
+    require(target[0].get("arn") == cluster_arn and target[0].get("role_arn") == role_arns["aws_iam_role.worker_scheduler"], "worker schedule role/cluster drift")
+    require(isinstance(ecs_parameters, list) and len(ecs_parameters) == 1 and ecs_parameters[0].get("task_definition_arn") == task_arns["aws_ecs_task_definition.worker"], "worker schedule task definition drift")
+
+    certificate = planned_after(changes, "data.aws_acm_certificate.pilot", "aws_acm_certificate")
+    require(certificate.get("arn") == PILOT_CERTIFICATE_ARN and certificate.get("domain") == PILOT_HOSTNAME and certificate.get("status") == "ISSUED", "ACM lookup identity/status drift")
+    require(certificate.get("most_recent") is False and certificate.get("statuses") == ["ISSUED"] and certificate.get("types") == ["AMAZON_ISSUED"] and certificate.get("key_types") == ["RSA_2048"], "ACM lookup constraints drift")
+    certificate_tags = certificate.get("tags")
+    require(isinstance(certificate_tags, dict) and certificate_tags.get("Project") == "paprnav" and certificate_tags.get("Environment") == "pilot", "ACM lookup tag drift")
+    listener = planned_after(changes, "aws_lb_listener.https", "aws_lb_listener")
+    require(listener.get("certificate_arn") == PILOT_CERTIFICATE_ARN and listener.get("protocol") == "HTTPS" and listener.get("port") == 443, "HTTPS listener certificate drift")
+
+    output = plan.get("output_changes", {}).get("pilot_dns_cname")
+    require(isinstance(output, dict) and not has_unknown(output.get("after_unknown")), "unknown external DNS handoff")
+    dns = output.get("after")
+    require(isinstance(dns, dict) and dns.get("provider") == "Squarespace" and dns.get("name") == PILOT_HOSTNAME and dns.get("type") == "CNAME" and dns.get("ttl_seconds") == 300, "external DNS handoff drift")
+    require(isinstance(dns.get("value"), str) and re.fullmatch(r"[a-z0-9-]+\.[a-z0-9-]+\.elb\.amazonaws\.com", dns["value"]), "unknown/invalid external DNS target")
+    planned_output = plan.get("planned_values", {}).get("outputs", {}).get("pilot_dns_cname", {})
+    require(planned_output.get("value") == dns, "planned/output DNS handoff contradiction")
+
+
 def validate_plan_changes(plan: dict, generated: dict, baseline: dict, root: Path = ROOT) -> dict:
     """Pure change checks, not an approval result; saved-plan binding is required."""
     proof = coverage(generated, baseline, root)
@@ -428,18 +604,19 @@ def validate_plan_changes(plan: dict, generated: dict, baseline: dict, root: Pat
     variables = plan.get("variables", {})
     for key, value in {"project": "paprnav", "environment": "pilot", "aws_account_id": ACCOUNT, "aws_region": REGION}.items():
         require(variables.get(key, {}).get("value") == value, f"unknown or drifted input: {key}")
-    require(variables.get("route53_zone_id", {}).get("value") == generated["inputs"]["hostedZoneId"], "zone input differs from policy")
     require(variables.get("pilot_hostname", {}).get("value") == generated["inputs"]["pilotHostname"], "hostname input differs from policy")
     known = instances(bound_sources(root))
     changes = plan.get("resource_changes")
     require(isinstance(changes, list), "missing resource changes")
     seen = set()
+    change_index = {}
     for item in changes:
         address = item["address"]
         require(address in known and address not in seen, f"unknown/duplicate resource instance: {address}")
         if known[address] != "local":
             require(item.get("type") == known[address].removeprefix("data."), "resource type/address mismatch")
         seen.add(address)
+        change_index[address] = item
         if item.get("type") == "aws_secretsmanager_secret" or address in SECRET_NAMES:
             require(address in SECRET_NAMES and item.get("type") == "aws_secretsmanager_secret", "uncatalogued secret")
             change = item["change"]
@@ -470,6 +647,7 @@ def validate_plan_changes(plan: dict, generated: dict, baseline: dict, root: Pat
                         require(before.get(key) == after.get(key), f"secret update requires stop: {address}.{key}")
     require(set(SECRET_NAMES) <= seen, "plan does not include all three secret resources")
     require({a for a, typ in known.items() if typ != "local" and not typ.startswith("data.")} <= seen, "plan omits managed graph instances")
+    validate_planned_runtime(plan, change_index, generated)
     return {"status": "checks-pass", "decision": "saved-plan-binding-required", "planSha256": digest(plan), "policySha256": proof["policySha256"], "mutationAuthorized": False}
 
 

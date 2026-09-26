@@ -17,10 +17,12 @@ SUPPLEMENT_POLICY_ARN = f"{DEPLOY_POLICY_ARN}-pilot-supplement"
 DEPLOY_ROLE_ARN = f"arn:aws:iam::{ACCOUNT}:role/paprnav-terraform-deploy"
 WORKER_SCHEDULE_ARN = f"arn:aws:scheduler:{REGION}:{ACCOUNT}:schedule/default/paprnav-pilot-worker"
 WORKER_SCHEDULER_ROLE_ARN = f"arn:aws:iam::{ACCOUNT}:role/paprnav-pilot-worker-scheduler-role"
-ZONE_RE = re.compile(r"^Z[A-Z0-9]{8,32}$")
 PRINCIPAL_RE = re.compile(rf"^arn:aws:iam::{ACCOUNT}:(?:user|role)/[^\s]+$")
 KMS_RE = re.compile(rf"^arn:aws:kms:{REGION}:{ACCOUNT}:key/[0-9a-f-]+$")
 HOSTNAME_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$")
+PILOT_HOSTNAME = "pilot.paprnav.com"
+DNS_ZONE_NAME = "paprnav.com"
+DNS_PROVIDER = "Squarespace"
 
 
 def statement(sid: str, actions: list[str], resource: str | list[str], condition: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -30,39 +32,45 @@ def statement(sid: str, actions: list[str], resource: str | list[str], condition
     return result
 
 
-def generate(zone_id: str, pilot_hostname: str, updater_principal: str, kms_key_arn: str) -> dict[str, Any]:
-    if ZONE_RE.fullmatch(zone_id) is None:
-        raise ValueError("invalid Route53 zone ID")
-    if HOSTNAME_RE.fullmatch(pilot_hostname) is None:
-        raise ValueError("pilot hostname must be one canonical lower-case DNS hostname")
+def generate(dns_zone_name: str, pilot_hostname: str, updater_principal: str, kms_key_arn: str) -> dict[str, Any]:
+    if dns_zone_name != DNS_ZONE_NAME or HOSTNAME_RE.fullmatch(dns_zone_name) is None:
+        raise ValueError(f"DNS zone must be the Squarespace-managed {DNS_ZONE_NAME}")
+    if pilot_hostname != PILOT_HOSTNAME or HOSTNAME_RE.fullmatch(pilot_hostname) is None:
+        raise ValueError(f"pilot hostname must be {PILOT_HOSTNAME}")
+    if pilot_hostname == dns_zone_name or not pilot_hostname.endswith(f".{dns_zone_name}"):
+        raise ValueError("pilot hostname must be a subdomain of the Squarespace DNS zone")
     if PRINCIPAL_RE.fullmatch(updater_principal) is None:
         raise ValueError("updater principal must be an exact account IAM user or role ARN")
     if KMS_RE.fullmatch(kms_key_arn) is None:
         raise ValueError("Secrets Manager KMS key must be one exact account/region key ARN")
-    service_roles = {
-        "rds.amazonaws.com": f"arn:aws:iam::{ACCOUNT}:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS",
-        "ecs.amazonaws.com": f"arn:aws:iam::{ACCOUNT}:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
-        "elasticloadbalancing.amazonaws.com": f"arn:aws:iam::{ACCOUNT}:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
-    }
     deploy_statements = [
         statement(
-            "AcmListCertificates",
+            "AcmInventory",
             ["acm:ListCertificates"],
             "*",
             {"StringEquals": {"aws:RequestedRegion": REGION}},
         ),
         statement(
-            "AcmReadCertificateMetadata",
+            "AcmCertificateMetadata",
             ["acm:DescribeCertificate", "acm:ListTagsForCertificate", "acm:GetCertificate"],
             f"arn:aws:acm:{REGION}:{ACCOUNT}:certificate/*",
             {"StringEquals": {"aws:RequestedRegion": REGION}},
         ),
-        statement("WafInventory", ["wafv2:ListWebACLs", "wafv2:ListRegexPatternSets", "wafv2:GetWebACLForResource"], "*"),
+        statement(
+            "WafInventory",
+            ["wafv2:ListWebACLs", "wafv2:ListRegexPatternSets", "wafv2:GetWebACLForResource"],
+            "*",
+            {"StringEquals": {"aws:RequestedRegion": REGION}},
+        ),
         statement(
             "WafCreateTaggedPilotResources",
             ["wafv2:CreateWebACL", "wafv2:CreateRegexPatternSet"],
             "*",
-            {"StringEquals": {"aws:RequestTag/Project": "paprnav", "aws:RequestedRegion": REGION}},
+            {"StringEquals": {
+                "aws:RequestedRegion": REGION,
+                "aws:RequestTag/Project": "paprnav",
+                "aws:RequestTag/Environment": "pilot",
+            }},
         ),
         statement(
             "WafManagePilotResources",
@@ -75,25 +83,7 @@ def generate(zone_id: str, pilot_hostname: str, updater_principal: str, kms_key_
         statement(
             "WafAssociatePilotAlb",
             ["wafv2:AssociateWebACL", "wafv2:DisassociateWebACL"],
-            [f"arn:aws:wafv2:{REGION}:{ACCOUNT}:regional/webacl/paprnav-*/*", f"arn:aws:elasticloadbalancing:{REGION}:{ACCOUNT}:loadbalancer/app/paprnav-*/*"],
-        ),
-        statement("Route53Inventory", ["route53:ListHostedZones", "route53:GetChange"], "*"),
-        statement(
-            "Route53ReadExactPilotZone",
-            ["route53:GetHostedZone", "route53:ListResourceRecordSets", "route53:ListTagsForResource"],
-            f"arn:aws:route53:::hostedzone/{zone_id}",
-        ),
-        statement(
-            "Route53ChangeExactPilotAlias",
-            ["route53:ChangeResourceRecordSets"],
-            f"arn:aws:route53:::hostedzone/{zone_id}",
-            {
-                "ForAllValues:StringEquals": {
-                    "route53:ChangeResourceRecordSetsNormalizedRecordNames": [pilot_hostname],
-                    "route53:ChangeResourceRecordSetsRecordTypes": ["A"],
-                    "route53:ChangeResourceRecordSetsActions": ["CREATE", "UPSERT", "DELETE"],
-                }
-            },
+            [f"arn:aws:wafv2:{REGION}:{ACCOUNT}:regional/webacl/paprnav-*/*", f"arn:aws:elasticloadbalancing:{REGION}:{ACCOUNT}:loadbalancer/app/paprnav-pilot/*"],
         ),
         statement(
             "SchedulerInventory",
@@ -105,6 +95,7 @@ def generate(zone_id: str, pilot_hostname: str, updater_principal: str, kms_key_
             "ManageExactWorkerSchedule",
             ["scheduler:GetSchedule", "scheduler:CreateSchedule", "scheduler:UpdateSchedule", "scheduler:DeleteSchedule"],
             WORKER_SCHEDULE_ARN,
+            {"StringEquals": {"aws:RequestedRegion": REGION}},
         ),
         statement(
             "PassExactWorkerSchedulerRole",
@@ -113,30 +104,53 @@ def generate(zone_id: str, pilot_hostname: str, updater_principal: str, kms_key_
             {"StringEquals": {"iam:PassedToService": "scheduler.amazonaws.com"}},
         ),
         statement(
-            "PilotSecretLifecycleWithoutValues",
-            ["secretsmanager:CreateSecret", "secretsmanager:DescribeSecret", "secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:DeleteSecret", "secretsmanager:RestoreSecret", "secretsmanager:PutResourcePolicy", "secretsmanager:GetResourcePolicy", "secretsmanager:DeleteResourcePolicy"],
+            "CreateTaggedPilotSecrets",
+            ["secretsmanager:CreateSecret"],
+            "*",
+            {
+                "StringLike": {"secretsmanager:Name": "/paprnav/pilot/*"},
+                "StringEquals": {
+                    "aws:RequestedRegion": REGION,
+                    "aws:RequestTag/Project": "paprnav",
+                    "aws:RequestTag/Environment": "pilot",
+                },
+            },
+        ),
+        statement(
+            "ManagePilotSecretLifecycleWithoutValues",
+            ["secretsmanager:TagResource", "secretsmanager:UntagResource", "secretsmanager:DeleteSecret", "secretsmanager:RestoreSecret"],
             f"arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:/paprnav/pilot/*",
         ),
         statement(
-            "RdsManagedSecretCreation",
+            "CreateRdsManagedSecret",
             ["secretsmanager:CreateSecret"],
             "*",
             {"StringLike": {"secretsmanager:Name": "rds!db-*"}, "StringEquals": {"aws:RequestedRegion": REGION}},
         ),
         statement(
-            "RdsManagedSecretTagging",
+            "TagRdsManagedSecret",
             ["secretsmanager:TagResource"],
             f"arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:rds!db-*",
         ),
-        statement("RdsManagedSecretKmsDescribe", ["kms:DescribeKey"], kms_key_arn),
-    ]
-    for index, (service_name, role_arn) in enumerate(service_roles.items(), start=1):
-        deploy_statements.append(statement(
-            f"CreateServiceLinkedRole{index}",
+        statement(
+            "CreateRdsServiceLinkedRole",
             ["iam:CreateServiceLinkedRole"],
-            role_arn,
-            {"StringEquals": {"iam:AWSServiceName": service_name}},
-        ))
+            f"arn:aws:iam::{ACCOUNT}:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS",
+            {"StringEquals": {"iam:AWSServiceName": "rds.amazonaws.com"}},
+        ),
+        statement(
+            "CreateEcsServiceLinkedRole",
+            ["iam:CreateServiceLinkedRole"],
+            f"arn:aws:iam::{ACCOUNT}:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            {"StringEquals": {"iam:AWSServiceName": "ecs.amazonaws.com"}},
+        ),
+        statement(
+            "CreateElbServiceLinkedRole",
+            ["iam:CreateServiceLinkedRole"],
+            f"arn:aws:iam::{ACCOUNT}:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+            {"StringEquals": {"iam:AWSServiceName": "elasticloadbalancing.amazonaws.com"}},
+        ),
+    ]
     operator = {
         "Version": "2012-10-17",
         "Statement": [
@@ -171,8 +185,8 @@ def generate(zone_id: str, pilot_hostname: str, updater_principal: str, kms_key_
         )],
     }
     return {
-        "version": "paprnav-pilot-generated-prerequisites-v3",
-        "inputs": {"hostedZoneId": zone_id, "pilotHostname": pilot_hostname, "operatorUpdaterPrincipalArn": updater_principal, "secretsManagerKmsKeyArn": kms_key_arn},
+        "version": "paprnav-pilot-generated-prerequisites-v5",
+        "inputs": {"dnsProvider": DNS_PROVIDER, "dnsZoneName": dns_zone_name, "pilotHostname": pilot_hostname, "operatorUpdaterPrincipalArn": updater_principal, "secretsManagerKmsKeyArn": kms_key_arn},
         "baselinePolicyArn": DEPLOY_POLICY_ARN,
         "supplementPolicyArn": SUPPLEMENT_POLICY_ARN,
         "deployRoleArn": DEPLOY_ROLE_ARN,
@@ -190,7 +204,7 @@ def generate(zone_id: str, pilot_hostname: str, updater_principal: str, kms_key_
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--hosted-zone-id", required=True)
+    parser.add_argument("--dns-zone-name", required=True)
     parser.add_argument("--pilot-hostname", required=True)
     parser.add_argument("--operator-updater-principal-arn", required=True)
     parser.add_argument("--secrets-manager-kms-key-arn", required=True)
@@ -198,7 +212,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         generated = generate(
-            args.hosted_zone_id,
+            args.dns_zone_name,
             args.pilot_hostname,
             args.operator_updater_principal_arn,
             args.secrets_manager_kms_key_arn,

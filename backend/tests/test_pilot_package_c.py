@@ -237,20 +237,27 @@ def test_admin_connection_secret_location_fields_cannot_override_environment(
     )
 
 
-def test_terraform_gates_are_blocking_and_bind_actual_zone_identity() -> None:
+def test_terraform_gates_are_blocking_and_bind_external_dns_identity() -> None:
     variables = (REPO_ROOT / "infra/terraform/variables.tf").read_text(encoding="utf-8")
     main = (REPO_ROOT / "infra/terraform/main.tf").read_text(encoding="utf-8")
     load_balancer = (REPO_ROOT / "infra/terraform/load_balancer.tf").read_text(encoding="utf-8")
+    outputs = (REPO_ROOT / "infra/terraform/outputs.tf").read_text(encoding="utf-8")
     versions = (REPO_ROOT / "infra/terraform/versions.tf").read_text(encoding="utf-8")
     assert 'check "external_inputs"' not in variables
     assert 'check "image_repositories"' not in main
     assert 'resource "terraform_data" "deployment_input_gate"' in main
     assert 'resource "terraform_data" "certificate_input_gate"' in main
     assert main.count("precondition {") >= 8
-    assert 'data "aws_route53_zone" "pilot"' in main
-    assert "data.aws_route53_zone.pilot.name" in main
-    assert "private_zone = false" in main
-    assert load_balancer.count("data.aws_route53_zone.pilot.zone_id") == 1
+    assert 'variable "dns_zone_name"' in variables
+    assert 'variable "route53_zone_id"' not in variables
+    assert 'data "aws_route53_zone" "pilot"' not in main
+    assert 'resource "aws_route53_record"' not in load_balancer
+    assert 'dns_provider   = "squarespace"' in main
+    assert "dns_zone_name  = var.dns_zone_name" in main
+    assert 'endswith(var.pilot_hostname, ".${lower(trimsuffix(var.dns_zone_name, "."))}")' in main
+    assert 'provider    = "Squarespace"' in outputs
+    assert 'type        = "CNAME"' in outputs
+    assert "value       = aws_lb.main.dns_name" in outputs
 
     assert 'variable "pilot_certificate_arn"' in variables
     assert 'data "aws_acm_certificate" "pilot"' in main
@@ -480,12 +487,12 @@ def test_acm_policy_is_exactly_read_only_and_account_region_bounded() -> None:
         "paprnav_package_c_policy_generator",
         REPO_ROOT / "scripts/generate_pilot_deploy_policy.py",
     )
-    hostname = "pilot.example.com"
+    hostname = "pilot.paprnav.com"
     policy = generator.generate(
-        "Z123456789",
+        "paprnav.com",
         hostname,
         "arn:aws:iam::527257972989:role/paprnav-policy-updater",
-        "arn:aws:kms:us-east-1:527257972989:key/11111111-2222-3333-4444-555555555555",
+        "arn:aws:kms:us-east-1:527257972989:key/ea9571ad-3bc5-4ed5-96d9-070bcad47d60",
     )
     statements = policy["deployPolicySupplement"]["Statement"]
     acm_statements = [item for item in statements if any(action.lower().startswith("acm:") for action in item["Action"])]
@@ -521,10 +528,10 @@ def test_generated_supplement_is_separate_quota_feasible_and_exactly_attachable(
     baseline_bytes = baseline_path.read_bytes()
     baseline = json.loads(baseline_bytes)
     generated = generator.generate(
-        "Z123456789ABC",
-        "pilot.example.com",
+        "paprnav.com",
+        "pilot.paprnav.com",
         "arn:aws:iam::527257972989:role/paprnav-policy-updater",
-        "arn:aws:kms:us-east-1:527257972989:key/11111111-2222-3333-4444-555555555555",
+        "arn:aws:kms:us-east-1:527257972989:key/ea9571ad-3bc5-4ed5-96d9-070bcad47d60",
     )
     assert baseline_path.read_bytes() == baseline_bytes
 
@@ -535,11 +542,11 @@ def test_generated_supplement_is_separate_quota_feasible_and_exactly_attachable(
         "Statement": baseline["Statement"] + supplement["Statement"],
     }
     assert len(compact(baseline)) == 5011
-    assert len(compact(supplement)) == 4796
-    assert len(compact(invalid_merge)) == 9769
+    assert len(compact(supplement)) == 4194
+    assert len(compact(invalid_merge)) == 9167
     assert hashlib.sha256(baseline_bytes).hexdigest() == "da2420f54b0a24623eebc522de4cffb8a7969e3d22f75abae11de44884b8a78e"
-    assert hashlib.sha256(compact(supplement).encode()).hexdigest() == "10d188f490d0f2ec0e66e7da584d775ad6c47116bd00612a3163167726e6d802"
-    assert hashlib.sha256(compact(invalid_merge).encode()).hexdigest() == "0c85f79046fc427770c8d14a40e2b65355764871220eaa6196e63f13b15813d7"
+    assert hashlib.sha256(compact(supplement).encode()).hexdigest() == "54e9853b4cb82b6240ddcd05f4b4641124d63d270856acb01e06acd9320eca65"
+    assert hashlib.sha256(compact(invalid_merge).encode()).hexdigest() == "adc3893a8a9dab14441f20312e181869f3a662daaf8402880b17cb88635657c2"
     limits = generated["publicationPreconditions"]
     assert len(compact(baseline)) <= limits["customerManagedPolicyCharacterLimit"]
     assert len(compact(supplement)) <= limits["customerManagedPolicyCharacterLimit"]
@@ -618,60 +625,113 @@ def generated_pilot_policy() -> dict[str, Any]:
         REPO_ROOT / "scripts/generate_pilot_deploy_policy.py",
     )
     return generator.generate(
-        "Z123456789ABC",
-        "pilot.example.com",
+        "paprnav.com",
+        "pilot.paprnav.com",
         "arn:aws:iam::527257972989:role/paprnav-policy-updater",
-        "arn:aws:kms:us-east-1:527257972989:key/11111111-2222-3333-4444-555555555555",
+        "arn:aws:kms:us-east-1:527257972989:key/ea9571ad-3bc5-4ed5-96d9-070bcad47d60",
     )
+
+
+def live_pilot_supplement_v1() -> dict[str, Any]:
+    return json.loads(
+        (REPO_ROOT / "backend/tests/fixtures/iam/paprnav-terraform-deploy-pilot-supplement-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+
+def policy_semantics(document: dict[str, Any]) -> list[str]:
+    """Normalize non-semantic IAM scalar/list and statement-order differences."""
+    normalized = []
+    for item in document["Statement"]:
+        statement = {
+            "Effect": item["Effect"],
+            "Action": sorted(item["Action"] if isinstance(item["Action"], list) else [item["Action"]]),
+            "Resource": sorted(item["Resource"] if isinstance(item["Resource"], list) else [item["Resource"]]),
+        }
+        if "Condition" in item:
+            statement["Condition"] = item["Condition"]
+        normalized.append(json.dumps(statement, sort_keys=True, separators=(",", ":")))
+    return sorted(normalized)
 
 
 def statement_by_sid(statements: list[dict[str, Any]], sid: str) -> dict[str, Any]:
     return one([item for item in statements if item["Sid"] == sid])
 
 
-def test_route53_policy_separates_reads_and_limits_every_change_batch_value() -> None:
-    statements = generated_pilot_policy()["deployPolicySupplement"]["Statement"]
-    inventory = statement_by_sid(statements, "Route53Inventory")
-    reads = statement_by_sid(statements, "Route53ReadExactPilotZone")
-    changes = statement_by_sid(statements, "Route53ChangeExactPilotAlias")
-    zone_arn = "arn:aws:route53:::hostedzone/Z123456789ABC"
-
-    assert inventory == {
-        "Sid": "Route53Inventory",
-        "Effect": "Allow",
-        "Action": ["route53:ListHostedZones", "route53:GetChange"],
-        "Resource": "*",
+def test_generated_policy_excludes_route53_and_binds_external_dns() -> None:
+    generated = generated_pilot_policy()
+    assert generated["version"] == "paprnav-pilot-generated-prerequisites-v5"
+    assert generated["inputs"]["dnsProvider"] == "Squarespace"
+    assert generated["inputs"]["dnsZoneName"] == "paprnav.com"
+    assert generated["inputs"]["pilotHostname"] == "pilot.paprnav.com"
+    actions = {
+        action
+        for statement in generated["deployPolicySupplement"]["Statement"]
+        for action in statement["Action"]
     }
-    assert reads["Action"] == [
-        "route53:GetHostedZone",
-        "route53:ListResourceRecordSets",
-        "route53:ListTagsForResource",
+    assert not any(action.startswith("route53:") for action in actions)
+    matrix = json.loads((REPO_ROOT / "infra/aws-iam/pilot-policy-matrix.json").read_text())
+    assert matrix["externalDns"] == {
+        "provider": "Squarespace",
+        "zoneName": "paprnav.com",
+        "pilotHostname": "pilot.paprnav.com",
+        "recordType": "CNAME",
+        "terraformDnsMutation": False,
+    }
+    assert "route53" not in json.dumps(matrix).lower()
+
+
+def test_generated_supplement_is_live_v1_plus_only_proven_lifecycle_deltas() -> None:
+    fixture_path = REPO_ROOT / "backend/tests/fixtures/iam/paprnav-terraform-deploy-pilot-supplement-v1.json"
+    assert hashlib.sha256(fixture_path.read_bytes()).hexdigest() == (
+        "72050286d45bfabb04a83637e5cfb67f81efe563e7b194001305107838e94100"
+    )
+    live = live_pilot_supplement_v1()
+    generated = generated_pilot_policy()
+    desired = generated["deployPolicySupplement"]
+    expected = deepcopy(live)
+    live_by_sid = {item["Sid"]: item for item in live["Statement"]}
+    expected_by_sid = {item["Sid"]: item for item in expected["Statement"]}
+
+    expected_by_sid["AcmCertificateMetadata"]["Action"].append("acm:GetCertificate")
+    expected_by_sid["WafAssociatePilotAlb"]["Resource"] = [
+        expected_by_sid["WafAssociatePilotAlb"]["Resource"],
+        "arn:aws:elasticloadbalancing:us-east-1:527257972989:loadbalancer/app/paprnav-pilot/*",
     ]
-    assert reads["Resource"] == zone_arn and "Condition" not in reads
-    assert changes["Action"] == ["route53:ChangeResourceRecordSets"]
-    assert changes["Resource"] == zone_arn
-    conditions = changes["Condition"]
-    assert set(conditions) == {"ForAllValues:StringEquals"}
-    allowed = conditions["ForAllValues:StringEquals"]
-    assert allowed == {
-        "route53:ChangeResourceRecordSetsNormalizedRecordNames": ["pilot.example.com"],
-        "route53:ChangeResourceRecordSetsRecordTypes": ["A"],
-        "route53:ChangeResourceRecordSetsActions": ["CREATE", "UPSERT", "DELETE"],
+    expected["Statement"].append({
+        "Sid": "SchedulerInventory",
+        "Effect": "Allow",
+        "Action": "scheduler:ListSchedules",
+        "Resource": "*",
+        "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-1"}},
+    })
+    assert policy_semantics(desired) == policy_semantics(expected)
+
+    desired_by_sid = {item["Sid"]: item for item in desired["Statement"]}
+    assert set(desired_by_sid) == set(live_by_sid) | {"SchedulerInventory"}
+    for sid, live_statement in live_by_sid.items():
+        desired_statement = desired_by_sid[sid]
+        assert desired_statement.get("Condition") == live_statement.get("Condition")
+        if sid not in {"AcmCertificateMetadata", "WafAssociatePilotAlb"}:
+            assert policy_semantics({"Statement": [desired_statement]}) == policy_semantics(
+                {"Statement": [live_statement]}
+            )
+
+    authority = load_module("pilot_iam_live_delta", REPO_ROOT / "scripts/pilot_iam_authority.py")
+    baseline = json.loads((REPO_ROOT / "infra/aws-iam/paprnav-terraform-deploy-policy.json").read_text())
+    missing = set()
+    for row in authority.requirements(authority.bound_sources(), generated["inputs"]):
+        if row.get("decision") == "allow" and not authority.allowed(
+            [baseline, live], row["action"], row["resource"], row["context"]
+        ):
+            missing.add((row["action"], row["resource"]))
+    assert missing == {
+        ("acm:GetCertificate", "arn:aws:acm:us-east-1:527257972989:certificate/*"),
+        ("scheduler:ListSchedules", "*"),
+        ("wafv2:AssociateWebACL", "arn:aws:elasticloadbalancing:us-east-1:527257972989:loadbalancer/app/paprnav-pilot/*"),
+        ("wafv2:DisassociateWebACL", "arn:aws:elasticloadbalancing:us-east-1:527257972989:loadbalancer/app/paprnav-pilot/*"),
     }
-
-    def batch_allowed(names: list[str], types: list[str], actions: list[str]) -> bool:
-        authority = load_module("pilot_iam_batch", REPO_ROOT / "scripts/pilot_iam_authority.py")
-        return authority.allowed([generated_pilot_policy()["deployPolicySupplement"]], "route53:ChangeResourceRecordSets", zone_arn, {
-            "route53:ChangeResourceRecordSetsNormalizedRecordNames": names,
-            "route53:ChangeResourceRecordSetsRecordTypes": types,
-            "route53:ChangeResourceRecordSetsActions": actions,
-        })
-
-    assert batch_allowed(["pilot.example.com"], ["A"], ["DELETE"])
-    assert batch_allowed(["pilot.example.com"], ["A"], ["CREATE", "UPSERT", "DELETE"])
-    assert not batch_allowed(["pilot.example.com", "other.example.com"], ["A", "A"], ["UPSERT", "UPSERT"])
-    assert not batch_allowed(["pilot.example.com", "pilot.example.com"], ["A", "CNAME"], ["UPSERT", "UPSERT"])
-    assert not batch_allowed(["pilot.example.com"], ["A"], ["DELETE", "BOGUS"])
 
 
 def test_scheduler_waf_and_updater_actions_are_exactly_scoped() -> None:
@@ -756,8 +816,8 @@ def test_policy_matrix_covers_every_terraform_aws_type_and_runtime_boundary() ->
     authority = load_module("pilot_iam_coverage", REPO_ROOT / "scripts/pilot_iam_authority.py")
     baseline = json.loads((REPO_ROOT / "infra/aws-iam/paprnav-terraform-deploy-policy.json").read_text())
     result = authority.coverage(generated_pilot_policy(), baseline)
-    assert result["instances"] == 98
-    assert len(result["requirements"]) == 751
+    assert result["instances"] == 96
+    assert len(result["requirements"]) == 740
     assert len([row for row in result["requirements"] if row["decision"] == "stop-secret-update"]) == 3
     assert set(row["address"] for row in result["requirements"]) == set(authority.instances(authority.bound_sources()))
     matrix = json.loads((REPO_ROOT / "infra/aws-iam/pilot-policy-matrix.json").read_text(encoding="utf-8"))
@@ -846,17 +906,145 @@ def test_iam_source_drift_and_uncatalogued_instances_fail_closed(iam_authority: 
         iam_authority.requirements(sources, generated_pilot_policy()["inputs"])
 
 
+def bind_plan_semantics(authority: ModuleType, plan: dict) -> None:
+    """Add the small known-value surface consumed by the production plan gate."""
+    changes = {item["address"]: item for item in plan["resource_changes"]}
+
+    def after(address: str) -> dict:
+        return changes[address]["change"]["after"]
+
+    def policy(*statements: dict) -> str:
+        return json.dumps({"Version": "2012-10-17", "Statement": list(statements)})
+
+    ecs_trust = policy({"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"Service": "ecs-tasks.amazonaws.com"}})
+    scheduler_trust = policy({"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"Service": "scheduler.amazonaws.com"}})
+    role_names = {
+        **{f'aws_iam_role.ecs_execution["{name}"]': f"paprnav-pilot-{name}-execution-role" for name in ("api", "frontend", "worker", "bootstrap")},
+        "aws_iam_role.api_task": "paprnav-pilot-api-task-role",
+        "aws_iam_role.frontend_task": "paprnav-pilot-frontend-task-role",
+        "aws_iam_role.worker_task": "paprnav-pilot-worker-task-role",
+        "aws_iam_role.migration_reference_task": "paprnav-pilot-migration-reference-task-role",
+        "aws_iam_role.runtime_role_task": "paprnav-pilot-runtime-role-task-role",
+        "aws_iam_role.first_admin_task": "paprnav-pilot-first-admin-task-role",
+        "aws_iam_role.worker_scheduler": "paprnav-pilot-worker-scheduler-role",
+    }
+    role_arns = {}
+    for address, name in role_names.items():
+        role_arns[address] = f"arn:aws:iam::{authority.ACCOUNT}:role/{name}"
+        after(address).update(name=name, arn=role_arns[address], assume_role_policy=scheduler_trust if address.endswith("worker_scheduler") else ecs_trust)
+    for name in ("api", "frontend", "worker", "bootstrap"):
+        after(f'aws_iam_role_policy_attachment.ecs_execution_managed["{name}"]').update(
+            role=role_names[f'aws_iam_role.ecs_execution["{name}"]'],
+            policy_arn=authority.ECS_EXECUTION_POLICY_ARN,
+        )
+
+    secret_arns = {}
+    for index, (address, name) in enumerate(authority.SECRET_NAMES.items(), 1):
+        secret_arns[address] = f"arn:aws:secretsmanager:{authority.REGION}:{authority.ACCOUNT}:secret:{name}-AbCdE{index}"
+        values = after(address)
+        values["arn"] = secret_arns[address]
+        before = changes[address]["change"].get("before")
+        if isinstance(before, dict):
+            before["arn"] = secret_arns[address]
+        if values.get("name") == "irrelevant":
+            values["name"] = name
+    master_secret = f"arn:aws:secretsmanager:{authority.REGION}:{authority.ACCOUNT}:secret:rds!db-AbCdEf"
+    after("aws_db_instance.postgres")["master_user_secret"] = [{"secret_arn": master_secret}]
+    bucket = f"arn:aws:s3:::paprnav-pilot-artifacts-{authority.ACCOUNT}"
+    after("aws_s3_bucket.app_artifacts")["arn"] = bucket
+    cluster = f"arn:aws:ecs:{authority.REGION}:{authority.ACCOUNT}:cluster/paprnav-pilot"
+    after("aws_ecs_cluster.main")["arn"] = cluster
+
+    task_roles = {
+        "aws_ecs_task_definition.api": ("api", "api", "api_task"),
+        "aws_ecs_task_definition.frontend": ("frontend", "frontend", "frontend_task"),
+        "aws_ecs_task_definition.worker": ("worker", "worker", "worker_task"),
+        'aws_ecs_task_definition.bootstrap["migration"]': ("bootstrap-migration", "bootstrap", "migration_reference_task"),
+        'aws_ecs_task_definition.bootstrap["reference"]': ("bootstrap-reference", "bootstrap", "migration_reference_task"),
+        'aws_ecs_task_definition.bootstrap["runtime-role"]': ("bootstrap-runtime-role", "bootstrap", "runtime_role_task"),
+        'aws_ecs_task_definition.bootstrap["first-admin"]': ("bootstrap-first-admin", "bootstrap", "first_admin_task"),
+    }
+    task_arns = {}
+    for address, (suffix, execution, task) in task_roles.items():
+        family = f"paprnav-pilot-{suffix}"
+        task_arns[address] = f"arn:aws:ecs:{authority.REGION}:{authority.ACCOUNT}:task-definition/{family}:1"
+        after(address).update(
+            family=family,
+            arn=task_arns[address],
+            execution_role_arn=role_arns[f'aws_iam_role.ecs_execution["{execution}"]'],
+            task_role_arn=role_arns[f"aws_iam_role.{task}"],
+        )
+
+    reads = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+    artifact = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:GetObjectTagging", "s3:PutObjectTagging"]
+    policies = {
+        "aws_iam_role_policy.api_execution_secrets": ("paprnav-pilot-api-execution-secrets", role_names['aws_iam_role.ecs_execution["api"]'], policy({"Effect": "Allow", "Action": reads, "Resource": [secret_arns["aws_secretsmanager_secret.database_url"], secret_arns["aws_secretsmanager_secret.invitation_signing"]]})),
+        "aws_iam_role_policy.worker_execution_secrets": ("paprnav-pilot-worker-execution-secrets", role_names['aws_iam_role.ecs_execution["worker"]'], policy({"Effect": "Allow", "Action": reads, "Resource": secret_arns["aws_secretsmanager_secret.database_url"]})),
+        "aws_iam_role_policy.api_task": ("paprnav-pilot-api-task", role_names["aws_iam_role.api_task"], policy({"Effect": "Allow", "Action": artifact, "Resource": f"{bucket}/*"}, {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": bucket})),
+        "aws_iam_role_policy.worker_task": ("paprnav-pilot-worker-task", role_names["aws_iam_role.worker_task"], policy({"Effect": "Allow", "Action": artifact, "Resource": f"{bucket}/*"}, {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": bucket}, {"Effect": "Allow", "Action": ["textract:DetectDocumentText", "textract:StartDocumentTextDetection", "textract:GetDocumentTextDetection"], "Resource": "*"})),
+        "aws_iam_role_policy.migration_reference_secrets": ("paprnav-pilot-migration-reference-secrets", role_names["aws_iam_role.migration_reference_task"], policy({"Effect": "Allow", "Action": reads, "Resource": master_secret})),
+        "aws_iam_role_policy.runtime_role_secrets": ("paprnav-pilot-runtime-role-secrets", role_names["aws_iam_role.runtime_role_task"], policy({"Effect": "Allow", "Action": reads, "Resource": master_secret}, {"Effect": "Allow", "Action": ["secretsmanager:PutSecretValue", "secretsmanager:DescribeSecret"], "Resource": secret_arns["aws_secretsmanager_secret.database_url"]})),
+        "aws_iam_role_policy.first_admin_secrets": ("paprnav-pilot-first-admin-secrets", role_names["aws_iam_role.first_admin_task"], policy({"Effect": "Allow", "Action": reads, "Resource": [master_secret, secret_arns["aws_secretsmanager_secret.first_admin_password"]]})),
+        "aws_iam_role_policy.worker_scheduler": ("paprnav-pilot-worker-scheduler", role_names["aws_iam_role.worker_scheduler"], policy({"Effect": "Allow", "Action": "ecs:RunTask", "Resource": task_arns["aws_ecs_task_definition.worker"], "Condition": {"ArnEquals": {"ecs:cluster": cluster}}}, {"Effect": "Allow", "Action": "iam:PassRole", "Resource": [role_arns['aws_iam_role.ecs_execution["worker"]'], role_arns["aws_iam_role.worker_task"]], "Condition": {"StringEquals": {"iam:PassedToService": "ecs-tasks.amazonaws.com"}}})),
+    }
+    for address, (name, role, document) in policies.items():
+        after(address).update(name=name, role=role, policy=document)
+
+    after("aws_scheduler_schedule.worker").update(
+        name="paprnav-pilot-worker",
+        group_name="default",
+        state="DISABLED",
+        target=[{
+            "arn": cluster,
+            "role_arn": role_arns["aws_iam_role.worker_scheduler"],
+            "ecs_parameters": [{"task_definition_arn": task_arns["aws_ecs_task_definition.worker"]}],
+        }],
+    )
+    after("aws_lb_listener.https").update(certificate_arn=authority.PILOT_CERTIFICATE_ARN, protocol="HTTPS", port=443)
+    plan["resource_changes"].append({
+        "address": "data.aws_acm_certificate.pilot",
+        "type": "aws_acm_certificate",
+        "change": {
+            "actions": ["read"],
+            "before": None,
+            "after_unknown": {},
+            "after": {
+                "arn": authority.PILOT_CERTIFICATE_ARN,
+                "domain": authority.PILOT_HOSTNAME,
+                "status": "ISSUED",
+                "most_recent": False,
+                "statuses": ["ISSUED"],
+                "types": ["AMAZON_ISSUED"],
+                "key_types": ["RSA_2048"],
+                "tags": {"Project": "paprnav", "Environment": "pilot"},
+            },
+        },
+    })
+    dns = {
+        "provider": "Squarespace",
+        "name": authority.PILOT_HOSTNAME,
+        "type": "CNAME",
+        "value": "paprnav-pilot-123456.us-east-1.elb.amazonaws.com",
+        "ttl_seconds": 300,
+    }
+    plan["output_changes"] = {"pilot_dns_cname": {"actions": ["create"], "before": None, "after": dns, "after_unknown": False}}
+    plan["planned_values"] = {"outputs": {"pilot_dns_cname": {"sensitive": False, "type": ["object", {}], "value": deepcopy(dns)}}}
+
+
 def secret_plan(authority: ModuleType, create: bool = False) -> dict:
     generated = generated_pilot_policy()
     plan = {"format_version": "1.2", "complete": True, "errored": False, "variables": {k: {"value": v} for k, v in {
         "project": "paprnav", "environment": "pilot", "aws_region": authority.REGION, "aws_account_id": authority.ACCOUNT,
-        "pilot_hostname": generated["inputs"]["pilotHostname"], "route53_zone_id": generated["inputs"]["hostedZoneId"],
+        "external_mode": True, "pilot_hostname": authority.PILOT_HOSTNAME, "dns_zone_name": authority.DNS_ZONE_NAME,
+        "pilot_certificate_arn": authority.PILOT_CERTIFICATE_ARN,
+        "policy_updater_principal_arn": generated["inputs"]["operatorUpdaterPrincipalArn"],
     }.items()}, "resource_changes": []}
     for address, typ in authority.instances(authority.bound_sources()).items():
         if typ == "local" or typ.startswith("data."):
             continue
         values = {"name": authority.SECRET_NAMES.get(address, "irrelevant"), "description": "reviewed description", "kms_key_id": None, "tags": {}, "tags_all": {"Project": "paprnav"}}
         plan["resource_changes"].append({"address": address, "type": typ, "change": {"actions": ["create"] if create else ["no-op"], "before": None if create else deepcopy(values), "after": values, "after_unknown": {"arn": True, "id": True, "policy": True, "replica": True, "name_prefix": True} if create and address in authority.SECRET_NAMES else {}}})
+    bind_plan_semantics(authority, plan)
     return plan
 
 
@@ -905,6 +1093,47 @@ def test_iam_plan_gate_rejects_whole_plan_before_any_apply(iam_authority: Module
     elif mutation == "mixed":
         change["after"]["description"] = "requires UpdateSecret"
         next(x for x in plan["resource_changes"] if x["address"] == "aws_ecs_cluster.main")["change"]["actions"] = ["update"]
+    with pytest.raises(iam_authority.Stop):
+        run_secret_plan(iam_authority, plan)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["route53-input", "certificate", "unknown-policy", "wildcard-runtime", "principal", "task-role", "scheduler", "dns-unknown", "deferred"],
+)
+def test_iam_plan_semantics_rejects_unreviewed_runtime_and_handoff_values(
+    iam_authority: ModuleType,
+    mutation: str,
+) -> None:
+    plan = secret_plan(iam_authority)
+    changes = {item["address"]: item for item in plan["resource_changes"]}
+    if mutation == "route53-input":
+        plan["variables"]["route53_zone_id"] = {"value": "ZSTALE"}
+    elif mutation == "certificate":
+        changes["aws_lb_listener.https"]["change"]["after"]["certificate_arn"] += "-other"
+    elif mutation in {"unknown-policy", "wildcard-runtime"}:
+        change = changes["aws_iam_role_policy.api_task"]["change"]
+        if mutation == "unknown-policy":
+            change["after"]["policy"] = None
+            change["after_unknown"] = {"policy": True}
+        else:
+            document = json.loads(change["after"]["policy"])
+            document["Statement"][0]["Resource"] = "*"
+            change["after"]["policy"] = json.dumps(document)
+    elif mutation == "principal":
+        role = changes["aws_iam_role.worker_scheduler"]["change"]["after"]
+        document = json.loads(role["assume_role_policy"])
+        document["Statement"][0]["Principal"]["Service"] = "*"
+        role["assume_role_policy"] = json.dumps(document)
+    elif mutation == "task-role":
+        changes["aws_ecs_task_definition.api"]["change"]["after"]["task_role_arn"] = changes["aws_iam_role.frontend_task"]["change"]["after"]["arn"]
+    elif mutation == "scheduler":
+        target = changes["aws_scheduler_schedule.worker"]["change"]["after"]["target"][0]
+        target["role_arn"] = changes["aws_iam_role.api_task"]["change"]["after"]["arn"]
+    elif mutation == "dns-unknown":
+        plan["output_changes"]["pilot_dns_cname"]["after_unknown"] = {"value": True}
+    else:
+        plan["deferred_changes"] = [{"reason": "provider_config_unknown"}]
     with pytest.raises(iam_authority.Stop):
         run_secret_plan(iam_authority, plan)
 
@@ -1043,7 +1272,7 @@ def saved_plan_archive(sources: dict[str, str]) -> bytes:
     return buffer.getvalue()
 
 
-@pytest.mark.parametrize("mutation", ["suffix-grant", "conditional-grant", "scheduler-star", "route53-operator", "route53-missing-condition", "literal-brackets"])
+@pytest.mark.parametrize("mutation", ["suffix-grant", "conditional-grant", "scheduler-star", "missing-acm-get", "route53-grant", "literal-brackets"])
 def test_iam_reviewed_policy_construction_rejects_all_contract_changes(iam_authority: ModuleType, mutation: str) -> None:
     generated = generated_pilot_policy()
     statements = generated["deployPolicySupplement"]["Statement"]
@@ -1056,11 +1285,10 @@ def test_iam_reviewed_policy_construction_rejects_all_contract_changes(iam_autho
             iam_authority.forbidden_secret_overlap([generated["deployPolicySupplement"]])
     elif mutation == "scheduler-star":
         statement_by_sid(statements, "ManageExactWorkerSchedule")["Resource"] = "*"
-    elif mutation == "route53-operator":
-        condition = statement_by_sid(statements, "Route53ChangeExactPilotAlias")["Condition"]
-        condition["StringEquals"] = condition.pop("ForAllValues:StringEquals")
-    elif mutation == "route53-missing-condition":
-        statement_by_sid(statements, "Route53ChangeExactPilotAlias").pop("Condition")
+    elif mutation == "missing-acm-get":
+        statement_by_sid(statements, "AcmCertificateMetadata")["Action"].remove("acm:GetCertificate")
+    elif mutation == "route53-grant":
+        statements.append({"Effect": "Allow", "Action": ["route53:ListHostedZones"], "Resource": "*"})
     else:
         statement_by_sid(statements, "ManageExactWorkerSchedule")["Resource"] = "arn:aws:scheduler:us-east-1:527257972989:schedule/default/paprnav-pilot-worke[r]"
     with pytest.raises(iam_authority.Stop, match="reviewed construction"):
