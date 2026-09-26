@@ -26,12 +26,12 @@ export function Header() {
     : navLinks;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="app-header-horizon sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="container flex h-16 items-center justify-between px-4 mx-auto">
         {/* Logo */}
         <Link href="/logbook" className="flex items-center space-x-2">
           <span className="text-2xl font-black tracking-tight">
-            papr<span className="text-primary">nav</span>
+            papr<span className="text-brand">nav</span>
           </span>
         </Link>
 
@@ -41,10 +41,11 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
+              aria-current={pathname === link.href || pathname.startsWith(link.href + "/") ? "page" : undefined}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
+                "relative text-sm font-medium transition-colors hover:text-brand after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-brand after:transition-transform",
                 pathname === link.href || pathname.startsWith(link.href + "/")
-                  ? "text-primary"
+                  ? "text-brand after:scale-x-100"
                   : "text-muted-foreground"
               )}
             >

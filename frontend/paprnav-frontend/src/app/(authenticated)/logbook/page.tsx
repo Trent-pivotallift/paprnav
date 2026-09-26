@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Filter } from "lucide-react";
+import { AlertTriangle, BookOpen, CalendarClock, Filter, Plane, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import ClientAircraftRow from "@/components/ClientAircraftRow";
 import { Aircraft, listAircraft } from "@/lib/api";
 import { useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { getStatusFromAdStatus } from "@/components/StatusBadge";
 
 function formatAircraftType(aircraft: Aircraft) {
   return `${aircraft.make} ${aircraft.model}`.trim();
@@ -38,6 +39,27 @@ function formatComplianceStatus(status: string) {
 
 function formatLastEntry(date: string | null) {
   return date ?? "No entries yet";
+}
+
+function formatMostRecentActivity(items: Aircraft[]) {
+  const latestTimestamp = items.reduce<number | null>((latest, item) => {
+    if (!item.lastLogEntryDate) {
+      return latest;
+    }
+    const timestamp = Date.parse(item.lastLogEntryDate);
+    if (Number.isNaN(timestamp)) {
+      return latest;
+    }
+    return latest === null ? timestamp : Math.max(latest, timestamp);
+  }, null);
+
+  return latestTimestamp === null
+    ? "No entries yet"
+    : new Intl.DateTimeFormat(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(new Date(latestTimestamp));
 }
 
 export default function LogbookDashboardPage() {
@@ -77,6 +99,17 @@ export default function LogbookDashboardPage() {
     const haystack = `${item.nNumber} ${item.make} ${item.model}`.toLowerCase();
     return haystack.includes(searchTerm.toLowerCase());
   });
+  const attentionCount = aircraft.filter((item) => {
+    const status = getStatusFromAdStatus(item.complianceStatus);
+    return status === "warning" || status === "overdue";
+  }).length;
+  const aircraftWithoutEntries = aircraft.filter((item) => !item.lastLogEntryDate).length;
+  const fleetSnapshot = [
+    { label: "Total aircraft", value: String(aircraft.length), Icon: Plane },
+    { label: "Needs attention", value: String(attentionCount), Icon: AlertTriangle },
+    { label: "No log entries", value: String(aircraftWithoutEntries), Icon: BookOpen },
+    { label: "Most recent activity", value: formatMostRecentActivity(aircraft), Icon: CalendarClock },
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -87,6 +120,7 @@ export default function LogbookDashboardPage() {
             variant={userRole === "owner" ? "default" : "ghost"}
             size="sm"
             onClick={() => setUserRole("owner")}
+            aria-pressed={userRole === "owner"}
             className="rounded-md"
           >
             Owner View
@@ -95,6 +129,7 @@ export default function LogbookDashboardPage() {
             variant={userRole === "maintenance" ? "default" : "ghost"}
             size="sm"
             onClick={() => setUserRole("maintenance")}
+            aria-pressed={userRole === "maintenance"}
             className="rounded-md"
           >
             Maintenance Shop
@@ -110,6 +145,24 @@ export default function LogbookDashboardPage() {
             title="My Fleet"
             description="Manage your aircraft logbooks and compliance status"
           />
+
+          {!isLoading && !error ? (
+            <section aria-label="Fleet snapshot" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {fleetSnapshot.map(({ label, value, Icon }) => (
+                <Card key={label} className="border-border/80 shadow-sm">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className="rounded-lg bg-brand/10 p-2 text-brand">
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+                      <p className="truncate text-lg font-semibold tabular-nums">{value}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </section>
+          ) : null}
 
           {isLoading ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -145,17 +198,20 @@ export default function LogbookDashboardPage() {
               ))}
 
               {aircraft.length === 0 ? (
-                <Card className="min-h-[200px]">
-                  <CardContent className="flex h-full flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                <Card className="min-h-[200px] overflow-hidden">
+                  <CardContent className="logbook-ruled flex h-full flex-col items-center justify-center py-10 text-center text-muted-foreground">
                     <p className="font-medium text-foreground">No aircraft yet</p>
                     <p className="mt-1 text-sm">Add an aircraft to start building a digital logbook.</p>
                   </CardContent>
                 </Card>
               ) : null}
 
-              <Link href="/logbook/onboarding" className="block">
-                <Card className="flex min-h-[200px] cursor-pointer items-center justify-center border-2 border-dashed transition-colors hover:border-primary/50 hover:bg-muted/50 group">
-                  <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground transition-colors group-hover:text-primary">
+              <Link
+                href="/logbook/onboarding"
+                className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              >
+                <Card className="flex min-h-[200px] cursor-pointer items-center justify-center border-2 border-dashed transition-colors group-hover:border-brand/50 group-hover:bg-muted/50">
+                  <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground transition-colors group-hover:text-brand">
                     <Plus className="mb-2 h-12 w-12" />
                     <span className="font-medium">Add New Aircraft</span>
                   </CardContent>

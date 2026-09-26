@@ -20,7 +20,7 @@ export function PageHeader({
   backLinkLabel = "Back"
 }: PageHeaderProps) {
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("page-heading-flightpath space-y-4", className)}>
       {backLinkHref && (
         <Link
           href={backLinkHref}
