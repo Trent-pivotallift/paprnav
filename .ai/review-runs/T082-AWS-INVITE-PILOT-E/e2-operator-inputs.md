@@ -19,9 +19,9 @@ URLs must never be added.
 | Certificate/DNS owner principal | Operator controls Squarespace DNS; exact accountable human/AWS certificate creator remains to be recorded | certificate/renewal authority evidence |
 | Budget notification recipient | **required; do not commit the address if private** | foundation plan and invitations |
 | Accountable cost/incident operator | **required** | foundation plan and invitations |
-| IAM supplement updater principal and exact session ARN | **required** | supplement proof and M1 authorization; do not infer from bootstrap-user identity |
-| IAM updater accountable human owner | **required** | M1 authorization and rollback ownership |
-| IAM updater MFA or federated strong-authentication provenance | **required** | M1; current account-summary evidence does not prove this |
+| IAM supplement updater principal and exact session ARN | Operator approved existing project role `arn:aws:iam::527257972989:role/paprnav-terraform-deploy`; execution used `arn:aws:sts::527257972989:assumed-role/paprnav-terraform-deploy/botocore-session-1790386879` | v2 supplement update executed 2026-09-25 America/Chicago |
+| IAM updater accountable human owner | Repository operator approved the existing deploy role; exact accountable human identity remains to be recorded before external invitations | rollback ownership |
+| IAM updater MFA or federated strong-authentication provenance | **required before external invitations**; the assumed-role session was verified, but its upstream strong-authentication provenance was not exposed | release gate |
 | Root MFA or centralized root-credential-removal evidence | AWS account summary on 2026-09-25 reports `AccountMFAEnabled=0`, `AccountAccessKeysPresent=0`, and `AccountSigningCertificatesPresent=0`; root MFA/removal evidence remains a release blocker | external pilot release; never compensate with broader updater/deploy authority |
 | First administrator email/display name/platform organization | **required; use restricted handoff for private values** | bootstrap task definition |
 | Clean candidate commit authorization | Explicitly authorized and constructed as `e1e4c3cdcf135d6039c8b763e1a4cc251d558259`; release-boundary verifier passed and branch `codex/aws-invite-pilot` was published 2026-09-25 | immutable image/context construction |
