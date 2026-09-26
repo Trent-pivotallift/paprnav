@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_PAPRNAV_API_BASE_URL ?? "/api/backend";
+const API_BASE_URL = process.env.NEXT_PUBLIC_PAPRNAV_ENV === "pilot"
+  ? ""
+  : process.env.NEXT_PUBLIC_PAPRNAV_API_BASE_URL ?? "/api/backend";
 
 export interface Membership {
   organizationId: string;
@@ -15,6 +17,11 @@ export interface CurrentUser {
 
 export interface AuthResponse {
   user: CurrentUser;
+}
+
+export interface InvitationAcceptRequest {
+  invitationCode: string;
+  password: string;
 }
 
 export interface ProfileUpdateRequest {
@@ -535,6 +542,73 @@ export interface ObservabilityListResponse {
   feedback: UserFeedback[];
 }
 
+export interface PilotSummaryResponse {
+  generatedAt: string;
+  dateFrom: string | null;
+  dateTo: string | null;
+  actorUserId: string | null;
+  achievements: {
+    taxonomyVersion: "pilot-achievement-v1";
+    identityCount: number;
+    counts: Record<string, number>;
+    recent: Array<{
+      id: string;
+      eventType: string;
+      subjectType: string;
+      subjectId: string;
+      actorUserId: string | null;
+      organizationId: string | null;
+      aircraftId: string | null;
+      eventTime: string;
+    }>;
+  };
+  failures: {
+    count: number;
+    counts: Record<string, number>;
+    recent: Array<{
+      id: string;
+      workflowType: string;
+      workflowId: string;
+      category: string;
+      createdAt: string;
+    }>;
+  };
+  feedback: {
+    count: number;
+    typeCounts: Record<string, number>;
+    severityCounts: Record<string, number>;
+    statusCounts: Record<string, number>;
+    recent: Array<{
+      id: string;
+      feedbackType: string;
+      severity: string;
+      status: string;
+      organizationId: string | null;
+      aircraftId: string | null;
+      createdAt: string;
+    }>;
+  };
+  ocr: {
+    recordedRunsOnly: true;
+    paidAttemptCoverageComplete: false;
+    reconciliationCompletenessAvailable: false;
+    missingRowVisibilityAvailable: false;
+    attributionBasis: "recorded_billing_tags";
+    historicalTagsReattributed: false;
+    recordedRunCount: number;
+    lifecycleCounts: Record<string, number>;
+    pricingCounts: Record<string, number>;
+    attributionCounts: Record<string, number>;
+    billingCounts: Record<string, number>;
+    reconciliationRequiredRunCount: number;
+    knownEstimateRunCount: number;
+    unknownAmountRunCount: number;
+    knownPartialEstimateUsd: number | null;
+    completedPricedEstimateUsd: number | null;
+    estimateIsPartial: true;
+  };
+}
+
 export interface ADMatchResultListResponse {
   matches: ADMatchResult[];
   matcherStatus: "current" | "pending_recomputation" | "not_run";
@@ -661,6 +735,13 @@ export function register(name: string, email: string, password: string) {
   return apiFetch<AuthResponse>("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify({ name, email, password }),
+  });
+}
+
+export function acceptInvitation(payload: InvitationAcceptRequest) {
+  return apiFetch<AuthResponse>("/api/v1/auth/invitations/accept", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 
@@ -857,6 +938,25 @@ export function listObservability(params: Record<string, string> = {}) {
   const query = new URLSearchParams(params);
   const suffix = query.toString() ? `?${query.toString()}` : "";
   return apiFetch<ObservabilityListResponse>(`/api/v1/observability${suffix}`);
+}
+
+export function listAdminObservability(params: Record<string, string> = {}) {
+  const query = new URLSearchParams(params);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiFetch<ObservabilityListResponse>(`/api/v1/observability/admin${suffix}`);
+}
+
+export function listVisibleObservability(
+  isPlatformAdmin: boolean,
+  params: Record<string, string> = {},
+) {
+  return isPlatformAdmin ? listAdminObservability(params) : listObservability(params);
+}
+
+export function getPilotSummary(params: Record<string, string> = {}) {
+  const query = new URLSearchParams(params);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiFetch<PilotSummaryResponse>(`/api/v1/admin/pilot-summary${suffix}`);
 }
 
 export function getADCostAdminSummary() {

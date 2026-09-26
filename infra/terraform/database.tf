@@ -20,7 +20,7 @@ resource "aws_db_instance" "postgres" {
   storage_type          = "gp3"
 
   db_name                     = "paprnav"
-  username                    = "paprnav_app"
+  username                    = "paprnav_admin"
   manage_master_user_password = true
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
@@ -50,7 +50,14 @@ resource "aws_secretsmanager_secret" "database_url" {
   description = "SQLAlchemy DATABASE_URL for the paprnav pilot API and worker. Populate after RDS creation."
 }
 
-resource "aws_secretsmanager_secret" "session_secret" {
-  name        = "/${var.project}/${var.environment}/session-secret"
-  description = "Application session secret for the paprnav pilot runtime. Populate before starting ECS tasks."
+resource "aws_secretsmanager_secret" "invitation_signing" {
+  name                    = "/${var.project}/${var.environment}/invitation-signing"
+  description             = "Dedicated pilot invitation HMAC secret. Populate only at the Package E gate."
+  recovery_window_in_days = 30
+}
+
+resource "aws_secretsmanager_secret" "first_admin_password" {
+  name                    = "/${var.project}/${var.environment}/first-admin-password"
+  description             = "One-use first administrator password. Populate only at the Package E gate."
+  recovery_window_in_days = 30
 }

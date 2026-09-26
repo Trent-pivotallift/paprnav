@@ -1,0 +1,62 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_e_iam_amendment_design_review",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-20T20:13:56+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "167332fe43f66a9201b4afde46d77e72f677ccd16a139a888fa3805469e6bb01",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-design-initial.md",
+    "artifactSha256": "9bc70d1ed05266fd35aa55d817d87f5c77bd2fd6cae73d3155b1277385e75a54"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_e_iam_amendment_design_review_2",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-20T20:19:11+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "62a3116a91a588c21adccff7b17328cb2ce5438609f356dc65a005741a787b4f",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-design-remediation-1.md",
+    "artifactSha256": "8575a48b4c7f6fc3d7fdc056bb22c682a6217524d5ed38ac2793231e1db5ddd6"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_e_iam_amendment_impl_review",
+    "builder": "/root/t082_e_iam_amendment_impl",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-20T20:35:54+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "44aad955c1f638429a193bfb3b84e72a340488f5d675a7d59aa861910fb0b830",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-initial.md",
+    "artifactSha256": "5bbc217f569e115d6195d1ed913d930bbafdb7fb4b349e018e186bed60557a72"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_e_iam_amendment_impl_review_2",
+    "builder": "/root/t082_e_iam_amendment_remediation",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-20T21:02:29+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "2e8e3049c729e9e5525a3f154917682b09f87fb79559facbaafda2b6ee74a624",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-remediation-1.md",
+    "artifactSha256": "f8ad0b6b7f0675ebb48a3b6926f30cafd7df19f060c8483321f459163733716f"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_e_iam_amendment_impl_review_3",
+    "builder": "/root/t082_e_iam_amendment_remediation",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-20T21:19:50+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "983f374732ab2087bcfaaab98e6fc65cc0c5f017715848e052abe781843504bd",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-remediation-2.md",
+    "artifactSha256": "61df341c62d1be8f02479f59d4d4c77528d742f74510ed0dfb8dc5aece941a7b"
+  }
+]

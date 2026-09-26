@@ -1,0 +1,1001 @@
+{
+  "taskId": "T082-AWS-INVITE-PILOT-B",
+  "stage": "implementation",
+  "generatedAt": "2026-09-19T17:23:00+00:00",
+  "baseRef": "HEAD",
+  "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+  "scopePaths": [
+    "backend/.env.example",
+    "backend/app/core/config.py",
+    "backend/app/main.py",
+    "backend/app/api/routes/auth.py",
+    "backend/app/api/routes/observability.py",
+    "backend/app/schemas/auth.py",
+    "backend/app/services/invitations.py",
+    "backend/app/services/session_revocation.py",
+    "backend/app/scripts/revoke_auth_sessions.py",
+    "backend/tests/test_pilot_invite_tenant_boundary.py",
+    "backend/tests/test_pilot_release_boundary.py",
+    "backend/tests/test_ad_matching.py",
+    ".ai/pilot-release-boundary-v1.json",
+    ".ai/PILOT_RELEASE_BOUNDARY.md",
+    "frontend/paprnav-frontend/.env.example",
+    "frontend/paprnav-frontend/package.json",
+    "frontend/paprnav-frontend/src/lib/api.ts",
+    "frontend/paprnav-frontend/src/app/(authenticated)/observability/page.tsx",
+    "frontend/paprnav-frontend/src/app/api/backend/[...path]/route.ts",
+    "frontend/paprnav-frontend/src/app/(auth)/page.tsx",
+    "frontend/paprnav-frontend/src/app/(auth)/register/page.tsx",
+    "frontend/paprnav-frontend/src/app/(auth)/invite/page.tsx",
+    "frontend/paprnav-frontend/tests/pilot-observability.test.mjs"
+  ],
+  "scopeFingerprint": "16eefcc2e01884c0855c5e4cb0db589e4c2970abbc5ed3bee878b5f2010af236",
+  "files": [
+    {
+      "path": ".ai/PILOT_RELEASE_BOUNDARY.md",
+      "status": "??",
+      "size": 6653,
+      "sha256": "41e01eda7ad31da31a74d920c1b1b6b267f2ca25d34a5acc69bf3d8ca437dad3",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/pilot-release-boundary-v1.json",
+      "status": "??",
+      "size": 8074,
+      "sha256": "0eb014c2329e3dcfb9f388a7029e5d8a67eb1df4675106ee45bd6f32a3e458a8",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/.env.example",
+      "status": " M",
+      "size": 2212,
+      "sha256": "9d624bceccbeaaf1d49a889d3854060080ca92d5659ab6d574fe347bc3d5d71a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/auth.py",
+      "status": " M",
+      "size": 9323,
+      "sha256": "7c60a4e7818db8349d91431e53d6362f665e2a89c2ae3e25b86cbfef175a171a",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/api/routes/observability.py",
+      "status": " M",
+      "size": 11751,
+      "sha256": "39014b4d22b9defb9fdba1416532221cb8ddec28f065c03b99f86f7ea20ee762",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "status": " M",
+      "size": 10801,
+      "sha256": "a9015bedd4362c5cbfc3bda6b05ccce4e92984c958b8087d4dd8d10344562cf4",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/main.py",
+      "status": " M",
+      "size": 2160,
+      "sha256": "d82af05027a5be5e7395fe85eb6d5dc183ccc32a14c924dc18453e691819016e",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/schemas/auth.py",
+      "status": " M",
+      "size": 1360,
+      "sha256": "81ce14129ba709d36e031069ca5e4eb3e7af3c6cd86b21290ead742ff8b413ed",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/scripts/revoke_auth_sessions.py",
+      "status": "??",
+      "size": 779,
+      "sha256": "65b73178e5f855f515c5dba15d9c9b76f58be5f590431f4f82100a6358293fe7",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/invitations.py",
+      "status": "??",
+      "size": 6308,
+      "sha256": "b81a153085587c0a7b64961c043e2d13ab0ed54f93f2d31f624270097a0bf819",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/app/services/session_revocation.py",
+      "status": "??",
+      "size": 918,
+      "sha256": "d7c4a36fb880d74d2a390711b30ec0d19dd858205cb768a6cb11344e9996145f",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_ad_matching.py",
+      "status": " M",
+      "size": 23550,
+      "sha256": "51c8ad49fae7d3ff6b3c21fea7c692a437a4645aca63768fee59dbc9866e0303",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_pilot_invite_tenant_boundary.py",
+      "status": "??",
+      "size": 15496,
+      "sha256": "4481bc1e88bfaac5f0e7a9e3c05acc2cb070dd7131d6a4756a19b6a981227bc6",
+      "readStatus": "readable"
+    },
+    {
+      "path": "backend/tests/test_pilot_release_boundary.py",
+      "status": "??",
+      "size": 36863,
+      "sha256": "ad8538a9dc7292e4f5cb273b424cdabd64740fdd6b50fffa914574b56fde45a6",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/.env.example",
+      "status": " M",
+      "size": 261,
+      "sha256": "330af5f1958cc928f047f1c07b5db547361c865f3fb2ccb4b94f8048600611d3",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/package.json",
+      "status": " M",
+      "size": 1202,
+      "sha256": "4a320871cb8e65506a8f9cc38006b9702e28cf93a14392088ad317d616581a6d",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(auth)/invite/page.tsx",
+      "status": "??",
+      "size": 3488,
+      "sha256": "20e1ba41c07086e00a981e09577e966f27fa2311931f933c8baa40ed2d73f295",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(auth)/page.tsx",
+      "status": " M",
+      "size": 5097,
+      "sha256": "f076a27dc99d7da98b007502bf7a9ec78db8ba6a88a8ccbea96fbfd8bd1e2297",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(auth)/register/page.tsx",
+      "status": " M",
+      "size": 5612,
+      "sha256": "1d2338ac38759343a8babea48efd0719821671d2a81c7b8facd584367c052736",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/(authenticated)/observability/page.tsx",
+      "status": " M",
+      "size": 7963,
+      "sha256": "ab363fbce7a06211f7508ea2407d62c24498516f44f40c8eea248bcdac01f35f",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/app/api/backend/[...path]/route.ts",
+      "status": " M",
+      "size": 1780,
+      "sha256": "aa0dcb3c035b5180420d0ec5d9912625fde68f3d72d818c2fecc4daf33dcdad2",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/src/lib/api.ts",
+      "status": " M",
+      "size": 24483,
+      "sha256": "6feaa2e9ccdbaefd2e1f2785ce1f5f999e531d7da6e1857f4e57752873c71ba8",
+      "readStatus": "readable"
+    },
+    {
+      "path": "frontend/paprnav-frontend/tests/pilot-observability.test.mjs",
+      "status": "??",
+      "size": 940,
+      "sha256": "4b05f4297d57a0f63b5de11e6b2a0786c72f4d258f467fd0085fefe76cb31a2c",
+      "readStatus": "readable"
+    }
+  ],
+  "reviewInputs": [
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT-B/decision.md",
+      "status": "review_input",
+      "size": 6103,
+      "sha256": "43f85c462fefa7a8a71f94d1bcf154d63f6a724512e8abd9a8b6ebd6b6775ca1",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT-B/findings.json",
+      "status": "review_input",
+      "size": 2059,
+      "sha256": "4133a6e8e938a7c67526489459aba05d6ed1473404573bbdbb5d2bac706a7fdc",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/decision.md",
+      "status": "review_input",
+      "size": 36292,
+      "sha256": "69c2cce98e90b2902e172ef067800ee6bfdbdaaef3f701b8fe492a694d977f71",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/design-remediation-1.md",
+      "status": "review_input",
+      "size": 4092,
+      "sha256": "2909b5b0e14af10e41eb6a7b762df28e47f3d91c16c35627db8064e375f31506",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-design-closure-1.md",
+      "status": "review_input",
+      "size": 2888,
+      "sha256": "78442e342fb36fb3732cc95d7e9e77f49842b3a5e35dffe49c920c6e2d496018",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/package-b-implementation.md",
+      "status": "review_input",
+      "size": 5971,
+      "sha256": "2673d43606dde214046f93912574060840539302bb74ada2025cb6ad4fc1d669",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-implementation-package-a-remediation-3.md",
+      "status": "review_input",
+      "size": 2685,
+      "sha256": "cd7fc858bfcf9a7299fe26abe3dee9d7ae9b777655d334fb70740e0203df1884",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-design-inheritance.md",
+      "status": "review_input",
+      "size": 949,
+      "sha256": "95afd08c2e7a33173fdc0cdcec6fdee4e84d930b1999945213b0aef6cd2dd7a1",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-implementation-initial.md",
+      "status": "review_input",
+      "size": 2484,
+      "sha256": "c0f781e0293f7ee3f922886bfe3abc1991813c9ad944266311d46eb6e639cec1",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT-B/package-b-remediation-1.md",
+      "status": "review_input",
+      "size": 1838,
+      "sha256": "0d21b34b766bc120c0c8b70a86e1844f7a6fec7f74f3a74084557083731c79bc",
+      "readStatus": "readable"
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "review_input",
+      "size": 2214,
+      "sha256": "2295cae2d1394c07fe3573d4d790985eb1b85c9a6514a94d851d55337f3fc0cb",
+      "readStatus": "readable"
+    },
+    {
+      "path": ".ai/MODEL_ROUTING.md",
+      "status": "review_input",
+      "size": 10194,
+      "sha256": "043890c6138ba45f88dcb8a4ea209d288f4a8e8625cf60d9127408c1ff240261",
+      "readStatus": "readable"
+    }
+  ],
+  "outOfScopeDirtyFiles": [
+    {
+      "path": ".ai/MODEL_ROUTING.md",
+      "status": " M"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-bootstrap-ast-executor.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-bootstrap-ast-schema-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-bootstrap-reference-program-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-calibration-goldens.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-design-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-design-validator.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-mapping-reconstruction-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-mapping-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-mapping.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-persistence-bootstrap-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-persistence-bootstrap-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-persistence-bootstrap-validator.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-persistence-requirements-v1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-persistence-requirements-v2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-persistence-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-persistence.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-semantic-fixtures-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-semantic-goldens-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-semantic-interpreter.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-semantic-mutations-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-semantic-oracle-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-semantic-oracle-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-source-catalog-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-source-catalog.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-source-schema-v2.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-source-validator.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-synthetic-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/acceptance-synthetic-vectors.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-architecture-reassessment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-authority-dag-closure-1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-authority-dag-closure-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-authority-dag-closure-3.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-authority-dag.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-authority-versioning-bootstrap.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-authority-versioning-remediation-4.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-bootstrap-closure-1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-bootstrap-inputs.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-design-closure-1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-design-closure-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-design-initial.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-design-integration-final.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-cloud-partition-amendment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-kernel-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-kernel-remediation-3.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-kernel.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-predicate-oracle-design-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-predicate-oracle-design-remediation-3.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-predicate-oracle-design-remediation-4.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-predicate-oracle-design-remediation-5.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-predicate-oracle-design-remediation-6.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-local-semantic-predicate-oracle-design.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-mapping-reconstruction.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-orm-source-authority-design.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-orm-source-authority-implementation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-persistence-acl-canonicalization-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-persistence-acl-canonicalization-remediation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-persistence-acl-rollback-blocker.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-persistence-dag-implementation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-persistence-runtime-authority-reassessment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-platform-runtime-authority-local-blocker.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-platform-runtime-authority-local-v2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-platform-runtime-authority-profile-v2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-platform-runtime-authority-profile.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-platform-runtime-authority-rds-preflight.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-platform-runtime-authority-rds-prerequisite-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-platform-runtime-authority-rds-prerequisite.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/adversarial-resource-rebinding.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/architecture-oracle-reassessment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/authority-dag-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/authority-dag-remediation-3.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/authority-dag-remediation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/authority-history/decision-authority-map-v1/acceptance-persistence-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/authority-history/decision-authority-map-v1/resource-accounting-v2.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/authority-versioning-remediation-4.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/closure.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/decision-authority-map-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/decision-authority-map-v2.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/decision-authority-map-v2.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/decision-authority-map.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/decision.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/design-integration-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/design-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/design-remediation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/findings.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/independent-acceptance-enumerator.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-cloud-partition-amendment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/entry-fence-v2.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/entry-fence.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/implementation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/predicate-cases-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/predicate-oracle-results-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/predicate-registry-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/semantic_harness.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-kernel/semantic_kernel.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/local-semantic-predicate-oracle-design.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/manifest.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/normative-acceptance-matrix.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/oracle-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/orm-source-authority-decision.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/orm-source-authority-implementation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/persistence-acl-canonicalization-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/persistence-acl-canonicalization-remediation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/persistence-acl-rollback-blocker.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/persistence-implementation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/persistence-runtime-authority-reassessment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-0029-binary-manifest.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-0029-binary-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-0029-binary.tar.gz",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-local-oracle-v2.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-local-oracle.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-local-provenance-v2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-local-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-local-results-v2.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-local-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-oracle-plan-v2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-oracle-plan.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-profile-v1.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-profile-v1.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-profile-v2.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-profile-v2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-profile-v2.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-profile.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-rds-execution-manifest.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-rds-preflight-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-rds-preflight-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-rds-preflight.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-rds-prerequisite-amendment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-relationship-oracle.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/platform-runtime-authority-relationship-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/resource-accounting-results.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/resource-accounting-v2.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/resource-accounting-vectors.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/resource-accounting.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/resource-accounting.schema.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/resource-contract-builder.py",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/resource-reconstruction-provenance.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/review-packet.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/reviews.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/risk-adjusted-routing-audit.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/run-trusted-sentinel.sh",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/sql-topology-benchmark.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/state.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/trusted-sentinel-harness.sql",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/trusted-sentinel-output.txt",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-authority-architecture-amendment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-design-closure-1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-design-initial.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-implementation-package-a-initial.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-implementation-package-a-remediation-1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-implementation-package-a-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/adversarial-implementation-package-a-remediation-3.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/closure.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/decision.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/design-remediation-1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/findings.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/manifest.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/package-a-authority-architecture-amendment.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/package-a-implementation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/package-a-remediation-1.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/package-a-remediation-2.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/package-a-remediation-3.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/package-b-implementation.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/review-packet.md",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/reviews.json",
+      "status": "??"
+    },
+    {
+      "path": ".ai/review-runs/T082-AWS-INVITE-PILOT/state.json",
+      "status": "??"
+    },
+    {
+      "path": "backend/app/db/migrations/sql/20260916_0030_candidate_acceptance_contract.json",
+      "status": "??"
+    },
+    {
+      "path": "backend/app/db/migrations/sql/20260916_0030_candidate_acceptance_integrity.sql",
+      "status": "??"
+    },
+    {
+      "path": "backend/app/db/migrations/versions/20260916_0030_add_ad_v4_candidate_acceptance.py",
+      "status": "??"
+    },
+    {
+      "path": "backend/app/models/core.py",
+      "status": " M"
+    },
+    {
+      "path": "backend/app/services/ad_v4_acceptance_persistence_contract.py",
+      "status": "??"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_acceptance_persistence.py",
+      "status": "??"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_acceptance_persistence_postgres.py",
+      "status": "??"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_model_source_authority.py",
+      "status": "??"
+    },
+    {
+      "path": "backend/tests/test_ad_v4_model_source_authority_postgres.py",
+      "status": "??"
+    },
+    {
+      "path": "scripts/build_pilot_migration_context.py",
+      "status": "??"
+    },
+    {
+      "path": "scripts/generate-ad-v4-acceptance-persistence.py",
+      "status": "??"
+    },
+    {
+      "path": "scripts/verify_pilot_release_boundary.py",
+      "status": "??"
+    }
+  ],
+  "outOfScopeReason": "Preserved T081 Slice 4B artifacts, migration 0030, backend/app/models/core.py edits, Package A source outside shared config/main/test/policy dependencies, and the pre-existing model-routing policy edit are not Package B implementation. No Terraform, AWS, Git staging, or commit is in scope."
+}

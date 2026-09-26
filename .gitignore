@@ -32,6 +32,11 @@ backend/tmp/
 .ai/review-runs/*/review-packet.sha256
 .ai/review-runs/*/*.error.md
 
+# Paused local V4 Slice-4B evidence (large generated oracle artifacts).
+# Preserve locally during the AWS pilot; force-add selected artifacts only when
+# Slice-4B resumes and its commit gate is satisfied.
+.ai/review-runs/T081-V4-SCHEMA-SLICE-4B/
+
 # Terraform local state and provider cache
 .terraform/
 **/.terraform/

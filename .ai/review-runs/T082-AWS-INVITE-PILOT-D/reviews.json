@@ -1,0 +1,98 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T19:59:18+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "c8d03eed16b405d84027bf14f8cb596afcd13c9eac289a29413070a48839ac55",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-design-inheritance.md",
+    "artifactSha256": "db9ecac9003a10505ffc03a369af996ccc500a19b5c3f8187e17ecb17ba8131f"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T20:02:08+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "34eae5d28213ca4066c7df0c348229680f2df65258dff0c92b9d7de124648c93",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-design-closure.md",
+    "artifactSha256": "42cab17f1a95eafcc4843eb94680c062aa4e5e5b560828765fc39fae96886bc1"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_d_implementation_review",
+    "builder": "/root/t082_package_d_implementation",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T20:22:15+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "d672c75eae8a2fbcb73363fa610b4be59bd893eac5e926a887dd79db7c2a527b",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-implementation-initial.md",
+    "artifactSha256": "f03194456c9fe27b51fe84f9d91f946462d514c1ffcba870fa66c050fca36c17"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_d_implementation_review",
+    "builder": "/root/t082_package_d_remediation_1",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T20:41:26+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "bd07a92ac1619ff9cd021926e30eb9b071adf84ad3e08d80c114843a3ab3bc7d",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-implementation-remediation-1.md",
+    "artifactSha256": "4ab45d5f81e05f32e1957830cfd31eb51fc8db6acfb39001682dfebae1028949"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_d_privacy_review_2",
+    "builder": "/root/t082_package_d_privacy_remediation_2",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T21:02:24+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "1619d4026ee273d3866b7100dc9109fbb08a1856f78948a3d6c268339fab1f46",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-implementation-remediation-2.md",
+    "artifactSha256": "b3ae3c900212d16b475fef1f1faef32f39795ae54d014f0943783f27e4ea233c"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_d_privacy_review_2",
+    "builder": "/root/t082_package_d_privacy_remediation_3",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T21:51:52+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "c8d778283b7604cf927cdda027a8d1f1b47409c37a48de31e4da807f59d82b5a",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-implementation-remediation-3.md",
+    "artifactSha256": "02ed26002b1bbea0ced2b0e1158fd328f2293503baa4f7bdae0bce44830061f9"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/t082_package_d_closure_review",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T21:59:53+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "6d9dcad2c2928591ad49cd0ba2ba54bb437cb6b298964b8c59a45f807ac2fbdd",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-closure-initial.md",
+    "artifactSha256": "afbc56dd3e260c30c26158ed89969967d7e32ee65da40524d75a8034944ace26"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/t082_package_d_closure_review",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T22:12:49+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "ea52035a0490215f61c4babc7778215d72470517ee87378490a6bb3b2f340d46",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D/adversarial-closure-final.md",
+    "artifactSha256": "ab710ce245c2a799d0737f53e32aba9b48990de9c9ac7ce8ee7147def7ec6c14"
+  }
+]

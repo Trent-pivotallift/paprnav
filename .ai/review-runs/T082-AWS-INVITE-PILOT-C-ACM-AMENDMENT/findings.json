@@ -1,0 +1,15 @@
+[
+  {
+    "id": "T082-C-CLOSURE-001",
+    "stage": "closure",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Final closure artifacts enumerate every meaningful phase, role, identity, requested route, and actual model and effort or runtime non-disclosure.",
+    "summary": "The closure reports omitted a complete mandatory model-assignment summary.",
+    "evidence": ["../T082-AWS-INVITE-PILOT-C/adversarial-closure-initial.md", ".ai/MODEL_ROUTING.md", "closure.md", "../T082-AWS-INVITE-PILOT-C/closure.md"],
+    "impact": "The high-risk amendment cannot close without auditable model-routing evidence.",
+    "requiredClosure": "Add complete Model assignments sections to both closure reports, preserving historical artifacts, and obtain documentation/integrity re-attestation.",
+    "closureEvidence": ["closure.md", "../T082-AWS-INVITE-PILOT-C/closure.md", "../T082-AWS-INVITE-PILOT-C/adversarial-closure-final.md"]
+  }
+]

@@ -19,6 +19,7 @@ from app.models.core import (
     OCRRun,
     OCRTextSpan,
     Upload,
+    User,
 )
 from app.services.ocr_provider import OCRProvider, get_ocr_provider
 from app.services.cost_tags import upload_billable_account_tag
@@ -30,6 +31,7 @@ from app.services.page_planning import (
 )
 from app.services.candidate_validation import validate_entry_candidate
 from app.services.selective_ocr import process_upload_with_selective_routing
+from app.services.pilot_achievements import record_pilot_achievement
 
 LOW_CONFIDENCE_THRESHOLD = 80.0
 EXTRACTION_PROVIDER_NAME = "deterministic_logbook_extractor"
@@ -293,7 +295,12 @@ def effective_span_text(span: OCRTextSpan) -> str:
     return span.text
 
 
-def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntry]:
+def extract_entries_from_job(
+    db: Session,
+    job: IngestionJob,
+    *,
+    pilot_actor: User | None = None,
+) -> list[LogbookEntry]:
     if job.verification_status != "verified":
         raise ValueError("Page order and completeness must be verified before extraction")
 
@@ -301,7 +308,7 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
         select(LogbookEntry)
         .join(LogbookEntryEvidence)
         .where(LogbookEntryEvidence.ingestion_job_id == job.id)
-    ).all()
+    ).unique().all()
     if existing:
         return existing
 
@@ -369,6 +376,20 @@ def extract_entries_from_job(db: Session, job: IngestionJob) -> list[LogbookEntr
                 field_name,
                 evidence_type=draft.field_evidence_types.get(field_name),
                 validation_result=draft.validation_result,
+            )
+        if pilot_actor is not None:
+            record_pilot_achievement(
+                db,
+                event_type="logbook_entry_created",
+                subject_type="logbook_entry",
+                subject_id=entry.id,
+                actor=pilot_actor,
+                aircraft_id=job.aircraft_id,
+                organization_id=job.aircraft.owner_organization_id,
+                properties={
+                    "logbookSection": section.key,
+                    "sourceType": entry.source_type,
+                },
             )
 
     job.entry_extraction_status = "complete"

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 
 
 DEFAULT_CORS_ORIGINS = (
@@ -81,7 +82,10 @@ class Settings:
     ad_extraction_timeout_seconds: float
     govinfo_api_key: Optional[str]
     govinfo_base_url: str
+    session_cookie_secure: bool
+    invite_signing_secret: Optional[str]
     drs_max_snapshot_age_days: int = 7
+    ad_v4_routes_enabled: bool = True
     ad_v4_validator2_writes_enabled: bool = False
     ad_v4_slice3a_routes_enabled: bool = False
     ad_v4_slice3b_routes_enabled: bool = False
@@ -99,10 +103,11 @@ def parse_bool(value: Optional[str], default: bool = False) -> bool:
 @lru_cache
 def get_settings() -> Settings:
     load_local_env_file()
+    environment = os.getenv("PAPRNAV_ENV", "local").strip().lower()
     return Settings(
         app_name=os.getenv("PAPRNAV_APP_NAME", "paprnav"),
         app_version=os.getenv("PAPRNAV_APP_VERSION", "0.1.0"),
-        environment=os.getenv("PAPRNAV_ENV", "local"),
+        environment=environment,
         database_url=os.getenv(
             "DATABASE_URL",
             "postgresql+psycopg://paprnav_user:paprnav_password@localhost:5432/paprnav_db",
@@ -179,8 +184,17 @@ def get_settings() -> Settings:
         ad_extraction_timeout_seconds=float(os.getenv("PAPRNAV_AD_EXTRACTION_TIMEOUT_SECONDS", "30")),
         govinfo_api_key=os.getenv("GOVINFO_API_KEY") or None,
         govinfo_base_url=os.getenv("PAPRNAV_GOVINFO_BASE_URL", "https://api.govinfo.gov").rstrip("/"),
+        session_cookie_secure=parse_bool(
+            os.getenv("PAPRNAV_SESSION_COOKIE_SECURE"),
+            default=environment == "pilot",
+        ),
+        invite_signing_secret=os.getenv("PAPRNAV_INVITE_SIGNING_SECRET") or None,
         drs_max_snapshot_age_days=int(
             os.getenv("PAPRNAV_DRS_MAX_SNAPSHOT_AGE_DAYS", "7")
+        ),
+        ad_v4_routes_enabled=parse_bool(
+            os.getenv("PAPRNAV_AD_V4_ROUTES_ENABLED"),
+            default=environment != "pilot",
         ),
         ad_v4_validator2_writes_enabled=parse_bool(
             os.getenv("PAPRNAV_AD_V4_VALIDATOR2_WRITES_ENABLED")
@@ -201,3 +215,44 @@ def get_settings() -> Settings:
             os.getenv("PAPRNAV_AD_V4_SLICE4_DECISIONS_ENABLED")
         ),
     )
+
+
+PILOT_FORBIDDEN_V4_SETTINGS = (
+    "ad_v4_routes_enabled",
+    "ad_v4_validator2_writes_enabled",
+    "ad_v4_slice3a_routes_enabled",
+    "ad_v4_slice3b_routes_enabled",
+    "ad_v4_slice4_reads_enabled",
+    "ad_v4_slice4_drafts_enabled",
+    "ad_v4_slice4_decisions_enabled",
+)
+
+
+def validate_runtime_settings(settings: Settings) -> None:
+    """Fail closed when required invite-pilot trust boundaries are absent."""
+
+    if settings.environment != "pilot":
+        return
+    enabled = [name for name in PILOT_FORBIDDEN_V4_SETTINGS if getattr(settings, name)]
+    if enabled:
+        raise RuntimeError(
+            "Pilot startup refused because V4 capability settings are enabled: "
+            + ", ".join(enabled)
+        )
+    if not settings.session_cookie_secure:
+        raise RuntimeError("Pilot startup requires secure session cookies")
+    if not settings.invite_signing_secret or len(settings.invite_signing_secret.encode("utf-8")) < 32:
+        raise RuntimeError("Pilot startup requires a dedicated invitation signing secret of at least 32 bytes")
+    if len(settings.cors_origins) != 1:
+        raise RuntimeError("Pilot startup requires exactly one CORS origin")
+    origin = settings.cors_origins[0]
+    parsed = urlsplit(origin)
+    canonical_origin = f"{parsed.scheme}://{parsed.netloc}"
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or origin != canonical_origin
+        or parsed.username
+        or parsed.password
+    ):
+        raise RuntimeError("Pilot startup requires one canonical HTTPS browser origin")

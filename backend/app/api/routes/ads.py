@@ -161,6 +161,7 @@ from app.services.ad_v4_reviews import (
 from app.services.ad_recurrence import due_state_payload
 from app.services.installed_components import component_display_name
 from app.services.observability import record_product_event, record_workflow_status
+from app.services.pilot_achievements import record_pilot_achievement
 from app.services.storage import safe_filename
 
 router = APIRouter(prefix="/api/v1/ads", tags=["airworthiness-directives"])
@@ -1762,6 +1763,19 @@ def decide_match_adjudication(
             "matchStatus": match.status,
         },
     )
+    record_pilot_achievement(
+        db,
+        event_type="ad_review_completed",
+        subject_type="ad_match_adjudication",
+        subject_id=adjudication.id,
+        actor=current_user,
+        aircraft_id=match.aircraft_id,
+        organization_id=match.aircraft.owner_organization_id,
+        properties={
+            "decision": payload.decision,
+            "decisionKind": "aircraft_match",
+        },
+    )
     record_workflow_status(
         db,
         workflow_type="hitl_adjudication",
@@ -1967,6 +1981,17 @@ def decide_extraction_review(
             "decision": payload.decision,
             "directiveId": review.extraction.directive_id,
             "extractionStatus": review.extraction.status,
+        },
+    )
+    record_pilot_achievement(
+        db,
+        event_type="ad_review_completed",
+        subject_type="ad_extraction_review",
+        subject_id=review.id,
+        actor=current_user,
+        properties={
+            "decision": payload.decision,
+            "decisionKind": "extraction",
         },
     )
     record_workflow_status(

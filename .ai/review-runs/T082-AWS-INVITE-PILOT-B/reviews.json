@@ -1,0 +1,26 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T17:21:00+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "47eb68a013d7118c515de8de448e7d5447de7e262a38059fe019950668d66b94",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-design-inheritance.md",
+    "artifactSha256": "95afd08c2e7a33173fdc0cdcec6fdee4e84d930b1999945213b0aef6cd2dd7a1"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T17:25:09+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "16eefcc2e01884c0855c5e4cb0db589e4c2970abbc5ed3bee878b5f2010af236",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-implementation-remediation-1.md",
+    "artifactSha256": "947a8d027ae557cd9e9de1dbe9e3d178766f062f54f90c87f35d0ff406d664c9"
+  }
+]

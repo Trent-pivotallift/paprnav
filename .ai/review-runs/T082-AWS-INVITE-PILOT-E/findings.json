@@ -1,0 +1,67 @@
+[
+  {
+    "id": "E-DESIGN-001",
+    "stage": "design",
+    "reviewer": "/root/t082_package_e_design_review",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The sealed fixed-phase bootstrap must connect to the exact Terraform-managed RDS instance without changing the RDS-managed secret schema.",
+    "summary": "Bootstrap requires host and port inside an RDS-managed secret that does not contain them, while Terraform supplies no separate endpoint or port.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-design-initial.md",
+      "infra/bootstrap/bootstrap.py:83-95",
+      "infra/terraform/ecs_runtime.tf:42-47",
+      "https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_jdbc.html"
+    ],
+    "impact": "All four bootstrap phases fail before connecting, blocking the manual invite cohort.",
+    "requiredClosure": "Amend the design and implement a reviewed bootstrap/IaC contract that binds non-secret endpoint and port to the exact RDS resource, keeps credentials in the managed secret, adds realistic missing/mismatch tests, and refreshes image/task evidence.",
+    "closureEvidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/decision.md:E1A",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/design-remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-implementation-e1a-remediation-1.md"
+    ]
+  },
+  {
+    "id": "E-DESIGN-002",
+    "stage": "design",
+    "reviewer": "/root/t082_package_e_design_review",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The IAM prerequisite must fit AWS policy quotas and be publishable and reversible by the explicitly named updater authority.",
+    "summary": "The proposed merged customer-managed policy is approximately 8,704 non-whitespace characters, exceeding AWS's 6,144-character managed-policy limit.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-design-initial.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/decision.md",
+      "infra/aws-iam/paprnav-terraform-deploy-policy.json",
+      "scripts/generate_pilot_deploy_policy.py",
+      "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html"
+    ],
+    "impact": "M1 cannot publish the proposed merge; splitting the policy would require authority and rollback behavior not covered by the current design.",
+    "requiredClosure": "Select and independently review a quota-feasible bounded policy layout with exact updater create/version/attach/detach/delete authority, rollback, character-count evidence, and honest effective allow/deny claims.",
+    "closureEvidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/decision.md:M1",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/design-remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-implementation-e1a-initial.md"
+    ]
+  },
+  {
+    "id": "E-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_e_e1a_review",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The focused Terraform oracle must resolve and verify the exact database host and port in every one of the four bootstrap task definitions at plan time.",
+    "summary": "Package C Terraform resource mocks use apply-time defaults while the bootstrap assertions run at plan time, so container definitions can remain unknown.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-implementation-e1a-initial.md",
+      "infra/terraform/tests/package_c.tftest.hcl"
+    ],
+    "impact": "The added HCL assertions are not yet a deterministic executable oracle for the production bootstrap environment contract.",
+    "requiredClosure": "Supply plan-time mock values for every resource dependency of the bootstrap container JSON, retain all-four-phase assertions, execute the focused Terraform test with pinned tooling, and obtain independent verification.",
+    "closureEvidence": [
+      "infra/terraform/tests/package_c.tftest.hcl",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/e1a-remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-implementation-e1a-remediation-1.md"
+    ]
+  }
+]

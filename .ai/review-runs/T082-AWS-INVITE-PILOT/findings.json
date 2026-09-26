@@ -1,0 +1,232 @@
+[
+  {
+    "id": "T082-DESIGN-001",
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Paid provider attempts are durable, single-claim, replay-safe, and cost-visible across crashes and ambiguous outcomes.",
+    "summary": "The current OCR transaction can lose a billable Textract Start and automatically submit another paid attempt.",
+    "evidence": [
+      "backend/app/services/ingestion.py:90-120,238 flushes but does not commit the attempt before the provider call.",
+      "backend/app/services/ocr_provider.py:353-362 starts Textract without a stable idempotency token and keeps JobId only in memory.",
+      "backend/app/workers/ocr.py:10-15 automatically selects failed jobs; backend/app/services/ocr_billing.py:42-44 excludes failed attempts."
+    ],
+    "impact": "A crash or timeout can create duplicate AWS spend while local cost evidence omits or undercounts the first attempt.",
+    "requiredClosure": "Define durable pre-call identity, serialized claim, stable provider token, retained JobId, ambiguous reconciliation, and failed/unknown cost visibility; later prove crash and competing-worker cases.",
+    "closureEvidence": [
+      "decision.md defines committed OCRRun intent, frozen Start parameters/S3 version, stable Textract token, retained JobId, six-day recovery ceiling, single claim, and reconciliation_required.",
+      "adversarial-design-closure-1.md independently verifies design closure."
+    ]
+  },
+  {
+    "id": "T082-DESIGN-002",
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "A fresh pilot database becomes usable without development users or fixed credentials.",
+    "summary": "Required logbook-section rows and the first platform administrator previously existed only through seed_dev.py.",
+    "evidence": [
+      "backend/app/db/migrations/versions/20260617_0001_initial_schema.py:45-53 creates the table but not required rows.",
+      "backend/app/api/routes/logbook_entries.py:41-44,235 and backend/app/services/ingestion.py:308-311 require those rows.",
+      "backend/app/scripts/seed_dev.py:19-35,209-224 also creates public demo credentials."
+    ],
+    "impact": "A clean AWS database cannot complete manual/OCR entry workflows, while using the development seed exposes a known administrator password.",
+    "requiredClosure": "Specify idempotent non-demo reference data, a secure first-admin bootstrap, prohibition of seed_dev, and clean-database acceptance evidence.",
+    "closureEvidence": [
+      "decision.md:269-281 defines separate first-admin and idempotent reference-data bootstrap phases without seed_dev.py.",
+      "decision.md test strategy requires fresh migration/bootstrap, manual and OCR-derived entry, and rerun behavior.",
+      "adversarial-design-closure-1.md independently verifies design closure."
+    ]
+  },
+  {
+    "id": "T082-DESIGN-003",
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Historical authorship never restores access removed by current membership or aircraft-assignment revocation.",
+    "summary": "An actor branch could have exposed aircraft-bound events or feedback after the actor lost tenant access.",
+    "evidence": [
+      "backend/app/api/routes/aircraft.py:51-70 removes aircraft visibility with inactive membership or assignment.",
+      "backend/app/api/routes/observability.py:80-108 stores aircraft-linked user feedback."
+    ],
+    "impact": "A former tenant participant could retain access to aircraft-linked operational or user-authored data.",
+    "requiredClosure": "Require current aircraft/organization authority for tenant-bound records, actor-only fallback for personal unbound rows, authoritative workflow joins, and revocation tests.",
+    "closureEvidence": [
+      "decision.md:192-200 defines current-visibility scoping, limited personal fallback, and fail-closed workflow resolution.",
+      "decision.md tenant ACL tests require membership and assignment revocation coverage.",
+      "adversarial-design-closure-1.md independently verifies design closure."
+    ]
+  },
+  {
+    "id": "T082-DESIGN-004",
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Invitation roles map exactly to existing organization and membership authorization domains.",
+    "summary": "Initial owner/maintenance token roles did not match owner_admin/maintenance_admin application checks.",
+    "evidence": [
+      "frontend owner and maintenance checks use owner_ and maintenance_ role prefixes.",
+      "backend/app/scripts/seed_dev.py:214-219 uses owner_admin and maintenance_admin with owner and maintenance_shop organization types."
+    ],
+    "impact": "A valid invite could create a user unable to perform the intended pilot workflow or with an ambiguous authority domain.",
+    "requiredClosure": "Close the exact owner_admin/owner and maintenance_admin/maintenance_shop mapping and reject all other pairs.",
+    "closureEvidence": [
+      "decision.md specifies the exact allowed mappings and fail-closed behavior.",
+      "adversarial-design-closure-1.md independently verifies design closure."
+    ]
+  },
+  {
+    "id": "T082-DESIGN-005",
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Pilot browser mutations traverse one origin/CSRF/WAF/correlation boundary.",
+    "summary": "The Next development proxy forwarded cookies/body while dropping security and correlation context.",
+    "evidence": [
+      "frontend/paprnav-frontend/src/app/api/backend/[...path]/route.ts:18-44 forwards cookie and body but not Origin, Referer, or correlation headers."
+    ],
+    "impact": "The alternate proxy path could bypass the proposed request controls and fragment evidence.",
+    "requiredClosure": "Disable the proxy in pilot and use one direct same-origin API path; retain implementation proof.",
+    "closureEvidence": [
+      "decision.md:180-191 requires exact origin enforcement, direct /api/v1 calls, and pilot-unavailable /api/backend proxy.",
+      "adversarial-design-initial.md records independent acceptance of the corrected design."
+    ]
+  },
+  {
+    "id": "T082-DESIGN-006",
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Emergency session invalidation revokes already-issued opaque database sessions.",
+    "summary": "The original design incorrectly claimed rotation of an unused session secret would invalidate sessions.",
+    "evidence": [
+      "backend/app/core/security.py:38-43 creates random tokens and unsalted SHA256 hashes without the configured secret.",
+      "backend/app/api/deps.py:22-35 relies on database revocation and expiry."
+    ],
+    "impact": "An operator could believe sessions were revoked while existing cookies remained valid.",
+    "requiredClosure": "Use audited per-user/global database revocation and remove the unused secret from the pilot contract; retain implementation proof.",
+    "closureEvidence": [
+      "decision.md:282-287 and 416-419 define database revocation and reject secret rotation as evidence.",
+      "adversarial-design-initial.md records independent acceptance of the corrected design."
+    ]
+  },
+  {
+    "id": "T082-DESIGN-007",
+    "stage": "design",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Achievement names and success predicates state only what the current authoritative workflow has actually completed.",
+    "summary": "The proposed ocr_review_completed milestone fired after page order/completeness verification even when mandatory low-confidence corrections remained.",
+    "evidence": [
+      "backend/app/api/routes/ingestion.py:390-399 sets verification_status verified but may leave job.status awaiting_ocr_corrections."
+    ],
+    "impact": "Pilot reporting could count OCR review as complete while the user still had required correction work.",
+    "requiredClosure": "Either require all mandatory corrections or name the milestone as page review only and state that it does not prove correction completion.",
+    "closureEvidence": [
+      "decision.md version-1 achievement table uses page_review_completed and explicitly disclaims completion of low-confidence corrections.",
+      "design-remediation-1.md records the semantic correction without adding a new workflow.",
+      "adversarial-design-closure-1.md independently verifies design closure."
+    ]
+  },
+  {
+    "id": "T082-A-001",
+    "stage": "implementation",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Every pilot V4 route-family request is rejected before authentication, request-body parsing, or CORS handling using the same decoded path authority as the router.",
+    "summary": "Reparsing request.url.path truncates decoded question-mark and fragment characters, allowing encoded delimiter requests to reach V4 authentication.",
+    "evidence": [
+      "GET /api/v1/ads/directives/id%3Fquery/v4/candidate-proposals reached an injected authentication sentinel.",
+      "The %23fragment variant also reached authentication, while the ordinary path returned the generic 404."
+    ],
+    "impact": "A pilot request can enter unfinished V4 authentication or validation despite the claimed release boundary.",
+    "requiredClosure": "Use the decoded ASGI scope path with deliberate root-path handling and independently verify encoded-delimiter, authentication-sentinel, body-read-sentinel, and preflight cases.",
+    "closureEvidence": [
+      "backend/app/main.py classifies starlette._utils.get_route_path(request.scope), matching router decoding and root-path handling.",
+      "backend/tests/test_pilot_release_boundary.py covers %3F/%23 authentication sentinels, preflight, mounted decoded paths, and a body-read sentinel.",
+      "package-a-remediation-1.md records 23 focused passing tests.",
+      "adversarial-implementation-package-a-remediation-1.md records an independent 378-case raw-ASGI matrix with zero authentication or body reads."
+    ]
+  },
+  {
+    "id": "T082-A-002",
+    "stage": "implementation",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "The release verifier proves the exact executed, complete, acyclic migration graph approved for the pilot candidate.",
+    "summary": "First-assignment parsing and head set subtraction accept later metadata overrides and disconnected migration cycles.",
+    "evidence": [
+      "Appending a second revision assignment to the committed 0029 migration still produced a passing 0029 head.",
+      "A disconnected two-revision cycle beside the expected head also preserved the expected head and passed."
+    ],
+    "impact": "An unreviewed executed migration identity or invalid graph can receive a false release-boundary pass.",
+    "requiredClosure": "Independently verify the approved sealed-context builder, exact Git/mode/hash/output manifest, and execution-backed import oracle; retain candidate-commit and Package E immutable-image/task acceptance gates.",
+    "closureEvidence": [
+      ".ai/pilot-release-boundary-v1.json binds the exact 29 approved migration source paths and blob hashes.",
+      "scripts/verify_pilot_release_boundary.py rejects inventory/blob drift, duplicate metadata, missing predecessors, duplicate predecessors, and graph cycles.",
+      "backend/tests/test_pilot_release_boundary.py mutates actual 0029 content and constructs a disconnected cycle; both fail.",
+      "package-a-remediation-1.md records 23 focused passing tests and an explicit HEAD check with all 29 revision blobs matched.",
+      "adversarial-implementation-package-a-remediation-1.md shows the remaining unbound SQL/configuration and Git-quoted path gaps; the finding is not closed.",
+      "package-a-remediation-2.md binds 44 authority inputs including the whole migration directory, Alembic configuration, and env.py repository import closure; the exact Package A config target amendment is recorded.",
+      "The verifier now compares raw NUL-delimited Git names as bytes and requires all four graph metadata declarations, a complete acyclic single-root graph, the separate head, and protected model checks.",
+      "Remediation 2: 124 dependency-relevant tests pass, including candidate authority addition/removal/rename/content drift and quoted/tab/newline/UTF-8/non-UTF-8 names under migration and excluded T081 prefixes; Python compilation and diff checks pass.",
+      "HEAD correctly fails only for the intentionally target-bound config.py; the mocked target candidate passes. Eventual reviewed candidate-commit verification and independent finding verification remain required.",
+      "adversarial-implementation-package-a-remediation-2.md proves backend/psycopg.py and backend/psycopg/__init__.py can execute through engine_from_config while the 44-file verifier passes; implementation paused after the third loop.",
+      "package-a-authority-architecture-amendment.md replaces import-name enumeration with a sealed context assembled only from reviewed Git blobs.",
+      "adversarial-authority-architecture-amendment.md independently passes the architecture and records the required implementation evidence; implementation may resume but the finding remains open.",
+      "package-a-remediation-3.md records the sealed 44-file context plus deterministic manifest, exact commit/blob/mode checks, exclusive no-symlink creation, read-only integrity verification, and simplified source-verifier responsibility.",
+      "Actual Alembic env.py and SQLAlchemy engine_from_config select injected psycopg module/package sentinels in vulnerable controls, while sealed controls load canonical installed psycopg with no checkout source on sys.path and no database connection.",
+      "Remediation 3 evidence: 292 boundary cases and 16 existing V4 API cases pass; compilation and diff checks pass. Runtime database configuration is required, dotenv/bytecode disabled, and child secret output suppressed.",
+      "adversarial-implementation-package-a-remediation-3.md independently verifies exact commit/blob/mode/path construction, complete output integrity, vulnerable and sealed real-Alembic import controls, secret handling, and route-gate regression, and closes T082-A-002 for Package A with no blocker/high finding.",
+      "The candidate-commit verification gate remains mandatory before image construction. Package E separately owns runtime immutability, trusted installed dependencies/startup hooks, migration-secret isolation, and a fresh PostgreSQL upgrade."
+    ]
+  },
+  {
+    "id": "T082-DELIVERY-001",
+    "stage": "design",
+    "reviewer": "/root/t082_delivery_amendment_review",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Delivery status distinguishes implementation review, formal closure, component tests, and operational acceptance.",
+    "summary": "The initial scoreboard overstated E1A closure and local evidence for complete journey, AD, and AWS-cost gates.",
+    "evidence": [
+      "adversarial-delivery-objective-amendment-initial.md records the independent countercheck.",
+      "Package E state is implementation_reviewed and its closure template is unfilled.",
+      "Package D local closure excludes live AWS log, budget-delivery, and actual-cost acceptance."
+    ],
+    "impact": "The daily delivery control could count unproved acceptance as completed work.",
+    "requiredClosure": "Use precise component/implementation/operational labels, separate local telemetry from AWS-cost evidence, and independently verify the corrected scoreboard.",
+    "closureEvidence": [
+      "delivery-scoreboard.md now distinguishes component implementation review, targeted component checks, local telemetry closure, and outstanding live acceptance.",
+      "adversarial-delivery-objective-amendment-final.md independently verifies the correction."
+    ]
+  },
+  {
+    "id": "T082-DELIVERY-002",
+    "stage": "design",
+    "reviewer": "/root/t082_delivery_amendment_review",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Every mandatory release gate is executable without inventing an approved prior release.",
+    "summary": "The initial amendment unconditionally required previous-image rollback for a first release with no approved prior image.",
+    "evidence": [
+      "adversarial-delivery-objective-amendment-initial.md records the independent countercheck.",
+      "Package E decision states first-release rollback is service count zero with retained data."
+    ],
+    "impact": "The governing target created an impossible or misleading initial acceptance condition.",
+    "requiredClosure": "Require first-release stop/scale-to-zero and data-preserving recovery, with previous-image rollback only after a compatible approved prior release exists.",
+    "closureEvidence": [
+      "delivery-objective-amendment.md and delivery-scoreboard.md now state the conditional rollback rule.",
+      "adversarial-delivery-objective-amendment-final.md independently verifies the correction."
+    ]
+  }
+]

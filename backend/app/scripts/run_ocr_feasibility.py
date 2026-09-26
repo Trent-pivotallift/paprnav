@@ -406,7 +406,11 @@ def main() -> None:
                 processed_job.status = "ready_for_entry_extraction"
                 processed_job.entry_extraction_status = "ready"
                 db.commit()
-                entries = extract_entries_from_job(db, processed_job)
+                entries = extract_entries_from_job(
+                    db,
+                    processed_job,
+                    pilot_actor=None,
+                )
 
             summary = summarize_job(db, job_id=processed_job.id, entries=entries)
             if selection is not None:

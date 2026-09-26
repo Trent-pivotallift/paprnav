@@ -18,6 +18,11 @@ output "frontend_ecr_repository_url" {
   value       = aws_ecr_repository.frontend.repository_url
 }
 
+output "bootstrap_ecr_repository_url" {
+  description = "ECR repository URL for the sealed migration/bootstrap image."
+  value       = aws_ecr_repository.bootstrap.repository_url
+}
+
 output "ecs_cluster_name" {
   description = "ECS cluster name for paprnav pilot services."
   value       = aws_ecs_cluster.main.name
@@ -29,8 +34,29 @@ output "vpc_id" {
 }
 
 output "alb_dns_name" {
-  description = "Public ALB DNS name for the HTTP pilot runtime skeleton."
+  description = "Public ALB DNS name behind the canonical HTTPS pilot record."
   value       = aws_lb.main.dns_name
+}
+
+output "pilot_dns_cname" {
+  description = "Manual DNS handoff for the Squarespace-managed pilot hostname."
+  value = {
+    provider    = "Squarespace"
+    name        = var.pilot_hostname
+    type        = "CNAME"
+    value       = aws_lb.main.dns_name
+    ttl_seconds = 300
+  }
+}
+
+output "pilot_https_url" {
+  description = "Canonical HTTPS URL."
+  value       = "https://${var.pilot_hostname}"
+}
+
+output "pilot_certificate_arn" {
+  description = "Verified operator-provisioned ACM certificate attached to the HTTPS listener."
+  value       = data.aws_acm_certificate.pilot.arn
 }
 
 output "api_service_name" {
@@ -73,12 +99,22 @@ output "database_url_secret_arn" {
   value       = aws_secretsmanager_secret.database_url.arn
 }
 
-output "session_secret_arn" {
-  description = "Secret ARN for the app session secret. Populate before starting ECS tasks."
-  value       = aws_secretsmanager_secret.session_secret.arn
+output "invitation_signing_secret_arn" {
+  description = "Secret ARN for the dedicated invitation-signing secret."
+  value       = aws_secretsmanager_secret.invitation_signing.arn
+}
+
+output "first_admin_password_secret_arn" {
+  description = "One-use first-administrator password secret ARN."
+  value       = aws_secretsmanager_secret.first_admin_password.arn
 }
 
 output "worker_schedule_name" {
   description = "EventBridge Scheduler schedule for the OCR worker task."
   value       = aws_scheduler_schedule.worker.name
+}
+
+output "bootstrap_task_definition_arns" {
+  description = "Fixed one-off task definitions; running them remains a Package E gate."
+  value       = { for phase, task in aws_ecs_task_definition.bootstrap : phase => task.arn }
 }

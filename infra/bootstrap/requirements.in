@@ -1,0 +1,4 @@
+alembic==1.19.1
+boto3==1.43.70
+psycopg[binary]==3.3.4
+

@@ -314,8 +314,8 @@ def test_ad_matching_creates_evidence_and_unresolved_review_tasks(
     assert feedback_response.status_code == 201
     feedback_id = feedback_response.json()["feedback"]["id"]
     triage_response = client.patch(f"/api/v1/observability/feedback/{feedback_id}", json={"status": "triaged"})
-    assert triage_response.status_code == 200
-    assert db_session.get(UserFeedback, feedback_id).status == "triaged"
+    assert triage_response.status_code == 403
+    assert db_session.get(UserFeedback, feedback_id).status == "open"
 
     observability_response = client.get("/api/v1/observability")
     assert observability_response.status_code == 200

@@ -18,6 +18,24 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  if (process.env.NEXT_PUBLIC_PAPRNAV_ENV === "pilot") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Invitation required</CardTitle>
+            <CardDescription>The pilot is available only to invited users.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/invite" className="font-medium text-primary hover:text-primary/80">
+              Accept an invitation
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);

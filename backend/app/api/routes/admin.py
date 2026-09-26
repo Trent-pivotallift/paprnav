@@ -10,8 +10,10 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.core import User
 from app.schemas.admin import ADCostAdminSummaryResponse, OCRBillingSummaryResponse
+from app.schemas.observability import PilotSummaryResponse
 from app.services.ad_coverage import summarize_ad_costs
 from app.services.ocr_billing import summarize_ocr_billing
+from app.services.pilot_summary import summarize_pilot
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
@@ -67,6 +69,34 @@ def get_ocr_billing_summary(
             account_tag=account_tag,
             aircraft_tag=aircraft_tag,
             billing_status=billing_status,
+        )
+    )
+
+
+@router.get("/pilot-summary", response_model=PilotSummaryResponse)
+def get_pilot_summary(
+    date_from: Optional[datetime] = Query(default=None, alias="dateFrom"),
+    date_to: Optional[datetime] = Query(default=None, alias="dateTo"),
+    actor_user_id: Optional[str] = Query(default=None, alias="actorUserId", max_length=36),
+    recent_limit: int = Query(default=25, alias="recentLimit", ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> PilotSummaryResponse:
+    ensure_platform_admin(current_user)
+    date_from = _normalized_datetime(date_from)
+    date_to = _normalized_datetime(date_to)
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="dateFrom must be earlier than or equal to dateTo",
+        )
+    return PilotSummaryResponse.model_validate(
+        summarize_pilot(
+            db,
+            date_from=date_from,
+            date_to=date_to,
+            actor_user_id=_normalized_filter(actor_user_id),
+            recent_limit=recent_limit,
         )
     )
 

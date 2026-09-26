@@ -16,6 +16,9 @@ type RouteContext = {
 };
 
 async function proxyRequest(request: NextRequest, context: RouteContext) {
+  if (process.env.PAPRNAV_ENV === "pilot") {
+    return NextResponse.json({ detail: "Not Found" }, { status: 404 });
+  }
   const { path } = await context.params;
   const backendPath = path.join("/");
   const upstreamUrl = new URL(`${BACKEND_URL.replace(/\/$/, "")}/${backendPath}`);

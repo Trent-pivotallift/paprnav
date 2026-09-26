@@ -1,0 +1,152 @@
+[
+  {
+    "id": "IAM-DESIGN-001",
+    "stage": "design",
+    "reviewer": "/root/t082_e_iam_amendment_design_review",
+    "severity": "high",
+    "status": "fixed_pending_verification",
+    "invariant": "Every current Terraform lifecycle action is either authorized at least privilege or is an explicit fail-closed stop gate.",
+    "summary": "Secrets Manager UpdateSecret is missing for metadata updates, but granting it would also permit secret-value mutation.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-design-initial.md",
+      "infra/terraform/database.tf",
+      "scripts/generate_pilot_deploy_policy.py"
+    ],
+    "impact": "The design either overclaims complete lifecycle support or weakens the credential-separation boundary.",
+    "requiredClosure": "Choose and document a metadata-update stop gate or truthful value-mutation authority, then add resource/lifecycle/action coverage and negative tests.",
+    "closureEvidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/decision.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/design-remediation-1.md"
+    ]
+  },
+  {
+    "id": "IAM-DESIGN-002",
+    "stage": "design",
+    "reviewer": "/root/t082_e_iam_amendment_design_review",
+    "severity": "high",
+    "status": "fixed_pending_verification",
+    "invariant": "DNS mutation authority is limited to the one canonical Paprnav pilot alias managed by Terraform.",
+    "summary": "ChangeResourceRecordSets is zone-scoped without record-name/type conditions and can mutate unrelated or ACM-renewal records.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-design-initial.md",
+      "scripts/generate_pilot_deploy_policy.py",
+      "infra/terraform/load_balancer.tf"
+    ],
+    "impact": "A compromised or mistaken deploy session could change unrelated DNS within the hosted zone.",
+    "requiredClosure": "Split reads from writes and constrain every change-batch record name and type to the canonical pilot A alias, with mixed-batch negative tests.",
+    "closureEvidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/decision.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/design-remediation-1.md"
+    ]
+  },
+  {
+    "id": "IAM-DESIGN-003",
+    "stage": "design",
+    "reviewer": "/root/t082_e_iam_amendment_design_review",
+    "severity": "medium",
+    "status": "fixed_pending_verification",
+    "invariant": "Policy publication and rollback preserve the exact pre-existing attachment/default-version state and do not affect unexpected consumers.",
+    "summary": "Rollback always detaches and consumer inventory occurs too late for an already shared policy.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-design-initial.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/decision.md"
+    ],
+    "impact": "Rollback can remove pre-existing authority or a default-version change can affect unexpected principals.",
+    "requiredClosure": "Inventory all consumers before versioning, stop on unexpected use, preserve original attachment state, and test all absent/existing/shared/partial-failure branches.",
+    "closureEvidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/decision.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/design-remediation-1.md"
+    ]
+  },
+  {
+    "id": "IAM-DESIGN-004",
+    "stage": "design",
+    "reviewer": "/root/t082_e_iam_amendment_design_review",
+    "severity": "high",
+    "status": "fixed_pending_verification",
+    "invariant": "The authority that publishes deployment permissions is strongly authenticated and attributable.",
+    "summary": "AWS account summary reports AccountMFAEnabled=0 and MFADevicesInUse=0, while updater MFA or federation provenance is unproved.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-design-initial.md"
+    ],
+    "impact": "A long-lived single-factor IAM credential could change the deployment role's permissions.",
+    "requiredClosure": "Assign an owner and prove an MFA-protected or federated updater session before M1; resolve root-account MFA posture before external pilot release.",
+    "closureEvidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/decision.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/design-remediation-1.md"
+    ]
+  }
+  ,
+  {
+    "id": "IAM-IMPL-001",
+    "stage": "implementation",
+    "reviewer": "/root/t082_e_iam_amendment_impl_review",
+    "severity": "high",
+    "status": "open",
+    "invariant": "Every declared Terraform lifecycle requirement is evaluated against concrete rendered IAM actions, resources, and conditions or an executable stop gate.",
+    "summary": "The lifecycle matrix and tests validate labels and nonempty prose, not effective authorization decisions.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-initial.md",
+      "backend/tests/test_pilot_package_c.py",
+      "infra/aws-iam/pilot-policy-matrix.json"
+    ],
+    "impact": "A missing, bogus, or wrongly scoped action can pass the claimed completeness oracle and fail or over-authorize deployment.",
+    "requiredClosure": "Implement a concrete lifecycle/action/resource/condition evaluator and negative mutation tests.",
+    "closureEvidence": [
+      "scripts/pilot_iam_authority.py:coverage",
+      "backend/tests/test_pilot_package_c.py:test_iam_executable_coverage_rejects_policy_and_runtime_mutations",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/remediation-2.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-remediation-2.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/architecture-pause.md"
+    ]
+  },
+  {
+    "id": "IAM-IMPL-002",
+    "stage": "implementation",
+    "reviewer": "/root/t082_e_iam_amendment_impl_review",
+    "severity": "high",
+    "status": "fixed_pending_verification",
+    "invariant": "Any Terraform plan requiring UpdateSecret for the three pilot secrets is rejected before any apply.",
+    "summary": "The secret-update stop gate exists only as matrix prose and a literal-string test.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-initial.md",
+      "infra/aws-iam/pilot-policy-matrix.json",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/decision.md"
+    ],
+    "impact": "A mixed Terraform apply can perform unrelated mutations before failing on denied secret metadata updates.",
+    "requiredClosure": "Add and integrate a deterministic plan gate with create, update, unknown, and legacy-name tests.",
+    "closureEvidence": [
+      "scripts/pilot_iam_authority.py:plan_gate",
+      "backend/tests/test_pilot_package_c.py:test_iam_plan_gate_rejects_whole_plan_before_any_apply",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E/decision.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/remediation-2.md"
+    ]
+  },
+  {
+    "id": "IAM-IMPL-003",
+    "stage": "implementation",
+    "reviewer": "/root/t082_e_iam_amendment_impl_review",
+    "severity": "medium",
+    "status": "fixed_pending_verification",
+    "invariant": "Publication preflight exhausts both IAM consumer inventories and rollback restores exact observed pre-state after partial or ambiguous calls.",
+    "summary": "Publication and rollback behavior is represented by prose without a callable transition authority.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-initial.md",
+      "infra/aws-iam/pilot-policy-matrix.json",
+      "backend/tests/test_pilot_package_c.py"
+    ],
+    "impact": "Later-page or boundary consumers can be missed and blind rollback can detach or change pre-existing authority.",
+    "requiredClosure": "Implement an offline state-transition/preflight authority with pagination and ambiguous-outcome recovery tests.",
+    "closureEvidence": [
+      "scripts/pilot_iam_authority.py:publication",
+      "backend/tests/test_pilot_package_c.py:test_iam_publication_exhausts_both_consumer_page_chains",
+      "backend/tests/test_pilot_package_c.py:test_iam_ambiguous_recovery_uses_observed_default_and_attachment",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/adversarial-implementation-remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-E-IAM-AMENDMENT/remediation-2.md"
+    ]
+  }
+]

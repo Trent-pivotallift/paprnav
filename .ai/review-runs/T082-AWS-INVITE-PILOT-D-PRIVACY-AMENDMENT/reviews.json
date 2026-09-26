@@ -1,0 +1,62 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_package_d_privacy_review_2",
+    "builder": "/root/t082_package_d_privacy_amendment_design",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T21:17:05+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "baa5d3de036f61ecc41aefa685a83ae68d375eab7aad760ae38003bf7bffdb09",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D-PRIVACY-AMENDMENT/adversarial-design-initial.md",
+    "artifactSha256": "f0a2ce68249a53c3d9db25fb506c965531d7de4114415a337866b76c0900f087"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_package_d_privacy_review_2",
+    "builder": "/root/t082_package_d_privacy_amendment_design",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T21:22:33+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "7ccae300c7aac9bbb7b5b4f7e04e1e8d26323218201244cf2d178a06ab42131c",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D-PRIVACY-AMENDMENT/adversarial-design-final.md",
+    "artifactSha256": "6673a7801c24caabcfabf8f6a83d3d1d6e3289f3864e1215dfe0cd5902c9d493"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_d_privacy_review_2",
+    "builder": "/root/t082_package_d_privacy_remediation_3",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T21:51:51+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "a1b1f58c0637ce8f99196c33f5a61947d600bfa375223a4c35274f1f2faf1b09",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D-PRIVACY-AMENDMENT/adversarial-implementation-final.md",
+    "artifactSha256": "623e3d3875acd071d9a4782d8d696108988b83f5d7fabb895a5c9cdc9776d5a7"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/t082_package_d_closure_review",
+    "builder": "/root",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T21:59:53+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "3a1538f9606d96475227b18100ed09c1aabbc11f15904115db957d92f6fee968",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D-PRIVACY-AMENDMENT/adversarial-closure-initial.md",
+    "artifactSha256": "6ee113d6b082311f806ecf47f659c73f7ba94cce4f1c80c03b96e67460d70ffd"
+  },
+  {
+    "stage": "closure",
+    "reviewer": "/root/t082_package_d_closure_review",
+    "builder": "/root",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T22:12:49+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "eb7f8d120061d36f7502149756ad57dc56d3bbf6bda17ffc6e8e182bb4260346",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-D-PRIVACY-AMENDMENT/adversarial-closure-final.md",
+    "artifactSha256": "5c02003819162a8fde11936036ceec2f803582978e1f96d47ba3351abcd3ac48"
+  }
+]

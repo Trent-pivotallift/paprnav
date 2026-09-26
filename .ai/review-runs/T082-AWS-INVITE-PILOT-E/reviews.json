@@ -1,0 +1,50 @@
+[
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_package_e_design_review",
+    "builder": "/root/t082_package_e_execution_design",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T22:27:36+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "975633ac179af440c9e09d30216e08d29561163c681466a901f67d5c1cfd7e33",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-design-initial.md",
+    "artifactSha256": "30521a39a91f53c5147025aa70cf85408cc6b8abcdec842d87dc6d2b645af972"
+  },
+  {
+    "stage": "design",
+    "reviewer": "/root/t082_package_e_design_reviewer_2",
+    "builder": "/root/t082_package_e_design_remediation",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T22:40:37+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "23342b2df02448ba6935eb8dfcd266ea72278181324dd603d9b68a11761ec09e",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-design-remediation-1.md",
+    "artifactSha256": "b9f32b6ae9408808259b6191ac03cf7d70d553c01454fc3f9e217a42efd21abd"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_e_e1a_review",
+    "builder": "/root/t082_package_e_e1a_implementation",
+    "outcome": "fail",
+    "reviewedAt": "2026-09-19T22:53:16+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "75049d6661b14ff3c241b6846fa10416ea632361c4d144c8a9062b4123d4dc52",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-implementation-e1a-initial.md",
+    "artifactSha256": "d05cb5921f283e7e9ce7d9705da875358aa7faaa4079b23db904870452c72330"
+  },
+  {
+    "stage": "implementation",
+    "reviewer": "/root/t082_package_e_e1a_review_2",
+    "builder": "/root/t082_package_e_e1a_remediation_1",
+    "outcome": "pass",
+    "reviewedAt": "2026-09-19T23:05:07+00:00",
+    "baseRef": "HEAD",
+    "head": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scopeFingerprint": "e0628f9566074128e50e9a9d50bfe12f4f85c6175483af52b050a633b30c8d8e",
+    "artifact": ".ai/review-runs/T082-AWS-INVITE-PILOT-E/adversarial-implementation-e1a-remediation-1.md",
+    "artifactSha256": "212425e65464799b025301156ca0cf3ec7c7362d5f05673677fa07f389c0c5df"
+  }
+]

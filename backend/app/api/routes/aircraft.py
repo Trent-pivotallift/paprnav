@@ -23,6 +23,7 @@ from app.services.installed_components import sync_installed_components_from_air
 from app.services.ad_coverage import resolve_aircraft_ad_coverage
 from app.services.cost_tags import ensure_aircraft_cost_tag, ensure_organization_account_tag
 from app.services.observability import record_product_event
+from app.services.pilot_achievements import record_pilot_achievement
 from app.services.ad_matching import invalidate_aircraft_match_results
 
 router = APIRouter(prefix="/api/v1/aircraft", tags=["aircraft"])
@@ -257,7 +258,7 @@ def create_aircraft(
     ensure_aircraft_cost_tag(aircraft)
     sync_installed_components_from_aircraft(db, aircraft)
     resolve_aircraft_ad_coverage(db, aircraft.id)
-    record_product_event(
+    record_pilot_achievement(
         db,
         event_type="aircraft_created",
         subject_type="aircraft",
@@ -266,11 +267,8 @@ def create_aircraft(
         aircraft_id=aircraft.id,
         organization_id=aircraft.owner_organization_id,
         properties={
-            "nNumber": aircraft.n_number_normalized,
-            "make": aircraft.make,
-            "model": aircraft.model,
-            "customerAccountTag": aircraft.owner_organization.customer_account_tag,
-            "aircraftCostTag": aircraft.cost_allocation_tag,
+            "hasAccountTag": bool(aircraft.owner_organization.customer_account_tag),
+            "hasAircraftTag": bool(aircraft.cost_allocation_tag),
         },
     )
     db.commit()

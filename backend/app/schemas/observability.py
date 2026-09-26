@@ -63,3 +63,84 @@ class UserFeedbackUpdateRequest(BaseModel):
 
 class UserFeedbackCreateResponse(BaseModel):
     feedback: UserFeedbackResponse
+
+
+class PilotAchievementRecentResponse(BaseModel):
+    id: str
+    eventType: str
+    subjectType: str
+    subjectId: str
+    actorUserId: Optional[str]
+    organizationId: Optional[str]
+    aircraftId: Optional[str]
+    eventTime: datetime
+
+
+class PilotAchievementSummaryResponse(BaseModel):
+    taxonomyVersion: str
+    identityCount: int
+    counts: dict[str, int]
+    recent: list[PilotAchievementRecentResponse]
+
+
+class PilotFailureRecentResponse(BaseModel):
+    id: str
+    workflowType: str
+    workflowId: str
+    category: str
+    createdAt: datetime
+
+
+class PilotFailureSummaryResponse(BaseModel):
+    count: int
+    counts: dict[str, int]
+    recent: list[PilotFailureRecentResponse]
+
+
+class PilotFeedbackRecentResponse(BaseModel):
+    id: str
+    feedbackType: str
+    severity: str
+    status: str
+    organizationId: Optional[str]
+    aircraftId: Optional[str]
+    createdAt: datetime
+
+
+class PilotFeedbackSummaryResponse(BaseModel):
+    count: int
+    typeCounts: dict[str, int]
+    severityCounts: dict[str, int]
+    statusCounts: dict[str, int]
+    recent: list[PilotFeedbackRecentResponse]
+
+
+class PilotOCRSummaryResponse(BaseModel):
+    recordedRunsOnly: bool
+    paidAttemptCoverageComplete: bool
+    reconciliationCompletenessAvailable: bool
+    missingRowVisibilityAvailable: bool
+    attributionBasis: str
+    historicalTagsReattributed: bool
+    recordedRunCount: int
+    lifecycleCounts: dict[str, int]
+    pricingCounts: dict[str, int]
+    attributionCounts: dict[str, int]
+    billingCounts: dict[str, int]
+    reconciliationRequiredRunCount: int
+    knownEstimateRunCount: int
+    unknownAmountRunCount: int
+    knownPartialEstimateUsd: Optional[float]
+    completedPricedEstimateUsd: Optional[float]
+    estimateIsPartial: bool
+
+
+class PilotSummaryResponse(BaseModel):
+    generatedAt: datetime
+    dateFrom: Optional[datetime]
+    dateTo: Optional[datetime]
+    actorUserId: Optional[str]
+    achievements: PilotAchievementSummaryResponse
+    failures: PilotFailureSummaryResponse
+    feedback: PilotFeedbackSummaryResponse
+    ocr: PilotOCRSummaryResponse

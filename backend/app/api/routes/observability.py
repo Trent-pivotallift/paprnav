@@ -1,13 +1,24 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.api.routes.aircraft import get_visible_aircraft_or_404
+from app.api.routes.admin import ensure_platform_admin
+from app.api.routes.aircraft import get_visible_aircraft_or_404, visible_aircraft_statement
 from app.db.session import get_db
-from app.models.core import ProductEvent, User, UserFeedback, WorkflowStatusEvent
+from app.models.core import (
+    ADMatchAdjudication,
+    ADMatchResult,
+    Aircraft,
+    AircraftAssignment,
+    IngestionJob,
+    ProductEvent,
+    User,
+    UserFeedback,
+    WorkflowStatusEvent,
+)
 from app.schemas.observability import (
     ObservabilityListResponse,
     ProductEventResponse,
@@ -35,8 +46,79 @@ def list_observability(
 ) -> ObservabilityListResponse:
     if aircraft_id:
         get_visible_aircraft_or_404(db, current_user, aircraft_id)
+    if user_id and user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot widen observability scope",
+        )
+    return _list_observability(
+        db,
+        current_user=current_user,
+        admin_scope=False,
+        aircraft_id=aircraft_id,
+        user_id=user_id,
+        event_type=event_type,
+        subject_type=subject_type,
+        status_filter=status_filter,
+        workflow_id=workflow_id,
+    )
+
+
+@router.get("/admin", response_model=ObservabilityListResponse)
+def list_observability_admin(
+    aircraft_id: Optional[str] = Query(default=None),
+    user_id: Optional[str] = Query(default=None),
+    event_type: Optional[str] = Query(default=None),
+    subject_type: Optional[str] = Query(default=None),
+    status_filter: Optional[str] = Query(default=None, alias="status"),
+    workflow_id: Optional[str] = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ObservabilityListResponse:
+    ensure_platform_admin(current_user)
+    return _list_observability(
+        db,
+        current_user=current_user,
+        admin_scope=True,
+        aircraft_id=aircraft_id,
+        user_id=user_id,
+        event_type=event_type,
+        subject_type=subject_type,
+        status_filter=status_filter,
+        workflow_id=workflow_id,
+    )
+
+
+def _list_observability(
+    db: Session,
+    *,
+    current_user: User,
+    admin_scope: bool,
+    aircraft_id: Optional[str],
+    user_id: Optional[str],
+    event_type: Optional[str],
+    subject_type: Optional[str],
+    status_filter: Optional[str],
+    workflow_id: Optional[str],
+) -> ObservabilityListResponse:
+    visible_aircraft_ids = (
+        visible_aircraft_statement(current_user)
+        .with_only_columns(Aircraft.id)
+        .order_by(None)
+    )
 
     event_statement = select(ProductEvent).order_by(ProductEvent.event_time.desc()).limit(100)
+    if not admin_scope:
+        event_statement = event_statement.where(
+            or_(
+                ProductEvent.aircraft_id.in_(visible_aircraft_ids),
+                and_(
+                    ProductEvent.aircraft_id.is_(None),
+                    ProductEvent.organization_id.is_(None),
+                    ProductEvent.actor_user_id == current_user.id,
+                ),
+            )
+        )
     if aircraft_id:
         event_statement = event_statement.where(ProductEvent.aircraft_id == aircraft_id)
     if user_id:
@@ -47,6 +129,33 @@ def list_observability(
         event_statement = event_statement.where(ProductEvent.subject_type == subject_type)
 
     workflow_statement = select(WorkflowStatusEvent).order_by(WorkflowStatusEvent.created_at.desc()).limit(100)
+    if not admin_scope:
+        visible_job_ids = select(IngestionJob.id).where(
+            IngestionJob.aircraft_id.in_(visible_aircraft_ids)
+        )
+        visible_adjudication_ids = (
+            select(ADMatchAdjudication.id)
+            .join(ADMatchResult, ADMatchAdjudication.match_result_id == ADMatchResult.id)
+            .where(ADMatchResult.aircraft_id.in_(visible_aircraft_ids))
+        )
+        workflow_statement = workflow_statement.where(
+            or_(
+                and_(
+                    WorkflowStatusEvent.workflow_type.in_(
+                        {"upload_ingestion", "page_verification", "ocr_correction"}
+                    ),
+                    WorkflowStatusEvent.workflow_id.in_(visible_job_ids),
+                ),
+                and_(
+                    WorkflowStatusEvent.workflow_type == "ad_matching",
+                    WorkflowStatusEvent.workflow_id.in_(visible_aircraft_ids),
+                ),
+                and_(
+                    WorkflowStatusEvent.workflow_type == "hitl_adjudication",
+                    WorkflowStatusEvent.workflow_id.in_(visible_adjudication_ids),
+                ),
+            )
+        )
     if workflow_id:
         workflow_statement = workflow_statement.where(WorkflowStatusEvent.workflow_id == workflow_id)
     if status_filter:
@@ -55,6 +164,17 @@ def list_observability(
         workflow_statement = workflow_statement.where(WorkflowStatusEvent.actor_user_id == user_id)
 
     feedback_statement = select(UserFeedback).order_by(UserFeedback.created_at.desc()).limit(50)
+    if not admin_scope:
+        feedback_statement = feedback_statement.where(
+            or_(
+                UserFeedback.aircraft_id.in_(visible_aircraft_ids),
+                and_(
+                    UserFeedback.aircraft_id.is_(None),
+                    UserFeedback.organization_id.is_(None),
+                    UserFeedback.submitted_by_user_id == current_user.id,
+                ),
+            )
+        )
     if aircraft_id:
         feedback_statement = feedback_statement.where(UserFeedback.aircraft_id == aircraft_id)
     if status_filter:
@@ -75,9 +195,24 @@ def create_feedback(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> UserFeedbackCreateResponse:
+    organization_id = None
     if payload.aircraftId:
-        get_visible_aircraft_or_404(db, current_user, payload.aircraftId)
-    organization_id = current_user.memberships[0].organization_id if current_user.memberships else None
+        aircraft = get_visible_aircraft_or_404(db, current_user, payload.aircraftId)
+        active_organization_ids = {
+            membership.organization_id
+            for membership in current_user.memberships
+            if membership.status == "active"
+        }
+        if aircraft.owner_organization_id in active_organization_ids:
+            organization_id = aircraft.owner_organization_id
+        else:
+            organization_id = db.scalar(
+                select(AircraftAssignment.organization_id).where(
+                    AircraftAssignment.aircraft_id == aircraft.id,
+                    AircraftAssignment.organization_id.in_(active_organization_ids),
+                    AircraftAssignment.status == "active",
+                )
+            )
     feedback = UserFeedback(
         submitted_by_user_id=current_user.id,
         organization_id=organization_id,
@@ -113,11 +248,10 @@ def update_feedback(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> UserFeedbackCreateResponse:
+    ensure_platform_admin(current_user)
     feedback = db.get(UserFeedback, feedback_id)
     if not feedback:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feedback not found")
-    if feedback.aircraft_id:
-        get_visible_aircraft_or_404(db, current_user, feedback.aircraft_id)
     feedback.status = payload.status
     record_product_event(
         db,

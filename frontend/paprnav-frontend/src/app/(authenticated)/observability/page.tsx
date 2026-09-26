@@ -1,22 +1,29 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Activity, MessageSquare, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, DollarSign, MessageSquare, RefreshCw, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/PageHeader";
+import { useAuth } from "@/components/AuthProvider";
+import { PilotOcrSummaryDetails } from "@/lib/pilot-ocr-summary";
 import {
   createFeedback,
-  listObservability,
+  getPilotSummary,
+  listVisibleObservability,
   ObservabilityListResponse,
+  PilotSummaryResponse,
   updateFeedbackStatus,
 } from "@/lib/api";
 
 export default function ObservabilityPage() {
+  const { user } = useAuth();
+  const isPlatformAdmin = user?.memberships.some((membership) => membership.role === "platform_admin") ?? false;
   const [data, setData] = useState<ObservabilityListResponse>({ events: [], workflowEvents: [], feedback: [] });
+  const [pilotSummary, setPilotSummary] = useState<PilotSummaryResponse | null>(null);
   const [filters, setFilters] = useState({ aircraftId: "", eventType: "", subjectType: "", status: "" });
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackSubject, setFeedbackSubject] = useState("demo");
@@ -26,13 +33,17 @@ export default function ObservabilityPage() {
   const loadData = useCallback(async () => {
     try {
       const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value.trim()));
-      const response = await listObservability(params);
+      const [response, summary] = await Promise.all([
+        listVisibleObservability(isPlatformAdmin, params),
+        isPlatformAdmin ? getPilotSummary() : Promise.resolve(null),
+      ]);
       setData(response);
+      setPilotSummary(summary);
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to load product observability.");
     }
-  }, [filters]);
+  }, [filters, isPlatformAdmin]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -86,6 +97,48 @@ export default function ObservabilityPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {isPlatformAdmin && pilotSummary ? (
+        <div className="mt-6 grid gap-4 md:grid-cols-3" data-testid="pilot-admin-summary">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Trophy className="h-4 w-4" /> Pilot achievements
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold">{pilotSummary.achievements.identityCount}</p>
+              <p className="text-xs text-muted-foreground">Deduplicated {pilotSummary.achievements.taxonomyVersion} identities</p>
+              <div className="mt-3 space-y-1 text-xs">
+                {Object.entries(pilotSummary.achievements.counts).map(([eventType, count]) => (
+                  <div className="flex justify-between gap-3" key={eventType}><span>{eventType}</span><span>{count}</span></div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertTriangle className="h-4 w-4" /> Failures and feedback
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p><span className="text-2xl font-semibold">{pilotSummary.failures.count}</span> workflow failures</p>
+              <p><span className="font-semibold">{pilotSummary.feedback.count}</span> content-free feedback records</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <DollarSign className="h-4 w-4" /> Recorded OCR cost
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PilotOcrSummaryDetails ocr={pilotSummary.ocr} />
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
@@ -151,10 +204,12 @@ export default function ObservabilityPage() {
                   <p>{item.message}</p>
                   <p className="text-muted-foreground">{item.subjectType} {item.subjectId ?? ""}</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => triageFeedback(item.id, "triaged")}>Triaged</Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => triageFeedback(item.id, "closed")}>Closed</Button>
-                </div>
+                {isPlatformAdmin ? (
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => triageFeedback(item.id, "triaged")}>Triaged</Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => triageFeedback(item.id, "closed")}>Closed</Button>
+                  </div>
+                ) : null}
               </div>
             </div>
           )) : <p className="text-sm text-muted-foreground">No feedback yet.</p>}

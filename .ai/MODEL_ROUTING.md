@@ -34,6 +34,39 @@ bounded phases with explicit handoffs. An approved design is required before
 routing coherent high-risk implementation to Sol; design and invariant work
 remain Astra work.
 
+## Risk-adjusted planning and review cadence
+
+For multi-phase work, score each remaining package independently from 1 (low)
+to 5 (high) on risk, technical complexity, dependency centrality, and
+uncertainty. Record dependencies, downstream consumers, reversibility, the
+strength of deterministic oracles, design-approval state, and relevant review
+history. File count and apparent edit size are not risk scores: a one-line ACL
+or migration change can be high-risk, while a large generated rewrite can be
+mechanical.
+
+Optimize expected total effort, including likely rework and review cost. Route
+to Astra earlier when ambiguity, centrality, or repeated findings make a Sol
+pass likely to require another implementation/review loop. Conversely, use
+Terra medium or Sol medium for deterministic work mechanically derived from an
+approved authority, even when it touches many generated files.
+
+Review once at each meaningful invariant-bearing family boundary:
+
+- review a coherent design together with its generated contracts, manifests,
+  hashes, counts, and deterministic validator results;
+- do not create standalone reviewer turns for each generated artifact or for
+  mechanical implementation that stays within the approved design;
+- request one implementation review after the coherent family and its full
+  positive/negative evidence are complete;
+- repeat a review or broad test only when changed dependencies can invalidate
+  prior evidence; and
+- retain independent design, implementation, and closure review for high-risk
+  schema, migration, authorization, regulatory, IAM, or invariant work.
+
+If an agent has completed the technical analysis but continues expanding prose,
+direct it to publish a compact reviewable artifact and return. Drafting length
+is not additional verification.
+
 ## Review-history escalation
 
 Count substantive failures within the current finding family or review loop.

@@ -1,0 +1,24 @@
+{
+  "version": "paprnav-pilot-reference-v1",
+  "logbookSections": [
+    {
+      "id": "lbs_airframe",
+      "key": "airframe",
+      "name": "Airframe",
+      "sortOrder": 10
+    },
+    {
+      "id": "lbs_engine",
+      "key": "engine",
+      "name": "Engine",
+      "sortOrder": 20
+    },
+    {
+      "id": "lbs_propeller",
+      "key": "propeller",
+      "name": "Propeller",
+      "sortOrder": 30
+    }
+  ]
+}
+

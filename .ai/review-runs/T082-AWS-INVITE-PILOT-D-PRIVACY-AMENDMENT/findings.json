@@ -1,0 +1,67 @@
+[
+  {
+    "id": "PRIV-001",
+    "stage": "design",
+    "reviewer": "/root/t082_package_d_privacy_review_2",
+    "severity": "high",
+    "status": "closed",
+    "invariant": "Cancellation of an older completed or non-current request cannot close a transport now owned by a successor request.",
+    "summary": "The proposed unconditional captured-cycle transport close can abort an overlapping keep-alive successor.",
+    "evidence": ["adversarial-design-initial.md", "decision.md", "backend/app/core/http_protocol.py"],
+    "impact": "A prior request's cancellation can terminate an unrelated in-flight successor response on the same client connection.",
+    "requiredClosure": "Define connection ownership transfer and a current-cycle close rule, with overlapping and grouped-cancellation evidence.",
+    "closureEvidence": ["decision.md", "design-remediation-1.md", "adversarial-design-final.md"]
+  },
+  {
+    "id": "PRIV-002",
+    "stage": "design",
+    "reviewer": "/root/t082_package_d_privacy_review_2",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "Disconnect and shutdown guarantees match the states observable by the application and server task owners.",
+    "summary": "A disconnected cycle can coexist with application code suspended away from receive/send, so disconnect alone does not finish the request.",
+    "evidence": ["adversarial-design-initial.md", "decision.md"],
+    "impact": "The design overstates liveness and its oracle can hide a pending task during cleanup.",
+    "requiredClosure": "Define a safe task owner or narrow the guarantee to observed I/O states and separately own bounded shutdown of unrelated waits.",
+    "closureEvidence": ["decision.md", "design-remediation-1.md", "adversarial-design-final.md"]
+  },
+  {
+    "id": "PRIV-CLOSURE-001",
+    "stage": "closure",
+    "reviewer": "/root/t082_package_d_closure_review",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "Closure records exact model and effort disclosure wording for every meaningful phase and the closure reviewer assignment.",
+    "summary": "The child closure model summary is incomplete and uses ambiguous shorthand.",
+    "evidence": ["adversarial-closure-initial.md", "closure.md", ".ai/MODEL_ROUTING.md"],
+    "impact": "The child run cannot close under mandatory routing-evidence policy.",
+    "requiredClosure": "Use exact wording and enumerate design remediation, focused verification, coordinator, and closure-review assignments.",
+    "closureEvidence": ["closure.md", "adversarial-closure-initial.md", "adversarial-closure-remediation.md"]
+  },
+  {
+    "id": "PRIV-CLOSURE-002",
+    "stage": "closure",
+    "reviewer": "/root/t082_package_d_closure_review",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The decision packet exposes the validator-required Objective, Safety and correctness invariants, Proposed design, and Test strategy sections.",
+    "summary": "The approved decision has equivalent substance but lacks the exact required headings.",
+    "evidence": ["adversarial-closure-initial.md", "decision.md"],
+    "impact": "The review-run validator cannot close the child run.",
+    "requiredClosure": "Add non-semantic heading anchors referencing the approved design without changing it.",
+    "closureEvidence": ["decision.md", "adversarial-closure-initial.md", "adversarial-closure-remediation.md"]
+  },
+  {
+    "id": "PRIV-CLOSURE-003",
+    "stage": "closure",
+    "reviewer": "/root/t082_package_d_closure_review",
+    "severity": "blocker",
+    "status": "closed",
+    "invariant": "The fresh child closure packet hash-binds the active modified model-routing policy.",
+    "summary": "The child closure packet omits .ai/MODEL_ROUTING.md.",
+    "evidence": ["adversarial-closure-initial.md", "manifest.json", ".ai/MODEL_ROUTING.md"],
+    "impact": "Closure cannot prove compliance with its governing policy.",
+    "requiredClosure": "Add .ai/MODEL_ROUTING.md as a closure review input and regenerate the packet.",
+    "closureEvidence": ["closure.md", "adversarial-closure-initial.md", "adversarial-closure-remediation.md", ".ai/MODEL_ROUTING.md"]
+  }
+]

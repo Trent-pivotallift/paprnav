@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from app.schemas.uploads import UploadCreateResponse, UploadResponse
 from app.services.ingestion import create_ingestion_job
 from app.services.cost_tags import upload_cost_tags
 from app.services.observability import record_product_event, record_workflow_status
+from app.services.pilot_achievements import record_pilot_achievement
 from app.services.storage import get_s3_client, store_upload_file
 
 router = APIRouter(prefix="/api/v1/aircraft/{aircraft_id}/uploads", tags=["uploads"])
@@ -186,6 +187,20 @@ def upload_logbook_file(
             "initialOcrBillableToTag": upload.initial_ocr_billable_to_tag,
         },
     )
+    record_pilot_achievement(
+        db,
+        event_type="upload_received",
+        subject_type="upload",
+        subject_id=upload.id,
+        actor=current_user,
+        aircraft_id=aircraft.id,
+        organization_id=aircraft.owner_organization_id,
+        properties={
+            "contentType": upload.content_type,
+            "logbookSection": section,
+            "storageBackend": upload.storage_backend,
+        },
+    )
     record_workflow_status(
         db,
         workflow_type="upload_ingestion",
@@ -205,11 +220,14 @@ def upload_logbook_file(
 @download_router.get("/{upload_id}/download")
 def download_upload(
     upload_id: str,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     upload = get_upload_or_404(db, upload_id)
-    get_visible_aircraft_or_404(db, current_user, upload.aircraft_id)
+    aircraft = get_visible_aircraft_or_404(db, current_user, upload.aircraft_id)
+    request.state.organization_id = aircraft.owner_organization_id
+    request.state.aircraft_id = aircraft.id
 
     settings = get_settings()
     if upload.storage_backend == "s3":

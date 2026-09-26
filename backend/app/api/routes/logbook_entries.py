@@ -20,6 +20,7 @@ from app.schemas.logbook_entries import (
     LogbookSectionKey,
 )
 from app.services.observability import record_product_event
+from app.services.pilot_achievements import record_pilot_achievement
 from app.services.ad_matching import invalidate_aircraft_match_results
 
 router = APIRouter(prefix="/api/v1/aircraft/{aircraft_id}/logbook-entries", tags=["logbook-entries"])
@@ -231,7 +232,7 @@ def create_logbook_entry(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> LogbookEntryResponse:
-    get_visible_aircraft_or_404(db, current_user, aircraft_id)
+    aircraft = get_visible_aircraft_or_404(db, current_user, aircraft_id)
     section = get_section_by_key(db, payload.section)
 
     entry = LogbookEntry(
@@ -251,18 +252,17 @@ def create_logbook_entry(
     )
     db.add(entry)
     db.flush()
-    record_product_event(
+    record_pilot_achievement(
         db,
         event_type="logbook_entry_created",
         subject_type="logbook_entry",
         subject_id=entry.id,
         actor=current_user,
         aircraft_id=aircraft_id,
+        organization_id=aircraft.owner_organization_id,
         properties={
-            "section": section.key,
-            "entryDate": entry.entry_date.isoformat(),
+            "logbookSection": section.key,
             "sourceType": entry.source_type,
-            "reviewStatus": entry.review_status,
         },
     )
     db.commit()

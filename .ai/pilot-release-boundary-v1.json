@@ -1,0 +1,86 @@
+{
+  "version": "paprnav-pilot-release-boundary-v1",
+  "approvedBaselineCommit": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+  "expectedMigrationHeads": [
+    "20260913_0029"
+  ],
+  "migrationAuthorityProvenance": {
+    "baselineCommit": "19fe8e2e170687ed65deed78cb1af99d60f601e9",
+    "scope": "Reviewed inputs to the sealed migration context: all committed migration-directory files, Alembic configuration, and the minimal env.py repository support modules. This source inventory alone does not prove transitive import isolation.",
+    "targetAmendments": {
+      "backend/app/core/config.py": "Package A V4 gates plus Package B pilot trust-boundary configuration; exact target bytes are bound below and require independent implementation approval before release."
+    }
+  },
+  "migrationContext": {
+    "version": "paprnav-sealed-migration-context-v1",
+    "manifestName": "migration-context.json",
+    "sourceGitMode": "100644",
+    "sourceToDestination": {
+      "backend/alembic.ini": "alembic.ini",
+      "backend/app/": "app/"
+    }
+  },
+  "approvedMigrationAuthoritySha256": {
+    "backend/alembic.ini": "b08cc331288d26bc4d717908115f3107393c714512b8d6da072fe4260f92d3b7",
+    "backend/app/__init__.py": "119575f3fe80c33bbf4ff5a79decfeaf5e26296258e61fb1f07a8a8c5ff36945",
+    "backend/app/core/__init__.py": "cdeae4c1b7a55869627de430e66b776b6784584e8cf5d0f2aea86acfacfd8868",
+    "backend/app/core/config.py": "a9015bedd4362c5cbfc3bda6b05ccce4e92984c958b8087d4dd8d10344562cf4",
+    "backend/app/db/__init__.py": "718944411bc53dcb4233ba8cded164b5ec32d4e0ab6f554f51fc9bf2e9225eff",
+    "backend/app/db/base.py": "7bc9d3f954177acda9b00457d7844ae640c15d77fcf25bb6022ded809f548b35",
+    "backend/app/db/migrations/README.md": "565479aaab47141f517fa167e49cca4d810c55705cb0d0d11109801b5cdf7f18",
+    "backend/app/db/migrations/env.py": "4e43a1a90bd81a036384fb82997aa0863185f2cf90a02c7347f0ff43b830aca1",
+    "backend/app/db/migrations/script.py.mako": "a1ba0945f4421247989ffaa31a92c0d83ed7822ca2fd9e3aa586af8fb97e62a7",
+    "backend/app/db/migrations/sql/20260911_0028_obligation_expectations.sql": "c8d1f6508b2708ae0a0c7c64ca9cefe7aa144e5d268e1d1118aee3bda25432b7",
+    "backend/app/db/migrations/sql/20260911_0028_obligation_integrity.sql": "d2db777166d1785d179d5bff5d572a95131b2a570df0b2c2a04dab4edd6d879e",
+    "backend/app/db/migrations/sql/20260913_0029_review_case_integrity.sql": "92cc8cb8c73356f8194fe2e995c1ca7ba9892d88d07e17f4cea67cc34d39cf7e",
+    "backend/app/db/migrations/versions/.gitkeep": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "backend/app/db/migrations/versions/20260617_0001_initial_schema.py": "4e2e9800d88efe949d3c10256ea82ae1c57a07fd8a463d6fc63c9793d6cfcce2",
+    "backend/app/db/migrations/versions/20260617_0002_add_auth_sessions.py": "295d960a5838a9160d5a5feea2bbe9e5aa2e1617545bd7aab628a1f1fe35896c",
+    "backend/app/db/migrations/versions/20260618_0003_add_ocr_ingestion.py": "6bec108a7a7dae047c8cca500f0622a6240c9ae4ae5ca572fe2a5a1ae8008eb3",
+    "backend/app/db/migrations/versions/20260618_0004_add_ad_ingestion.py": "22bb8021278526b25ca0cadb1b7d5f0031445176732740e8b7352faa9e7586cc",
+    "backend/app/db/migrations/versions/20260618_0005_add_ad_matching.py": "78c28259824e185c9649e79862b04d356dd596996cc14e1979b25adfeddb9a9b",
+    "backend/app/db/migrations/versions/20260619_0006_add_observability_and_adjudication.py": "e0cce3b4e68246b576a32f85c7def6c5ca5ded3a0ca1013198a5723c44fdcaf0",
+    "backend/app/db/migrations/versions/20260620_0007_add_component_applicability.py": "416ff71ff6e86c4935fcc7b98c4d3492f894677465476d0d5ee3fab91af5d2a0",
+    "backend/app/db/migrations/versions/20260708_0008_add_pilot_cost_tags.py": "96a07bf6456a456e51c9060d32a489cb0c6659376661e7785d59d8df8a27a26e",
+    "backend/app/db/migrations/versions/20260710_0009_add_ocr_correction_order.py": "d9a889a8a531e775c69c40f9edadf0e45b4813efb96bbccd768a1801220b9fdb",
+    "backend/app/db/migrations/versions/20260722_0010_add_ocr_review_audit.py": "53d283189605a449016a527ad86fc70dd8125b3dc433a91764329f58f667128a",
+    "backend/app/db/migrations/versions/20260725_0011_add_ocr_usage_metering.py": "4ff94f4ab0d2b8116631db42d7aaeba3bb9920fad9c84942436f4b4e19258549",
+    "backend/app/db/migrations/versions/20260725_0012_use_fixed_precision_ocr_costs.py": "30ae5ed52fc8bf26a0904e304f7d4bc1eefffae07468756683ea71f8fdd74f21",
+    "backend/app/db/migrations/versions/20260725_0013_add_pdf_inspection.py": "202dc0551bdca8ac282943a475925f64d30588d3edaf6a1160c7b920051b3fab",
+    "backend/app/db/migrations/versions/20260726_0014_add_page_extraction_plans.py": "426ec2bb9e51f0a2557cea9d30a870c591e3db3c2312875972bfa705a6a54fd9",
+    "backend/app/db/migrations/versions/20260726_0015_add_candidate_validation.py": "624a23cbe229320254780001ed4fd77f2974c8f2a5e412939befe3bb8903362a",
+    "backend/app/db/migrations/versions/20260726_0016_add_ad_coverage_cost_attribution.py": "7bc2125efe7013fa374d7a9fb446fd3e7e72b0cd071e39068e7898498f7f13eb",
+    "backend/app/db/migrations/versions/20260730_0017_add_review_attestation_and_current_matches.py": "9ed542afbddb8adcaace34fc4499ec3060c344021f319b8098233a024a33fa24",
+    "backend/app/db/migrations/versions/20260804_0018_add_ad_source_documents.py": "f530b964880888e172ce6a3720ce53b489879c411aed85848cf3309bdfd483ab",
+    "backend/app/db/migrations/versions/20260806_0019_expand_applicability_product_subtype.py": "d856fb08e3fb5286d0a5f4a8546bcb5342eec7665abd712dbdadd35c213d86df",
+    "backend/app/db/migrations/versions/20260809_0020_add_ad_recurrence.py": "20ff264a9ea43557f50f99aa6e221e6c071f2fded46cb38c14a1657b44c42d83",
+    "backend/app/db/migrations/versions/20260822_0021_add_ad_applicability_v3.py": "922164309f78fbe6bfbfe9801443fbbd70e18d146f6af35e02a93d1ee119252c",
+    "backend/app/db/migrations/versions/20260822_0022_harden_ad_review_materialization.py": "110edf1e31f5833e80a3fbb6d7188135a63525dfc3ba3b7eedabfcac0d6ed0e1",
+    "backend/app/db/migrations/versions/20260822_0023_backfill_ad_v3_amoc_envelope.py": "7c74737f8e332973a14c307525b470ea19a050758f0006f751294f24a0a7fd23",
+    "backend/app/db/migrations/versions/20260823_0024_bind_signed_ad_materialization.py": "c0f461d4fa7ffa5c02217990be9c72c444d23c9c1d2a276fe5326212503e8d29",
+    "backend/app/db/migrations/versions/20260830_0025_add_ad_evidence_fragments.py": "5f0c3bc1b4597e87cca56c28b726b62f8f1329795d716eaa5bd75feac5bd90a2",
+    "backend/app/db/migrations/versions/20260901_0026_add_ad_v4_candidates.py": "811efe67991359f70cd853444a00c9dd741407469a99634bc8ee4e8eee886633",
+    "backend/app/db/migrations/versions/20260907_0027_add_ad_v4_applicability.py": "6338c193516ebdf016fe5e80c6af1d443de1cc40bd911c8012bff41f3f107405",
+    "backend/app/db/migrations/versions/20260911_0028_add_ad_v4_obligations.py": "754c86b18ff6901cf14b17c28562b45511107a3b78acdb4b646d6b2deefcff8c",
+    "backend/app/db/migrations/versions/20260913_0029_add_ad_v4_review_cases.py": "325277f7ffb8c9e100028c6f32e39263b0a336591b88634f641ed24737041a8f",
+    "backend/app/models/__init__.py": "da84cc35897dece40a86bf6cebbc661a8398570559d5f195d8d430f5af879311",
+    "backend/app/models/core.py": "be50bfb1009cd24b1787cf2ceeff1377e92a82c2825aaa74023dec74852ae7ac"
+  },
+  "protectedBlobSha256": {
+    "backend/app/models/core.py": "be50bfb1009cd24b1787cf2ceeff1377e92a82c2825aaa74023dec74852ae7ac"
+  },
+  "excludedTreePaths": [
+    "backend/app/db/migrations/sql/20260916_0030_candidate_acceptance_contract.json",
+    "backend/app/db/migrations/sql/20260916_0030_candidate_acceptance_integrity.sql",
+    "backend/app/db/migrations/versions/20260916_0030_add_ad_v4_candidate_acceptance.py",
+    "backend/app/services/ad_v4_acceptance_persistence_contract.py",
+    "backend/tests/test_ad_v4_acceptance_persistence.py",
+    "backend/tests/test_ad_v4_acceptance_persistence_postgres.py",
+    "backend/tests/test_ad_v4_model_source_authority.py",
+    "backend/tests/test_ad_v4_model_source_authority_postgres.py",
+    "scripts/generate-ad-v4-acceptance-persistence.py"
+  ],
+  "excludedTreePrefixes": [
+    ".ai/review-runs/T081-V4-SCHEMA-SLICE-4B/"
+  ]
+}

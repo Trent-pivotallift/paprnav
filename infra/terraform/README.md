@@ -64,7 +64,7 @@ Remote state:
 Added in the current working tree:
 
 - VPC `paprnav-pilot` with two public subnets and two private database subnets.
-- Public HTTP ALB with frontend default target group and FastAPI path routing.
+- Public HTTPS ALB with frontend default target group and FastAPI path routing.
 - ECS task definitions for API, frontend, and worker.
 - ECS services for API and frontend with desired counts defaulting to `0`.
 - Disabled EventBridge Scheduler schedule for the OCR worker Fargate task.
@@ -97,7 +97,21 @@ Container status:
 - No frontend Dockerfile exists yet.
 - Do not raise desired counts above `0` until images are built/pushed and runtime secrets are populated.
 - Do not enable the worker schedule until images, secrets, and async/S3 Textract behavior are ready.
-- The HTTP ALB is for initial runtime smoke only. Add ACM/HTTPS before external volunteers use the app.
+- Terraform requires an issued, Paprnav-tagged ACM certificate before it can create the HTTPS listener.
+
+## External DNS (Squarespace)
+
+Paprnav DNS remains in Squarespace. Terraform does not read or modify Route 53 and does not replace the existing apex or `www` website records.
+
+Use a dedicated subdomain such as `pilot.<paprnav-domain>` for the AWS pilot:
+
+1. Request the pilot-hostname certificate in ACM in `us-east-1`.
+2. Add the ACM validation CNAME shown by AWS to Squarespace DNS.
+3. Wait for the certificate status to become `ISSUED` and tag it `Project=paprnav`.
+4. Supply its exact ARN through `pilot_certificate_arn`.
+5. After Terraform creates the ALB, add the `pilot_dns_cname` output to Squarespace DNS.
+
+The `pilot_dns_cname` output is the authoritative handoff record. Its name is `pilot_hostname`, its type is `CNAME`, and its value is the ALB DNS name. The pilot hostname must be a subdomain of `dns_zone_name`; using the apex is rejected so the existing Squarespace website remains intact.
 
 Routing notes:
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -37,6 +37,10 @@ from app.services.ingestion import (
 )
 from app.services.review_metrics import calculate_ingestion_review_metrics
 from app.services.observability import record_product_event, record_workflow_status
+from app.services.pilot_achievements import (
+    achievement_already_recorded,
+    record_pilot_achievement,
+)
 from app.core.config import get_settings
 from app.api.routes.uploads import get_s3_client, local_upload_path, s3_body_iterator
 
@@ -313,10 +317,13 @@ def create_ordered_ocr_correction(
 def download_page_image(
     job_id: str,
     page_id: str,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     job = get_visible_job_or_404(db, current_user, job_id)
+    request.state.organization_id = job.aircraft.owner_organization_id
+    request.state.aircraft_id = job.aircraft_id
     page = next((item for item in job.pages if item.id == page_id), None)
     if (
         page is None
@@ -412,6 +419,27 @@ def verify_pages(
             "pageCount": len(payload.pages),
         },
     )
+    if (
+        job.ocr_status == "complete"
+        and payload.isOrderConfirmed
+        and payload.isComplete
+        and not achievement_already_recorded(
+            db,
+            event_type="page_review_completed",
+            subject_type="ingestion_job",
+            subject_id=job.id,
+        )
+    ):
+        record_pilot_achievement(
+            db,
+            event_type="page_review_completed",
+            subject_type="ingestion_job",
+            subject_id=job.id,
+            actor=current_user,
+            aircraft_id=job.aircraft_id,
+            organization_id=job.aircraft.owner_organization_id,
+            properties={"pageCount": len(job.pages)},
+        )
     record_workflow_status(
         db,
         workflow_type="page_verification",
@@ -490,7 +518,7 @@ def extract_logbook_entries(
 ) -> ExtractLogbookEntriesResponse:
     job = get_visible_job_or_404(db, current_user, job_id)
     try:
-        entries = extract_entries_from_job(db, job)
+        entries = extract_entries_from_job(db, job, pilot_actor=current_user)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 

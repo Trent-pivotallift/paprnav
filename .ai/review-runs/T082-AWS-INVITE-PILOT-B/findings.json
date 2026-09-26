@@ -1,0 +1,45 @@
+[
+  {
+    "id": "T082-B-001",
+    "stage": "implementation",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "An authenticated pilot user reads only the observability records allowed by current authority, while cross-tenant reads and feedback triage remain platform-administrator-only.",
+    "summary": "The ordinary-user Observability page unconditionally calls the administrator endpoint and receives 403.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-implementation-initial.md",
+      "frontend/paprnav-frontend/src/lib/api.ts:listObservability",
+      "frontend/paprnav-frontend/src/app/(authenticated)/observability/page.tsx"
+    ],
+    "impact": "Invited non-administrator users cannot see their authorized product/workflow events or feedback from the existing page.",
+    "requiredClosure": "Separate ordinary and administrator readers, choose the reader from current membership, hide triage controls from ordinary users, and add an ordinary-user frontend regression.",
+    "closureEvidence": [
+      "frontend/paprnav-frontend/src/lib/api.ts:listObservability/listAdminObservability/listVisibleObservability",
+      "frontend/paprnav-frontend/src/app/(authenticated)/observability/page.tsx",
+      "frontend/paprnav-frontend/tests/pilot-observability.test.mjs",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-B/package-b-remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-implementation-remediation-1.md"
+    ]
+  },
+  {
+    "id": "T082-B-002",
+    "stage": "implementation",
+    "reviewer": "/root/t082_pilot_design_adversary",
+    "severity": "medium",
+    "status": "closed",
+    "invariant": "The invitation-tamper regression always changes signed bytes and therefore deterministically exercises HMAC rejection.",
+    "summary": "Changing the final base64url character can alter only unused encoding bits and leave decoded signature bytes unchanged.",
+    "evidence": [
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-implementation-initial.md",
+      "backend/tests/test_pilot_invite_tenant_boundary.py:test_invitation_verification_rejects_expired_future_and_tampered_codes"
+    ],
+    "impact": "The test has an approximately one-in-sixteen false failure and is not a reliable security oracle.",
+    "requiredClosure": "Decode the signature, mutate a byte, re-encode it, and retain deterministic rejection evidence.",
+    "closureEvidence": [
+      "backend/tests/test_pilot_invite_tenant_boundary.py:test_invitation_verification_rejects_expired_future_and_tampered_codes",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-B/package-b-remediation-1.md",
+      ".ai/review-runs/T082-AWS-INVITE-PILOT-B/adversarial-implementation-remediation-1.md"
+    ]
+  }
+]

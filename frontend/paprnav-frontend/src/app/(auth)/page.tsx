@@ -24,6 +24,7 @@ function LoginForm() {
   const [password, setPassword] = useState("demo-password");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isPilot = process.env.NEXT_PUBLIC_PAPRNAV_ENV === "pilot";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,16 +127,21 @@ function LoginForm() {
           </CardContent>
         </Card>
 
-        {/* Register link */}
-        <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-primary hover:text-primary/80"
-          >
-            Create one
-          </Link>
-        </p>
+        {isPilot ? (
+          <p className="text-center text-sm text-muted-foreground">
+            Have an invitation?{" "}
+            <Link href="/invite" className="font-medium text-primary hover:text-primary/80">
+              Accept it
+            </Link>
+          </p>
+        ) : (
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="font-medium text-primary hover:text-primary/80">
+              Create one
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );
