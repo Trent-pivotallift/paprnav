@@ -46,7 +46,7 @@ export function MobileNav() {
       <SheetHeader className="border-b px-6 py-4">
         <SheetTitle className="text-left">
           <span className="text-2xl font-black tracking-tight">
-            papr<span className="text-brand">nav</span>
+            papr<span className="text-primary">nav</span>
           </span>
         </SheetTitle>
       </SheetHeader>
@@ -76,11 +76,10 @@ export function MobileNav() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-brand text-brand-foreground"
+                      ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >

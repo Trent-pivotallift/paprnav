@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Book, Upload, ChevronDown, Plane } from "lucide-react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,8 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { StatusBadge, getStatusFromAdStatus, type StatusType } from "@/components/StatusBadge";
-import { cn } from "@/lib/utils";
+import { StatusBadge, getStatusFromAdStatus } from "@/components/StatusBadge";
 
 interface AircraftCardProps {
   nNumber: string;
@@ -23,25 +22,14 @@ interface AircraftCardProps {
 export default function AircraftCard({ nNumber, type, adStatus, lastLogEntry }: AircraftCardProps) {
   const status = getStatusFromAdStatus(adStatus);
   const statusLabel = adStatus.replace(/[^\w\s]/g, "").trim();
-  const statusRail: Record<StatusType, string> = {
-    compliant: "border-l-status-compliant",
-    warning: "border-l-status-warning",
-    overdue: "border-l-status-overdue",
-    neutral: "border-l-border",
-  };
 
   return (
-    <Card
-      className={cn(
-        "group overflow-hidden border-l-4 hover:shadow-lg motion-safe:transition-[transform,box-shadow] motion-safe:duration-200 motion-safe:hover:-translate-y-1",
-        statusRail[status],
-      )}
-    >
+    <Card className="group transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-brand/10 p-2">
-              <Plane className="h-5 w-5 text-brand" />
+            <div className="rounded-lg bg-primary/10 p-2">
+              <Plane className="h-5 w-5 text-primary" />
             </div>
             <div>
               <CardTitle className="text-xl font-semibold">{nNumber}</CardTitle>
@@ -51,7 +39,12 @@ export default function AircraftCard({ nNumber, type, adStatus, lastLogEntry }: 
           <StatusBadge status={status} label={statusLabel} />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <div className="text-sm">
+          <span className="text-muted-foreground">Last entry: </span>
+          <span className="font-medium">{lastLogEntry}</span>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           {/* View Logbook Dropdown */}
           <DropdownMenu>
@@ -110,10 +103,6 @@ export default function AircraftCard({ nNumber, type, adStatus, lastLogEntry }: 
           </DropdownMenu>
         </div>
       </CardContent>
-      <CardFooter className="border-t bg-muted/35 px-6 py-3 text-sm">
-        <span className="text-muted-foreground">Last activity</span>
-        <span className="ml-auto font-medium tabular-nums">{lastLogEntry}</span>
-      </CardFooter>
     </Card>
   );
 }

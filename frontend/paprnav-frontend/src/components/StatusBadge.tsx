@@ -1,8 +1,8 @@
-import { AlertTriangle, CheckCircle, AlertCircle, CircleHelp } from "lucide-react";
+import { AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type StatusType = "compliant" | "warning" | "overdue" | "neutral";
+type StatusType = "compliant" | "warning" | "overdue";
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -27,11 +27,6 @@ const statusConfig = {
     className: "bg-[var(--status-overdue)] hover:bg-[var(--status-overdue)]/90 text-white",
     Icon: AlertTriangle,
   },
-  neutral: {
-    label: "Unknown",
-    className: "border border-border bg-muted text-muted-foreground hover:bg-muted",
-    Icon: CircleHelp,
-  },
 };
 
 export function StatusBadge({ status, label, className, showIcon = true }: StatusBadgeProps) {
@@ -47,24 +42,11 @@ export function StatusBadge({ status, label, className, showIcon = true }: Statu
 }
 
 export function getStatusFromAdStatus(adStatus: string): StatusType {
-  const normalized = adStatus.trim().toLowerCase().replace(/[\s-]+/g, "_");
-
-  if (
-    normalized.includes("overdue") ||
-    normalized.includes("noncompliant") ||
-    normalized.includes("non_compliant")
-  ) {
+  if (adStatus.toLowerCase().includes("overdue")) {
     return "overdue";
   }
-  if (
-    normalized.includes("needs_review") ||
-    normalized.includes("warning") ||
-    normalized.includes("due_soon")
-  ) {
+  if (adStatus.toLowerCase().includes("warning") || adStatus.includes("1")) {
     return "warning";
   }
-  if (normalized.includes("compliant") || normalized === "current" || normalized === "clear") {
-    return "compliant";
-  }
-  return "neutral";
+  return "compliant";
 }
